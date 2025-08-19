@@ -4,7 +4,7 @@
 
 :root {
   /* 更活泼的基础色彩 */
-  --background: 0 0% 98%;
+  --background: 0 0% 98% / 0.75;
   --background-light: 0 0% 98%;
   --background-hover: 210 40% 98%;
   --background-container: 0,0%,100%,0.8;
@@ -12,7 +12,7 @@
   --dot-color: 220 14.3% 95.9%;
   
   /* 卡片和容器 */
-  --card: 0 0% 100%;
+  --card: 0 0% 100% / 0.75;
   --card-hover: 220 14.3% 95.9%;
   --card-active: 220 13% 91%;
   --card-foreground: 222 84% 4.9%;
@@ -76,6 +76,27 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+}
+
+.bg-mine-background {
+  position: relative;
+  background-image: url("https://bing.liushen.fun/daily.webp");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  backdrop-filter: blur(2px);
+}
+
+.bg-mine-background::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: -1;
 }
 
 /* 网格背景装饰 */

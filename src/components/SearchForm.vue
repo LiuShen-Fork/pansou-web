@@ -135,6 +135,13 @@ const handleSearch = () => {
 
 <template>
   <div class="w-full max-w-content mx-auto">
+    <div class="text-center mb-8 mt-20">
+      <p class="text-4xl md:text-5xl lg:text-6xl font-bold mb-2 transition-all flex items-center justify-center gap-2">
+        <img src="/favicon.ico" alt="清羽盘搜" class="w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14" />
+        清羽盘搜
+      </p>
+      <p class="text-sm md:text-base lg:text-lg text-muted-foreground/80 transition-all">清羽飞扬自建聚合网盘搜索</p>
+    </div>
     <div class="search-container">
       <!-- 主搜索框 -->
       <div class="relative w-full">
@@ -549,4 +556,4 @@ const handleSearch = () => {
     white-space: nowrap;
   }
 }
-</style> 
+</style>
