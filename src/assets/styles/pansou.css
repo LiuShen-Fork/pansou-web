@@ -80,7 +80,7 @@
 
 .bg-mine-background {
   position: relative;
-  background-image: url("https://bing.liushen.fun/daily.webp");
+  background-image: url("https://bing.liushen.fun/api/random");
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
