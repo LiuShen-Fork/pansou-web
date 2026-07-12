@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { Icons } from '@/components/ui';
 import type { ExportField, ExportFormat, ExportSettings } from '@/types';
-import { getDiskTypeName } from '@/utils/diskTypes';
+import { getDiskTypeName, sortDiskTypes } from '@/utils/diskTypes';
 
 const props = defineProps<{
   visible: boolean;
@@ -34,11 +34,12 @@ const localSettings = ref<ExportSettings>({
 });
 
 const allDiskTypesSelected = computed(() => localSettings.value.allDiskTypesSelected);
+const availableDiskTypes = computed(() => sortDiskTypes(props.availableDiskTypes));
 
 const syncFromProps = () => {
   const selectedDiskTypes = props.settings.allDiskTypesSelected
-    ? [...props.availableDiskTypes]
-    : [...props.settings.selectedDiskTypes];
+    ? [...availableDiskTypes.value]
+    : sortDiskTypes(props.settings.selectedDiskTypes);
 
   localSettings.value = {
     ...props.settings,
@@ -118,7 +119,7 @@ const toggleAllDiskTypes = () => {
     localSettings.value.selectedDiskTypes = [];
     localSettings.value.allDiskTypesSelected = false;
   } else {
-    localSettings.value.selectedDiskTypes = [...props.availableDiskTypes];
+    localSettings.value.selectedDiskTypes = [...availableDiskTypes.value];
     localSettings.value.allDiskTypesSelected = true;
   }
 
@@ -210,7 +211,7 @@ onUnmounted(() => {
               </div>
               <div class="disktype-grid">
                 <label
-                  v-for="diskType in props.availableDiskTypes"
+                  v-for="diskType in availableDiskTypes"
                   :key="diskType"
                   class="disktype-chip"
                   :class="{ selected: localSettings.selectedDiskTypes.includes(diskType) }"
