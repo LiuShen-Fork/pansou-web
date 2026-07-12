@@ -335,3 +335,167 @@
     background: hsl(var(--foreground));
   }
 }
+
+@layer components {
+  .app-shell .card,
+  .account-center .stat-card,
+  .account-center .placeholder-card,
+  .account-center .empty-state,
+  .config-container .stats-bar,
+  .config-container .tabs-nav,
+  .config-container .tab-content,
+  .config-container .pane-header,
+  .config-container .add-input-group,
+  .config-container .item-card,
+  .config-container .detection-card,
+  .config-container .export-section,
+  .qqpd-manager .user-card,
+  .qqpd-manager .add-card,
+  .gying-manager .user-card,
+  .gying-manager .add-card,
+  .panlian-manager .user-card,
+  .panlian-manager .add-card,
+  .weibo-manager .user-card,
+  .weibo-manager .add-card,
+  .service-card,
+  .login-dialog,
+  .export-modal,
+  .modal-content,
+  .detail-dialog {
+    border-radius: 0.5rem !important;
+    border: 1px solid rgba(226, 232, 240, 0.76) !important;
+    background: rgba(255, 255, 255, 0.74) !important;
+    box-shadow: 0 12px 36px rgba(15, 23, 42, 0.08) !important;
+    backdrop-filter: blur(16px) saturate(1.08);
+  }
+
+  .app-shell .card:hover,
+  .account-center .stat-card:hover,
+  .account-center .placeholder-card:hover,
+  .config-container .item-card:hover,
+  .qqpd-manager .user-card:hover,
+  .qqpd-manager .add-card:hover,
+  .gying-manager .user-card:hover,
+  .gying-manager .add-card:hover,
+  .panlian-manager .user-card:hover,
+  .panlian-manager .add-card:hover,
+  .weibo-manager .user-card:hover,
+  .weibo-manager .add-card:hover,
+  .service-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(59, 130, 246, 0.48) !important;
+    box-shadow: 0 18px 44px rgba(37, 99, 235, 0.14) !important;
+  }
+
+  .config-container,
+  .account-center,
+  .qqpd-manager,
+  .gying-manager,
+  .panlian-manager,
+  .weibo-manager {
+    width: 100%;
+  }
+
+  .config-container .config-header,
+  .account-center .header-section,
+  .qqpd-manager .header-section,
+  .gying-manager .header-section,
+  .panlian-manager .header-section,
+  .weibo-manager .header-section {
+    padding: 1rem 0 1.25rem;
+    border-bottom-color: rgba(226, 232, 240, 0.7) !important;
+  }
+
+  .config-container .config-title,
+  .account-center .page-title,
+  .account-center .section-title,
+  .qqpd-manager .header-section h1,
+  .gying-manager .header-section h1,
+  .panlian-manager .header-section h1,
+  .weibo-manager .header-section h1 {
+    letter-spacing: 0;
+    color: #0f172a;
+  }
+
+  .config-container .tabs-nav {
+    border-radius: 0.5rem 0.5rem 0 0 !important;
+    background: rgba(248, 250, 252, 0.68) !important;
+  }
+
+  .config-container .tab-button.active,
+  .config-container .tab-button:hover {
+    background: rgba(255, 255, 255, 0.9) !important;
+  }
+
+  .config-container .tab-content {
+    border-radius: 0 0 0.5rem 0.5rem !important;
+  }
+
+  .config-container .item-card.selected,
+  .config-container .checkbox.checked,
+  .disktype-chip.selected {
+    border-color: rgba(37, 99, 235, 0.65) !important;
+    background: rgba(239, 246, 255, 0.9) !important;
+  }
+
+  .config-container .pane-content,
+  .export-modal-body,
+  .modal-body {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(100, 116, 139, 0.45) rgba(248, 250, 252, 0.4);
+  }
+
+  .login-overlay,
+  .export-modal-overlay,
+  .modal-overlay,
+  .detail-overlay {
+    background: rgba(15, 23, 42, 0.42) !important;
+    backdrop-filter: blur(12px);
+  }
+
+  .login-dialog,
+  .export-modal,
+  .modal-content,
+  .detail-dialog {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.86)) !important;
+  }
+
+  .export-section,
+  .disktype-chip,
+  .compact-choice,
+  .footer-btn,
+  .login-button,
+  .action-btn,
+  .save-btn,
+  .export-btn,
+  .reset-btn,
+  .back-button {
+    border-radius: 0.5rem !important;
+  }
+
+  .service-card .card-content,
+  .account-center .stat-card,
+  .config-container .item-card {
+    min-height: 0;
+  }
+
+  @media (max-width: 768px) {
+    .config-container,
+    .account-center,
+    .qqpd-manager,
+    .gying-manager,
+    .panlian-manager,
+    .weibo-manager {
+      padding-inline: 0.5rem;
+    }
+
+    .config-container .stats-bar {
+      gap: 0.75rem;
+      padding: 0.85rem 1rem;
+    }
+
+    .service-card .card-content {
+      align-items: flex-start;
+    }
+  }
+}

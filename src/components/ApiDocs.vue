@@ -856,9 +856,9 @@ const checkResponseFields = [
 
 // 网盘类型配置
 const cloudTypes = [
+  { id: 'quark', name: '夸克网盘', icon: '🟡' },
   { id: 'baidu', name: '百度网盘', icon: '🔵' },
   { id: 'aliyun', name: '阿里云盘', icon: '🟠' },
-  { id: 'quark', name: '夸克网盘', icon: '🟡' },
   { id: 'guangya', name: '光鸭云盘', icon: '🦆' },
   { id: 'tianyi', name: '天翼云盘', icon: '🔴' },
   { id: 'uc', name: 'UC网盘', icon: '🟢' },
@@ -872,7 +872,7 @@ const cloudTypes = [
 ];
 
 const detectableCloudTypes = cloudTypes.filter((type) =>
-  ['baidu', 'aliyun', 'quark', 'tianyi', 'uc', 'mobile', '115', 'xunlei', '123'].includes(type.id)
+  ['quark', 'baidu', 'aliyun', 'tianyi', 'uc', 'mobile', '115', 'xunlei', '123'].includes(type.id)
 );
 
 // 搜索表单数据

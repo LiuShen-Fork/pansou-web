@@ -11,15 +11,15 @@ const props = defineProps<{
 
 // 网盘类型配置
 const diskTypes = [
+  { id: 'quark', name: '夸克', color: '#1890ff' },
   { id: 'baidu', name: '百度', color: '#2932e1' },
   { id: 'aliyun', name: '阿里', color: '#ff6a00' },
-  { id: 'quark', name: '夸克', color: '#1890ff' },
   { id: 'guangya', name: '光鸭', color: '#0ea5a3' },
   { id: 'tianyi', name: '天翼', color: '#0066cc' },
-  { id: '115', name: '115', color: '#02a7f0' },
-  { id: 'xunlei', name: '迅雷', color: '#0090ff' },
   { id: 'uc', name: 'UC', color: '#ff6600' },
   { id: 'mobile', name: '移动', color: '#0080ff' },
+  { id: '115', name: '115', color: '#02a7f0' },
+  { id: 'xunlei', name: '迅雷', color: '#0090ff' },
   { id: 'pikpak', name: 'PikPak', color: '#ff4785' },
   { id: '123', name: '123', color: '#00b96b' },
   { id: 'magnet', name: '磁力', color: '#722ed1' },

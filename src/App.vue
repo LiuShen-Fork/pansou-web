@@ -14,7 +14,7 @@ import GyingManager from '@/components/GyingManager.vue';
 import PanlianManager from '@/components/PanlianManager.vue';
 import WeiboManager from '@/components/WeiboManager.vue';
 import ExportResultsModal from '@/components/ExportResultsModal.vue';
-import { getDiskTypeName } from '@/utils/diskTypes';
+import { getDiskTypeName, sortDiskTypes } from '@/utils/diskTypes';
 
 // 后端健康状态缓存（应用启动时获取一次）
 const backendHealth = ref<HealthStatus | null>(null);
@@ -65,10 +65,10 @@ const hasExportableResults = computed(() => {
   return Object.values(searchResults.mergedResults || {}).some(items => Array.isArray(items) && items.length > 0);
 });
 const exportableDiskTypes = computed(() => {
-  return Object.keys(searchResults.mergedResults || {}).filter(key => {
+  return sortDiskTypes(Object.keys(searchResults.mergedResults || {}).filter(key => {
     const items = searchResults.mergedResults[key];
     return Array.isArray(items) && items.length > 0;
-  });
+  }));
 });
 
 // 强制刷新逻辑

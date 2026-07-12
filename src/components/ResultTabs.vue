@@ -9,7 +9,7 @@ import type {
   MergedResults,
   MergedResultItem,
 } from '@/types';
-import { getDiskTypeName } from '@/utils/diskTypes';
+import { getDiskTypeName, sortDiskTypes } from '@/utils/diskTypes';
 import {
   buildHealthCacheKey,
   buildHealthRecord,
@@ -54,14 +54,14 @@ const pendingHealthMap = ref<Record<string, true>>({});
 const currentViewToken = ref('');
 
 const supportedDetectionDiskTypes = new Set([
-  'baidu',
   'quark',
+  'baidu',
   'aliyun',
-  'uc',
   'tianyi',
-  '123',
-  'xunlei',
+  'uc',
   '115',
+  'xunlei',
+  '123',
   'mobile'
 ]);
 
@@ -72,7 +72,7 @@ const inFlightKeys = new Set<string>();
 
 // 计算所有可用的网盘类型
 const diskTypes = computed(() => {
-  return Object.keys(props.mergedResults || {}).sort();
+  return sortDiskTypes(Object.keys(props.mergedResults || {}));
 });
 
 // 判断是否有搜索结果
