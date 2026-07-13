@@ -450,7 +450,7 @@ onMounted(() => {
                 <div class="space-y-2 text-sm">
                   <div class="flex justify-between items-center">
                     <span class="text-muted-foreground">状态</span>
-                    <div class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs">
+                    <div class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
                       <span class="w-2 h-2 bg-green-500 rounded-full"></span>
                       <span>已登录</span>
                     </div>

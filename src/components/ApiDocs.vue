@@ -1459,7 +1459,7 @@ const copyToClipboard = async (text: string) => {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-family: inherit;
 }
 
 .docs-header {

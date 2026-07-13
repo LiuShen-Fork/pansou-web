@@ -91,12 +91,6 @@ const openExternalLink = (e: MouseEvent) => {
   border-color: hsl(var(--primary));
 }
 
-@media (prefers-color-scheme: dark) {
-  .service-card:hover {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  }
-}
-
 .card-content {
   display: flex;
   align-items: center;
@@ -171,12 +165,6 @@ const openExternalLink = (e: MouseEvent) => {
 .status-active {
   color: hsl(142, 76%, 36%);
   font-weight: 500;
-}
-
-@media (prefers-color-scheme: dark) {
-  .status-active {
-    color: hsl(142, 76%, 46%);
-  }
 }
 
 .status-empty {

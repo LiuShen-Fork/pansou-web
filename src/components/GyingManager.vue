@@ -759,7 +759,7 @@ const copyHashToClipboard = async () => {
                 <div class="space-y-2 text-sm">
                   <div class="flex justify-between items-center">
                     <span class="text-muted-foreground">状态</span>
-                    <div class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs">
+                    <div class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
                       <span class="w-2 h-2 bg-green-500 rounded-full"></span>
                       <span>已登录</span>
                     </div>
@@ -995,18 +995,6 @@ const copyHashToClipboard = async () => {
   background: rgba(239, 68, 68, 0.1);
   color: #dc2626;
   border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-@media (prefers-color-scheme: dark) {
-  .alert-success {
-    background: rgba(16, 185, 129, 0.2);
-    color: #6ee7b7;
-  }
-  
-  .alert-error {
-    background: rgba(239, 68, 68, 0.2);
-    color: #fca5a5;
-  }
 }
 
 .slide-fade-enter-active {
@@ -1257,14 +1245,6 @@ const copyHashToClipboard = async () => {
   margin-bottom: 1rem;
   background: hsl(var(--muted) / 0.4);
   color: hsl(var(--muted-foreground));
-}
-
-@media (prefers-color-scheme: dark) {
-  .site-config-notice {
-    border-color: rgba(251, 191, 36, 0.3);
-    background: rgba(245, 158, 11, 0.18);
-    color: rgb(253, 230, 138);
-  }
 }
 
 /* 响应式 */

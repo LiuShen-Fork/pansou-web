@@ -5,14 +5,7 @@ import type { SearchResponse, MergedResults, ExportField, ExportSettings } from 
 import SearchForm from '@/components/SearchForm.vue';
 import ResultTabs from '@/components/ResultTabs.vue';
 import SearchStats from '@/components/SearchStats.vue';
-import SearchConfig from '@/components/SearchConfig.vue';
-import ApiDocs from '@/components/ApiDocs.vue';
 import LoginDialog from '@/components/LoginDialog.vue';
-import QQPDManager from '@/components/QQPDManager.vue';
-import AccountCenter from '@/components/AccountCenter.vue';
-import GyingManager from '@/components/GyingManager.vue';
-import PanlianManager from '@/components/PanlianManager.vue';
-import WeiboManager from '@/components/WeiboManager.vue';
 import ExportResultsModal from '@/components/ExportResultsModal.vue';
 import { getDiskTypeName, sortDiskTypes } from '@/utils/diskTypes';
 
@@ -75,7 +68,7 @@ const exportableDiskTypes = computed(() => {
 let forceRefreshPending = false;
 
 // 当前页面状态
-const currentPage = ref<'search' | 'status' | 'docs' | 'accounts' | 'qqpd' | 'gying' | 'panlian' | 'weibo'>('search');
+const currentPage = ref<'search' | 'accounts' | 'qqpd' | 'gying' | 'panlian' | 'weibo'>('search');
 
 // 登录状态
 const showLogin = ref(false);
@@ -100,14 +93,6 @@ const hasAccountServices = computed(() => {
 });
 
 // 页面切换
-const switchToStatus = () => {
-  currentPage.value = 'status';
-};
-
-const switchToDocs = () => {
-  currentPage.value = 'docs';
-};
-
 const switchToAccounts = () => {
   currentPage.value = 'accounts';
 };
@@ -1185,91 +1170,50 @@ onUnmounted(() => {
     />
     
     <!-- 背景装饰 -->
-    <div class="bg-decorative"></div>
+    <div class="bg-decorative" aria-hidden="true">
+      <span>青海长云暗雪山</span>
+      <span>孤城遥望玉门关</span>
+      <span>黄沙百战穿金甲</span>
+      <span>不破楼兰终不还</span>
+    </div>
     
     <!-- 导航栏 -->
-    <nav ref="navHeaderRef" class="nav-header backdrop-blur-md bg-background/80 border-b border-border">
-      <div class="container mx-auto px-4 h-16 flex items-center justify-between">
-        <div class="flex items-center gap-3 cursor-pointer" @click="switchToSearch">
-          <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <svg class="w-5 h-5 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
-          </div>
+    <nav ref="navHeaderRef" class="nav-header">
+      <div class="container mx-auto px-4 nav-inner">
+        <div class="brand-lockup cursor-pointer" @click="switchToSearch">
+          <img src="/favicon.ico" alt="Qingyu PanSou" class="brand-icon" />
           <div>
-            <h1 class="text-xl font-bold">PanSou</h1>
+            <h1 class="brand-title">Qingyu PanSou</h1>
+            <p class="brand-subtitle">清羽盘搜</p>
           </div>
         </div>
         
-        <!-- 导航菜单 -->
-        <nav class="flex items-center gap-2">
-          <button 
-            @click="switchToSearch"
-            class="nav-button"
-            :class="{ 'active': currentPage === 'search' }"
-            title="搜索"
+        <nav class="nav-actions" aria-label="站点链接">
+          <a
+            href="https://www.liushen.fun/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="nav-link"
           >
-            <span class="nav-icon">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-              </svg>
-            </span>
-            <span class="nav-text">搜索</span>
-          </button>
-          <button 
-            @click="switchToStatus"
-            class="nav-button"
-            :class="{ 'active': currentPage === 'status' }"
-            title="配置"
+            站长主页
+          </a>
+          <a
+            href="https://blog.liushen.fun/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="nav-link"
           >
-            <span class="nav-icon">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-              </svg>
-            </span>
-            <span class="nav-text">配置</span>
-          </button>
-          <button 
-            @click="switchToDocs"
-            class="nav-button"
-            :class="{ 'active': currentPage === 'docs' }"
-            title="API文档"
-          >
-            <span class="nav-icon">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <!-- 文档外框 -->
-                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M14 2v6h6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <!-- API文字 -->
-                <text x="12" y="15" font-size="6" font-weight="bold" text-anchor="middle" fill="currentColor" font-family="Arial, sans-serif">API</text>
-              </svg>
-            </span>
-            <span class="nav-text">API</span>
-          </button>
-          <button 
-            v-if="hasAccountServices"
-            @click="switchToAccounts"
-            class="nav-button"
-            :class="{ 'active': currentPage === 'accounts' || currentPage === 'qqpd' || currentPage === 'gying' || currentPage === 'panlian' || currentPage === 'weibo' }"
-            title="账号管理"
-          >
-            <span class="nav-icon">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-              </svg>
-            </span>
-            <span class="nav-text">账号</span>
-          </button>
-          <button 
+            站长博客
+          </a>
+          <button
             v-if="isAuthenticated"
             @click="handleLogout"
             class="nav-button logout-button"
             :title="'退出登录 (当前用户: ' + currentUsername + ')'"
           >
             <span class="nav-icon">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
               </svg>
             </span>
             <span class="nav-text">退出</span>
@@ -1351,56 +1295,15 @@ onUnmounted(() => {
         />
       </div>
       
-      <!-- 配置页面 -->
-      <div v-else-if="currentPage === 'status'" class="status-page">
-        <SearchConfig :backend-health="backendHealth" />
-      </div>
-      
-      <!-- API文档页面 -->
-      <div v-else-if="currentPage === 'docs'" class="docs-page">
-        <ApiDocs />
-      </div>
-      
-      <!-- 账号管理中心页面 -->
-      <div v-else-if="currentPage === 'accounts'" class="accounts-page">
-        <AccountCenter 
-          :backend-health="backendHealth"
-          @navigate="handleAccountNavigate"
-        />
-      </div>
-      
-      <!-- QQ频道管理页面 -->
-      <div v-else-if="currentPage === 'qqpd'" class="qqpd-page">
-        <QQPDManager @back-to-center="switchToAccounts" />
-      </div>
-      
-      <!-- 观影管理页面 -->
-      <div v-else-if="currentPage === 'gying'" class="gying-page">
-        <GyingManager @back-to-center="switchToAccounts" />
-      </div>
-
-      <div v-else-if="currentPage === 'panlian'" class="panlian-page">
-        <PanlianManager @back-to-center="switchToAccounts" />
-      </div>
-      
-      <!-- 微博管理页面 -->
-      <div v-else-if="currentPage === 'weibo'" class="weibo-page">
-        <WeiboManager @back-to-center="switchToAccounts" />
-      </div>
     </main>
     
     <!-- 页脚 -->
-    <footer ref="footerRef" class="footer-shell border-t border-border bg-background/50 backdrop-blur-sm mt-auto">
-      <div class="container mx-auto px-4 py-4">
-        <div class="flex items-center justify-center gap-4 text-sm text-muted-foreground">
-          <span>© {{ new Date().getFullYear() }}-{{ new Date().getFullYear() + 10 }}</span>
-          <a href="https://dm.xueximeng.com/" target="_blank" rel="noopener noreferrer" class="hover:text-foreground transition-colors">美漫资源共建</a>
-          <a href="/report.html" target="_blank" rel="noopener noreferrer" class="hover:text-foreground transition-colors">实时监控</a>
-          <a href="https://github.com/fish2018" target="_blank" rel="noopener noreferrer" class="hover:text-foreground transition-colors">
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
-            </svg>
-          </a>
+    <footer ref="footerRef" class="footer-shell mt-auto">
+      <div class="container mx-auto px-4 py-5">
+        <div class="footer-links">
+          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">陕ICP备2024028531号</a>
+          <a href="https://beian.mps.gov.cn/#/query/webSearch?code=61011602000637" target="_blank" rel="noopener noreferrer">陕公网安备61011602000637号</a>
+          <span>© {{ new Date().getFullYear() }} Qingyu PanSou</span>
         </div>
       </div>
     </footer>
@@ -1410,72 +1313,169 @@ onUnmounted(() => {
 <style scoped>
 .bg-decorative {
   position: fixed;
-  inset: 0;
-  z-index: -10;
-  background-image: radial-gradient(circle at 1px 1px, hsl(var(--muted-foreground)) 1px, transparent 0);
-  background-size: 20px 20px;
-  opacity: 0.1;
+  top: 40vh;
+  left: 42vw;
+  z-index: 0;
+  display: grid;
+  gap: clamp(0.45rem, 1vw, 0.9rem);
+  width: 86vw;
+  pointer-events: none;
+  user-select: none;
+  transform: translateY(-12%) rotate(-2deg);
+  color: rgba(67, 56, 202, 0.16);
+  font-family: "Zhuque Fangsong (technical preview)", "Noto Sans SC", sans-serif;
+  font-size: clamp(3.7rem, 8.8vw, 9.6rem);
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: 0.11em;
+  white-space: nowrap;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.32);
+  mix-blend-mode: multiply;
+}
+
+.nav-header,
+.main-content,
+.footer-shell {
+  position: relative;
+  z-index: 1;
+}
+
+.bg-decorative span {
+  display: block;
+  transform: translateX(var(--poem-offset, 0));
+}
+
+.bg-decorative span:nth-child(2) {
+  --poem-offset: 7vw;
+}
+
+.bg-decorative span:nth-child(3) {
+  --poem-offset: 13vw;
+}
+
+.bg-decorative span:nth-child(4) {
+  --poem-offset: 20vw;
 }
 
 .nav-header {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 50;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none;
+}
+
+.nav-inner {
+  min-height: 5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.brand-icon {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.55rem;
+  object-fit: contain;
+  box-shadow: 0 8px 24px rgba(49, 46, 129, 0.1);
+}
+
+.brand-title {
+  margin: 0;
+  color: rgba(30, 27, 75, 0.96);
+  font-size: 1.08rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.brand-subtitle {
+  margin: 0.18rem 0 0;
+  color: rgba(67, 56, 202, 0.66);
+  font-size: 0.76rem;
+  line-height: 1;
+}
+
+.nav-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  min-height: 2.15rem;
+  padding: 0.38rem 0.64rem;
+  border: 1px solid transparent;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: rgba(49, 46, 129, 0.76);
+  font-size: 0.84rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.nav-link:hover {
+  background: rgba(238, 242, 255, 0.72);
+  border-color: rgba(199, 210, 254, 0.72);
+  color: rgba(49, 46, 129, 0.98);
 }
 
 /* 导航按钮样式 */
 .nav-button {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  min-height: 2.5rem;
-  padding: 0.5rem 0.95rem;
-  background: rgba(255, 255, 255, 0.54);
-  color: rgba(51, 65, 85, 0.92);
-  border: 1px solid rgba(226, 232, 240, 0.78);
-  border-radius: 9999px;
+  gap: 0.4rem;
+  min-height: 2.25rem;
+  padding: 0.42rem 0.72rem;
+  background: transparent;
+  color: rgba(71, 85, 105, 0.95);
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
-  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
-  transition: transform 0.2s ease, color 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: none;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .nav-button:hover {
-  transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.88);
-  color: hsl(var(--primary));
-  border-color: rgba(59, 130, 246, 0.34);
-  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.12);
+  background: rgba(238, 242, 255, 0.72);
+  color: rgba(49, 46, 129, 0.98);
+  border-color: rgba(199, 210, 254, 0.72);
+  box-shadow: none;
 }
 
 .nav-button.active {
-  background: linear-gradient(135deg, #2563eb, #06b6d4);
+  background: rgba(15, 23, 42, 0.92);
   color: #fff;
-  border-color: transparent;
-  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.24);
+  border-color: rgba(15, 23, 42, 0.92);
+  box-shadow: none;
 }
 
 .logout-button {
-  border-color: rgba(239, 68, 68, 0.28);
-  color: rgb(220, 38, 38);
+  border-color: transparent;
+  color: rgba(127, 29, 29, 0.82);
 }
 
 .logout-button:hover {
-  background: rgba(254, 242, 242, 0.92);
-  border-color: rgba(239, 68, 68, 0.42);
+  background: rgba(254, 242, 242, 0.86);
+  border-color: rgba(254, 202, 202, 0.9);
   color: rgb(185, 28, 28);
-  box-shadow: 0 12px 28px rgba(239, 68, 68, 0.12);
+  box-shadow: none;
 }
-
-@media (prefers-color-scheme: dark) {
-  .logout-button:hover {
-    background: hsl(0, 84%, 20%);
-    color: hsl(0, 84%, 90%);
-  }
-}
-
-
 
 .nav-icon {
   display: flex;
@@ -1493,6 +1493,31 @@ onUnmounted(() => {
   animation: fadeIn 0.3s ease-in-out;
 }
 
+.footer-shell {
+  border-top: 1px solid rgba(199, 210, 254, 0.46);
+  background: transparent;
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  color: rgba(79, 70, 229, 0.58);
+  font-size: 0.82rem;
+}
+
+.footer-links a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.footer-links a:hover {
+  color: rgba(49, 46, 129, 0.94);
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -1506,20 +1531,50 @@ onUnmounted(() => {
 
 @media (max-width: 768px) {
   .app-shell {
-    --mobile-footer-height: calc(3.15rem + env(safe-area-inset-bottom));
-    height: 100dvh;
     min-height: 100dvh;
-    overflow: hidden;
+    overflow-x: hidden;
+  }
+
+  .bg-decorative {
+    top: 39vh;
+    left: 18vw;
+    width: 130vw;
+    font-size: clamp(3.3rem, 18vw, 6.5rem);
+    color: rgba(67, 56, 202, 0.13);
+  }
+
+  .nav-inner {
+    min-height: auto;
+    padding-top: 1rem;
+    padding-bottom: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .brand-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .brand-title {
+    font-size: 0.98rem;
+  }
+
+  .nav-actions {
+    gap: 0.2rem;
+  }
+
+  .nav-link {
+    min-height: 2rem;
+    padding: 0.3rem 0.45rem;
+    font-size: 0.78rem;
   }
 
   .main-content {
     flex: 1 1 auto;
-    height: calc(100dvh - 4rem - var(--mobile-footer-height));
     min-height: 0;
     box-sizing: border-box;
-    padding-top: 2rem;
-    padding-bottom: 0.5rem;
-    overflow: hidden;
+    padding-top: 1.35rem;
+    padding-bottom: 1rem;
     overflow-x: hidden;
   }
 
@@ -1528,30 +1583,23 @@ onUnmounted(() => {
   }
 
   .footer-shell {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 30;
-    min-height: var(--mobile-footer-height);
     margin-top: 0 !important;
   }
 
   .footer-shell .container {
     box-sizing: border-box;
-    padding-top: 0.2rem;
-    padding-bottom: calc(0.2rem + env(safe-area-inset-bottom));
-    min-height: var(--mobile-footer-height);
+    padding-top: 0.75rem;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
     display: flex;
     align-items: center;
     justify-content: center;
   }
 
   .footer-shell .container > div {
-    gap: 1rem;
-    font-size: 0.875rem;
+    gap: 0.5rem 0.8rem;
+    font-size: 0.75rem;
     line-height: 1.25;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
   }
 

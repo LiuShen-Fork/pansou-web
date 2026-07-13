@@ -204,14 +204,6 @@ const handleLogin = async () => {
   animation: shake 0.3s ease-out;
 }
 
-@media (prefers-color-scheme: dark) {
-  .error-message {
-    background: hsl(0, 84%, 20%);
-    border-color: hsl(0, 84%, 30%);
-    color: hsl(0, 84%, 90%);
-  }
-}
-
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-10px); }
