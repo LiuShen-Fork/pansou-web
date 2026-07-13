@@ -166,14 +166,14 @@ const handleSearch = () => {
               placeholder="搜索资源、电影、音乐、软件..."
               :disabled="loading"
               @keydown.enter="handleSearch"
-              class="flex h-10 outline-none focus:outline-none rounded-md border bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 w-full text-center pl-12 pr-12 transition-all duration-300 border-primary/20 hover:border-primary/40 shadow-sm hover:shadow-md focus-visible:shadow-lg focus-visible:ring-primary/30 focus-visible:ring-offset-0 focus-visible:border-primary/60"
+              class="search-pill-input"
             />
             <!-- 搜索按钮 -->
             <button
               type="button"
               @click="handleSearch"
               :disabled="loading || !keyword.trim()"
-              class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 w-10 absolute right-0 top-0 h-full rounded-l-none transition-all duration-300 border-0 hover:border hover:border-l-0 hover:border-primary/40 hover:bg-primary hover:text-primary-foreground hover:scale-[1.03]"
+              class="search-submit-button"
             >
               <component 
                 :is="loading ? Icons.Loading() : Icons.Send()" 
@@ -255,34 +255,103 @@ const handleSearch = () => {
   width: 100%;
 }
 
+.search-pill-input {
+  width: 100%;
+  height: 3.5rem;
+  border: 1px solid rgba(37, 99, 235, 0.22);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: hsl(var(--foreground));
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  outline: none;
+  padding: 0 4rem;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.search-pill-input::placeholder {
+  color: rgba(100, 116, 139, 0.76);
+  font-weight: 400;
+}
+
+.search-pill-input:hover {
+  border-color: rgba(37, 99, 235, 0.42);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 20px 54px rgba(37, 99, 235, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
+
+.search-pill-input:focus {
+  border-color: rgba(37, 99, 235, 0.62);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 22px 60px rgba(37, 99, 235, 0.16), 0 0 0 4px rgba(59, 130, 246, 0.12);
+}
+
+.search-pill-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.search-submit-button {
+  position: absolute;
+  top: 0.375rem;
+  right: 0.375rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 0;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #2563eb, #06b6d4);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.24);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.search-submit-button:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.3);
+}
+
+.search-submit-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: none;
+}
+
 /* 高级选项切换按钮（左侧） */
 .advanced-toggle-left {
   position: absolute;
-  left: 0;
-  top: 0;
+  left: 0.375rem;
+  top: 0.375rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 6px 0 0 6px;
-  background: transparent;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  background: rgba(248, 250, 252, 0.82);
   border: none;
-  border-right: 1px solid hsl(var(--border));
   color: hsl(var(--muted-foreground));
   cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.8);
   transition: all 0.2s ease;
   z-index: 10;
 }
 
 .advanced-toggle-left:hover {
-  background: hsl(var(--accent));
-  color: hsl(var(--accent-foreground));
+  background: rgba(239, 246, 255, 0.95);
+  color: hsl(var(--primary));
+  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.26);
 }
 
 .advanced-toggle-left.active {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
+  background: linear-gradient(135deg, #2563eb, #06b6d4);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
 }
 
 .advanced-toggle-left.has-filter {
