@@ -71,10 +71,24 @@
   * {
     @apply border-border;
   }
+
+  html {
+    font-family: Inter, "HarmonyOS Sans SC", "MiSans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
   
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
   }
 }
 
@@ -432,10 +446,20 @@
   }
 
   .config-container .item-card.selected,
-  .config-container .checkbox.checked,
   .disktype-chip.selected {
     border-color: rgba(37, 99, 235, 0.65) !important;
     background: rgba(239, 246, 255, 0.9) !important;
+  }
+
+  .config-container .checkbox.checked {
+    border-color: rgba(37, 99, 235, 0.95) !important;
+    background: linear-gradient(135deg, #2563eb, #06b6d4) !important;
+    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.22);
+  }
+
+  .config-container .checkbox.checked .check-icon {
+    color: #fff !important;
+    filter: drop-shadow(0 1px 1px rgba(15, 23, 42, 0.18));
   }
 
   .config-container .pane-content,

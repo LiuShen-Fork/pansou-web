@@ -1428,38 +1428,44 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: transparent;
-  color: hsl(var(--muted-foreground));
-  border: 1px solid hsl(var(--border));
-  border-radius: 0.375rem;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.95rem;
+  background: rgba(255, 255, 255, 0.54);
+  color: rgba(51, 65, 85, 0.92);
+  border: 1px solid rgba(226, 232, 240, 0.78);
+  border-radius: 9999px;
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+  transition: transform 0.2s ease, color 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .nav-button:hover {
-  background: hsl(var(--accent));
-  color: hsl(var(--accent-foreground));
-  border-color: hsl(var(--accent));
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.88);
+  color: hsl(var(--primary));
+  border-color: rgba(59, 130, 246, 0.34);
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.12);
 }
 
 .nav-button.active {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  border-color: hsl(var(--primary));
+  background: linear-gradient(135deg, #2563eb, #06b6d4);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.24);
 }
 
 .logout-button {
-  border-color: hsl(0, 84%, 60%);
-  color: hsl(0, 84%, 60%);
+  border-color: rgba(239, 68, 68, 0.28);
+  color: rgb(220, 38, 38);
 }
 
 .logout-button:hover {
-  background: hsl(0, 84%, 95%);
-  border-color: hsl(0, 84%, 60%);
-  color: hsl(0, 84%, 50%);
+  background: rgba(254, 242, 242, 0.92);
+  border-color: rgba(239, 68, 68, 0.42);
+  color: rgb(185, 28, 28);
+  box-shadow: 0 12px 28px rgba(239, 68, 68, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
