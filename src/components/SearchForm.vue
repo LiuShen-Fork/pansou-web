@@ -140,7 +140,7 @@ const handleSearch = () => {
         <img src="/favicon.ico" alt="清羽盘搜" class="w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14" />
         清羽盘搜
       </p>
-      <p class="text-sm md:text-base lg:text-lg text-muted-foreground/80 transition-all">清羽飞扬自建聚合网盘搜索</p>
+      <p class="text-sm md:text-base lg:text-lg text-muted-foreground/80 transition-all">清羽飞扬自建网盘搜索，众多资源，一键直达</p>
     </div>
     <div class="search-container">
       <!-- 主搜索框 -->
@@ -253,39 +253,41 @@ const handleSearch = () => {
   flex-direction: column;
   gap: 0.75rem;
   width: 100%;
+  max-width: 56rem;
+  margin: 0 auto;
 }
 
 .search-pill-input {
   width: 100%;
-  height: 3.5rem;
-  border: 1px solid rgba(37, 99, 235, 0.22);
+  height: 2.75rem;
+  border: 1px solid rgba(203, 213, 225, 0.92);
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.9);
   color: hsl(var(--foreground));
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.95);
   outline: none;
-  padding: 0 4rem;
-  text-align: center;
-  font-size: 1rem;
-  font-weight: 500;
+  padding: 0 3.2rem;
+  text-align: left;
+  font-size: 0.95rem;
+  font-weight: 400;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .search-pill-input::placeholder {
-  color: rgba(100, 116, 139, 0.76);
+  color: rgba(100, 116, 139, 0.68);
   font-weight: 400;
 }
 
 .search-pill-input:hover {
-  border-color: rgba(37, 99, 235, 0.42);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 20px 54px rgba(37, 99, 235, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.98);
+  border-color: rgba(148, 163, 184, 0.9);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.98);
 }
 
 .search-pill-input:focus {
-  border-color: rgba(37, 99, 235, 0.62);
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 22px 60px rgba(37, 99, 235, 0.16), 0 0 0 4px rgba(59, 130, 246, 0.12);
+  border-color: rgba(15, 23, 42, 0.44);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.1), 0 0 0 3px rgba(15, 23, 42, 0.05);
 }
 
 .search-pill-input:disabled {
@@ -295,25 +297,25 @@ const handleSearch = () => {
 
 .search-submit-button {
   position: absolute;
-  top: 0.375rem;
-  right: 0.375rem;
+  top: 0;
+  right: 0.25rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.75rem;
+  width: 2.55rem;
   height: 2.75rem;
   border: 0;
-  border-radius: 9999px;
-  background: linear-gradient(135deg, #2563eb, #06b6d4);
-  color: #fff;
+  border-radius: 0;
+  background: transparent;
+  color: rgba(15, 23, 42, 0.76);
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.24);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  box-shadow: none;
+  transition: color 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
 }
 
 .search-submit-button:hover:not(:disabled) {
-  transform: translateY(-1px) scale(1.03);
-  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.3);
+  transform: translateX(1px);
+  color: rgba(37, 99, 235, 0.95);
 }
 
 .search-submit-button:disabled {
@@ -325,50 +327,41 @@ const handleSearch = () => {
 /* 高级选项切换按钮（左侧） */
 .advanced-toggle-left {
   position: absolute;
-  left: 0.375rem;
-  top: 0.375rem;
+  left: 0.25rem;
+  top: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.75rem;
+  width: 2.55rem;
   height: 2.75rem;
-  border-radius: 9999px;
-  background: rgba(248, 250, 252, 0.82);
+  border-radius: 0;
+  background: transparent;
   border: none;
-  color: hsl(var(--muted-foreground));
+  color: rgba(100, 116, 139, 0.9);
   cursor: pointer;
-  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.8);
-  transition: all 0.2s ease;
+  box-shadow: none;
+  transition: color 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
   z-index: 10;
 }
 
 .advanced-toggle-left:hover {
-  background: rgba(239, 246, 255, 0.95);
-  color: hsl(var(--primary));
-  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.26);
+  background: transparent;
+  color: rgba(37, 99, 235, 0.95);
+  transform: translateX(-1px);
 }
 
 .advanced-toggle-left.active {
-  background: linear-gradient(135deg, #2563eb, #06b6d4);
-  color: #fff;
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
+  background: transparent;
+  color: rgba(37, 99, 235, 0.98);
+  box-shadow: none;
 }
 
 .advanced-toggle-left.has-filter {
-  background: hsl(var(--primary) / 0.1);
   color: hsl(var(--primary));
 }
 
 .advanced-toggle-left.has-filter::after {
-  content: '';
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 8px;
-  height: 8px;
-  background: hsl(var(--primary));
-  border-radius: 50%;
-  border: 2px solid hsl(var(--background));
+  content: none;
 }
 
 /* 高级选项面板 */
