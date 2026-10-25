@@ -3,11 +3,15 @@ package admin
 import (
 	"database/sql"
 	"fmt"
-	"pansou/util/json"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
+
+	"pansou/util/json"
 )
+
+var safeProviderSlug = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{1,31}$`)
 
 const (
 	settingKeyAuth  = "auth"
@@ -174,6 +178,9 @@ func SaveOAuthProvider(p *OAuthProvider) error {
 	p.Name = strings.TrimSpace(p.Name)
 	if p.Slug == "" || p.Name == "" {
 		return fmt.Errorf("服务商标识和名称不能为空")
+	}
+	if !safeProviderSlug.MatchString(p.Slug) {
+		return fmt.Errorf("服务商标识仅允许小写字母、数字、下划线和连字符")
 	}
 	now := Now()
 	if p.ID == 0 {

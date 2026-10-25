@@ -172,6 +172,7 @@ const savePassword = async () => {
     password.current = '';
     password.next = '';
     await refreshMe();
+    await Promise.all([loadToken(), loadBindings()]);
     message.value = '密码已更新，其他设备的会话已退出';
   } catch (err: any) {
     error.value = err.response?.data?.error || '修改密码失败';

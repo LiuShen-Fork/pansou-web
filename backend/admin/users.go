@@ -231,8 +231,15 @@ func UpdateUser(id int64, upd UserUpdate) (*User, error) {
 	}
 	if upd.Username != nil {
 		name := strings.TrimSpace(*upd.Username)
-		if err := validateUsernameChars(name); err != nil {
-			return nil, err
+		// 普通用户不能改成 admin/root 等保留名；管理员允许沿用 admin。
+		var nameErr error
+		if u.Role == RoleAdmin {
+			nameErr = validateUsernameChars(name)
+		} else {
+			nameErr = ValidateUsername(name)
+		}
+		if nameErr != nil {
+			return nil, nameErr
 		}
 		if _, err := DB.Exec(`UPDATE users SET username = ?, updated_at = ? WHERE id = ?`, name, Now(), id); err != nil {
 			if strings.Contains(strings.ToLower(err.Error()), "unique") {
@@ -633,5 +640,10 @@ func truncate(s string, max int) string {
 	if len(s) <= max {
 		return s
 	}
-	return s[:max]
+	// 按 rune 截断，避免把 UTF-8 字符切成半个字节。
+	runes := []rune(s)
+	if len(runes) <= max {
+		return s
+	}
+	return string(runes[:max])
 }

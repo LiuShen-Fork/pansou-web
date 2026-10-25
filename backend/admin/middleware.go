@@ -119,8 +119,7 @@ func RequireAuth() gin.HandlerFunc {
 
 func passwordChangeAllowed(path string) bool {
 	switch path {
-	case "/api/auth/me", "/api/auth/logout", "/api/auth/change-password",
-		"/api/auth/token", "/api/auth/token/reset", "/api/auth/profile":
+	case "/api/auth/me", "/api/auth/logout", "/api/auth/change-password":
 		return true
 	}
 	return false
