@@ -1,254 +1,198 @@
-# PanSou Web
+# Qingyu PanSou
 
-🚀 镜像集成Pansou前后端，开箱即用。
+🚀 PanSou 前后端同仓维护版：Vue 3 前端 + Go 后端 + 账户体系 + 管理后台。
 
-[![Multi-Arch](https://img.shields.io/badge/arch-amd64%20%7C%20arm64-blue)](https://github.com/fish2018/pansou-web)
+- 前端：`frontend/`（Vue 3 + Vite + Tailwind）
+- 后端：`backend/`（以 git subtree 引入上游 [fish2018/pansou](https://github.com/fish2018/pansou)，并叠加账户/后台能力）
+- 镜像：根目录多阶段 `Dockerfile` 一次构建前后端，支持 `linux/amd64` / `linux/arm64`
+- 上游数据：构建时与运行时都会自动抓取上游的 TG 频道与启用插件列表，不再需要手工维护
 
 ## 快速开始
-
-### 一键启动
-
-```bash
-docker run -d --name pansou -p 80:80 ghcr.io/fish2018/pansou-web
-```
-
-访问：http://localhost
 
 ### Docker Compose（推荐）
 
 ```bash
-# 下载配置文件
-curl -o docker-compose.yml https://raw.githubusercontent.com/fish2018/pansou-web/main/docker-compose.yml
-
-# 启动服务
-docker-compose up -d
-
-# 查看日志
-docker-compose logs -f
+curl -O https://raw.githubusercontent.com/willow-god/pansou-web/main/docker-compose.yml
+docker compose up -d
 ```
 
-## 支持架构
+访问 `http://localhost`。
 
-镜像支持以下CPU架构：
-- `linux/amd64` - Intel/AMD 64位处理器
-- `linux/arm64` - ARM 64位处理器
-
-Docker会自动选择适合您系统的架构版本。
-
-## 环境变量
-
-### 基础配置
-
-| 变量名 | 默认值 | 说明 |
-|--------|--------|------|
-| `DOMAIN` | `localhost` | 访问域名 |
-| `ENABLED_PLUGINS` | `dyyjpro,duoduo,feikuai,gaoqing888,gying,hdmoli,haitunsou,hunhepan,ikantv,jutoushe,kkv,libvio,lingjisp,lou1,melost,meitizy,miosou,nyaa,ouge,panlian,pansearch,qqpd,quark4k,quarksoo,quarktv,qupanshe,sousou,thepiratebay,ting77,wanou,weibo,xb6v,xiaokupan,xiaozhang,xiaoyu,yunso,yunsou,zlxapp,zxzj` | 启用的搜索插件（逗号分隔） |
-
-> 🔌 **重要变更**: 从当前版本开始，必须通过 `ENABLED_PLUGINS` 显式指定要启用的插件，否则不会启用任何插件。
-
-### Telegram频道配置
-
-| 变量名 | 默认值 | 说明 |
-|--------|--------|------|
-| `CHANNELS` | **已内置数十个频道，开箱即用，无需配置** | Telegram频道列表（逗号分隔） |
-
-> 💡 **自定义频道**: 如需自定义，使用 `CHANNELS` 环境变量覆盖默认配置。
-
-### 代理配置
-
-| 变量名 | 默认值 | 说明 | 示例 |
-|--------|--------|------|------|
-| `PROXY` | 无 | 代理服务器地址 | `socks5://xxx.xxx.xxx.xxx:7897` |
-
-**支持的代理类型：**
-- SOCKS5代理: `socks5://xxx.xxx.xxx.xxx:7897`
-
-**使用场景：**
-- 访问被墙的Telegram频道
-- 加速国外资源访问
-- 企业内网代理
+### 直接运行镜像
 
 ```bash
-# 示例
--e PROXY=socks5://xxx.xxx.xxx.xxx:7897
-```
-
-### 性能配置
-
-| 变量名 | 默认值 | 说明 |
-|--------|--------|------|
-| `CACHE_ENABLED` | `true` | 是否启用缓存 |
-| `CACHE_TTL` | `60` | 缓存过期时间（分） |
-| `MAX_CONCURRENCY` | `200` | 最大并发数 |
-| `MAX_PAGES` | `30` | 最大搜索页数 |
-
-> ⚡ **性能优化**: 镜像已内置优化配置，通常无需调整。
-
-### 认证配置（可选）
-
-| 变量名 | 默认值 | 说明 |
-|--------|--------|------|
-| `AUTH_ENABLED` | `false` | 是否启用认证功能 |
-| `AUTH_USERS` | - | 用户账号配置，格式：`user1:pass1,user2:pass2` |
-| `AUTH_TOKEN_EXPIRY` | `24` | Token有效期（小时） |
-| `AUTH_JWT_SECRET` | 自动生成 | JWT签名密钥，建议手动设置 |
-
-> 🔐 **安全认证**: 启用后，访问应用需要登录。适合需要访问控制的场景。
-
----
-
-## 前端页面配置和访问控制说明
-
-本仓库的 Web 页面主要提供搜索入口、搜索偏好配置、API 调试文档和部分账号型插件的管理入口。部署前建议先区分“服务端全局配置”和“浏览器本地配置”：
-
-| 配置位置 | 保存位置 | 影响范围 |
-|--------|--------|--------|
-| Docker / Compose 环境变量 | 容器环境变量 | 全局生效，决定后端实际启用的插件、频道、缓存、代理和认证 |
-| Web 页面“搜索配置” | 当前浏览器 `localStorage` | 只影响当前浏览器发起搜索时携带的频道、插件、网盘类型参数 |
-| 账号型插件管理 | 浏览器本地记录 + 后端插件接口 | 用于 QQ 频道、观影、盘链、微博等需要登录态/账号数据的插件 |
-
-### 页面里的“搜索配置”会改服务器吗？
-
-不会。页面里的频道、插件、网盘类型选择会写入当前浏览器的 `localStorage`，用于后续搜索请求拼接 `channels`、`plugins`、`cloud_types` 参数。其他访问者看不到你的浏览器本地配置，也不会因此修改服务器上的 `ENABLED_PLUGINS`、`CHANNELS` 或 Docker 配置。
-
-真正的全局可用范围仍以后端为准：
-
-- `ENABLED_PLUGINS` 决定服务端允许启用的插件集合。
-- `CHANNELS` 决定服务端默认 Telegram 频道集合。
-- `CACHE_ENABLED`、`CACHE_TTL`、`MAX_CONCURRENCY`、`MAX_PAGES` 决定服务端缓存和搜索性能策略。
-- `PROXY` 用于服务端访问 Telegram 或外部资源时走代理。
-
-### 启用认证后限制哪些功能？
-
-当 `AUTH_ENABLED=true` 时，前端会显示登录弹窗，并把登录得到的 token 放在请求头 `Authorization: Bearer <token>` 中。真正的安全边界在后端接口校验，不在前端按钮是否隐藏。
-
-一般理解：
-
-- 网页搜索会受后端认证限制；未登录时搜索接口应返回 401。
-- API 搜索同样会受后端认证限制；直接调用 `/api/search` 也需要带 token。
-- `/api/auth/login` 用于获取 token，`/api/auth/verify` 用于校验 token。
-- 页面“搜索配置”即使能打开，也只是浏览器本地偏好；未登录用户不能绕过后端认证调用受保护接口。
-
-公网部署建议启用认证，并使用强密码和固定的 `AUTH_JWT_SECRET`：
-
-```bash
--e AUTH_ENABLED=true
--e AUTH_USERS=admin:MyStrongPassword
--e AUTH_TOKEN_EXPIRY=168
--e AUTH_JWT_SECRET=$(openssl rand -base64 32)
-```
-
-如果你希望整个站点完全私有，也可以在反向代理或面板层再加一层访问控制。
-
-### 常用管理项怎么用？
-
-- 搜索页：输入关键词后发起聚合搜索。前端会根据本地搜索配置优先搜索 Telegram、插件或两者。
-- 搜索配置：选择当前浏览器本次要使用的 Telegram 频道、插件、网盘类型和链接检测开关。
-- 导出配置：把当前选择的插件和频道导出成 `ENABLED_PLUGINS` / `CHANNELS`，方便写回 Docker 环境变量。
-- API 文档：调试 `/api/search`、`/api/health`、`/api/auth/*` 等接口；启用认证后需要填写或使用当前登录 token。
-- 账号管理：仅当后端启用了对应插件时显示，用于管理 QQ 频道、观影、盘链、微博等插件所需的账号或登录态。
-
----
-
-## 🎯 常见配置场景
-
-### 场景1：个人使用（最小配置）
-
-```bash
-docker run -d \
-  --name pansou \
+docker run -d --name pansou \
   -p 80:80 \
   -v pansou-data:/app/data \
   --restart unless-stopped \
-  ghcr.io/fish2018/pansou-web:latest
+  ghcr.io/willow-god/pansou-web:latest
 ```
 
-### 场景2：公网服务（带域名和SSL）
+> 所有持久化数据（缓存、日志、SSL 证书、账户数据库）都在 `/app/data`，升级镜像不会丢失。
+
+## 默认管理员
+
+首次启动会自动创建：
+
+| 账号 | 密码 |
+| --- | --- |
+| `admin` | `admin123456` |
+
+登录后会强制要求修改密码，修改前只能访问“用户中心/修改密码”等必要接口。
+
+> 🔐 公网部署前请务必修改默认密码，并在管理后台启用 HTTPS/反向代理。
+> 忘记密码时可删除数据卷中的 `pansou-admin.db` 重新初始化（会清空账户数据）。
+
+## 账户与权限
+
+登录页与后台支持以下组合，均可在「管理后台 → 认证与站点」中开关：
+
+| 功能 | 说明 |
+| --- | --- |
+| 用户名/邮箱 + 密码登录 | 管理员始终可以密码登录，避免关闭普通登录后把自己锁死 |
+| 邮箱注册 | 开启后强制 SMTP 邮箱验证码验证；未配置 SMTP 时无法保存该开关 |
+| OAuth2 登录 | 已绑定第三方账号的用户可登录 |
+| OAuth2 注册 | 第三方账号首次登录时自动创建本地用户 |
+| 个人 API 令牌 | 用户中心生成 `ps_...` 令牌，用于 `Authorization: Bearer <令牌>` |
+| 每日搜索配额 | 全局默认值 + 用户级覆盖，0 表示不限 |
+| API 必须登录 | 开启后 `/api/search`、链接检测与插件 Web 接口需要会话或令牌 |
+| 前端直接搜索 | 关闭后匿名用户不能使用网页搜索，必须登录 |
+
+### OAuth2 服务商
+
+管理后台内置 GitHub、Google、Linux DO 与通用 OIDC 预设。回调地址统一为：
+
+```
+https://你的域名/api/auth/oauth/callback
+```
+
+请在对应服务商后台登记该地址，并填写 Client ID / Client Secret。
+
+### API 使用
 
 ```bash
-# 1. 准备SSL证书
-mkdir -p /opt/pansou/ssl
-# 将证书放到 /opt/pansou/ssl/fullchain.pem 和 privkey.pem
+# 网页匿名搜索（受后台开关与匿名限流控制）
+curl "http://localhost/api/web/search?kw=仙逆"
 
-# 2. 启动容器
-docker run -d \
-  --name pansou \
-  -p 80:80 \
-  -p 443:443 \
-  -e DOMAIN=pansou.example.com \
-  -v pansou-data:/app/data \
-  -v /opt/pansou/ssl:/app/data/ssl:ro \
-  --restart unless-stopped \
-  ghcr.io/fish2018/pansou-web:latest
+# 登录用户 / API 令牌搜索
+curl -H "Authorization: Bearer ps_xxxxxxxx" \
+     "http://localhost/api/search?kw=仙逆"
 ```
 
-### 场景3：需要代理访问Telegram
+用户可在「用户中心 → API 令牌」重置令牌；旧令牌会立即失效。
+
+## 目录结构
+
+```text
+.
+├── frontend/                 # Vue 3 前端
+│   ├── src/
+│   │   ├── components/       # 搜索、结果、账户、管理后台组件
+│   │   ├── stores/auth.ts    # 登录态与站点开关
+│   │   └── api/auth.ts       # 账户/管理接口封装
+│   └── package.json
+├── backend/                  # 上游 pansou 后端 + 本仓库改造
+│   ├── admin/                # 新增：账户、会话、OAuth、SMTP、设置、配额、上游同步
+│   ├── api/                  # 已接入账户中间件与 /api/web/search
+│   └── UPSTREAM.md           # 上游同步说明与改造清单
+├── deploy/
+│   └── upstream-defaults.env # 构建时抓取的上游频道/插件快照
+├── scripts/
+│   ├── sync-upstream-defaults.mjs
+│   ├── sync-backend.sh
+│   └── check.sh
+├── Dockerfile
+├── docker-compose.yml
+└── start.sh
+```
+
+## 本地开发
+
+要求：Node.js 22+、Go 1.25（本仓库 `go.mod` 固定 Go 1.25；`scripts/check.sh` 会自动切换工具链）。
 
 ```bash
-docker run -d \
-  --name pansou \
-  -p 80:80 \
-  -e PROXY=socks5://xxx.xxx.xxx.xxx:7897 \
-  -v pansou-data:/app/data \
-  --restart unless-stopped \
-  ghcr.io/fish2018/pansou-web:latest
+# 安装前端依赖
+npm --prefix frontend ci
+
+# 启动后端（默认 :8888）
+cd backend && go run .
+
+# 另开终端启动前端（默认 :3000，自动代理 /api 到 :8888）
+npm run dev
 ```
 
-**注意：**
-- 使用 `--network host` 以访问宿主机代理
-- 或者将代理服务也容器化并使用 docker 网络
-
-### 场景4：启用访问认证
+一键校验（同步上游默认值 + 前端构建 + 后端测试/编译）：
 
 ```bash
-docker run -d \
-  --name pansou \
-  -p 80:80 \
-  -e AUTH_ENABLED=true \
-  -e AUTH_USERS=admin:MySecretPass123,viewer:ViewOnly456 \
-  -e AUTH_TOKEN_EXPIRY=168 \
-  -e AUTH_JWT_SECRET=$(openssl rand -base64 32) \
-  -v pansou-data:/app/data \
-  --restart unless-stopped \
-  ghcr.io/fish2018/pansou-web:latest
+bash scripts/check.sh
 ```
 
----
+### 关键环境变量
 
-## 📁 数据目录说明
+| 变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `PORT` | `8888` | 后端监听端口 |
+| `ADMIN_DB_PATH` | `data/pansou-admin.db` | 账户数据库路径；镜像内为 `/app/data/pansou-admin.db` |
+| `UPSTREAM_DEFAULTS_OUTPUT` | `/app/data/upstream-defaults.env`（容器内） | 运行期同步写出的默认值文件 |
+| `CHANNELS` | 上游快照 | 显式覆盖 TG 频道列表，逗号分隔 |
+| `ENABLED_PLUGINS` | 上游快照 | 显式覆盖启用插件，逗号分隔 |
+| `PROXY` | 无 | 访问 TG/外站使用的代理 |
+| `CACHE_ENABLED` / `CACHE_TTL` | `true` / `60` | 缓存开关与分钟数 |
 
-### 卷挂载
+完整的上游运行参数（并发、超时、插件配置等）仍与 [pansou](https://github.com/fish2018/pansou) 一致。
 
-**推荐：使用命名卷（Docker管理）**
+## 上游自动更新（重点）
+
+过去 TG 频道与插件列表写死在 Dockerfile 里，上游更新后容易长期遗漏。现在有三层保障：
+
+1. **构建时**：`scripts/sync-upstream-defaults.mjs` 读取上游 `Dockerfile` 的
+   `CHANNELS` / `ENABLED_PLUGINS`，生成 `deploy/upstream-defaults.env` 并打包进镜像。
+   抓取失败时使用仓库内已提交的快照，不会中断构建。
+2. **运行时（管理后台）**：默认每 24 小时抓取一次上游 Dockerfile。
+   - **TG 频道立即热更新**，无需重启；
+   - 插件列表写入 `/app/data/upstream-defaults.env`，重启后生效（新插件代码仍需更新镜像）；
+   - 可在「管理后台 → 上游自动同步」修改仓库/分支/间隔或点击“立即同步”，
+     页面会显示上次检查、成功时间、上游 revision、失败原因与是否需要重启。
+3. **代码同步**：`scripts/sync-backend.sh` 使用 git subtree 拉取上游后端；
+   GitHub Actions 每周自动执行并创建 PR（`.github/workflows/sync-backend.yml`），
+   每天更新频道/插件快照（`sync-upstream-data.yml`）。
+
+> 运行期同步不会执行上游代码，只是更新配置数据；插件代码的更新仍需重新构建镜像。
+
+## 构建镜像
+
 ```bash
--v pansou-data:/app/data
+docker build -t pansou-web .
 ```
 
-**或：使用绑定挂载（指定宿主机路径）**
-```bash
--v /opt/pansou/data:/app/data
-```
+多阶段构建：
 
-### 目录结构详解
+1. `node:22-alpine` 构建前端；
+2. `golang:1.25-alpine` 构建后端（`CGO_ENABLED=0`）；
+3. `nginx:alpine` 运行 nginx + Go 后端，`start.sh` 负责健康检查与自动重启。
 
-```
-/app/data/
-│
-├── cache/                          # 缓存目录（约100MB-1GB）
-│   ├── disk/                       # 磁盘缓存
-│   │   ├── [hash].cache           # 搜索结果缓存
-│   │   └── metadata.db            # 缓存元数据
-│   └── qqpd_users/                # QQPD插件数据
-│       └── [hash].json            # 用户配置和频道
-│
-├── logs/                           # 日志目录（建议定期清理）
-│   ├── backend/                    # 后端日志
-│   │   └── pansou.log             # 主日志文件
-│   └── nginx/                      # Nginx日志
-│       ├── access.log             # 访问日志
-│       └── error.log              # 错误日志
-│
-└── ssl/                            # SSL证书目录
-    ├── fullchain.pem              # 完整证书链
-    └── privkey.pem                # 私钥
-```
+GitHub Actions 在 release 或手动触发时构建并推送到 GHCR：
+`.github/workflows/build-docker.yml`。
+
+## 数据与备份
+
+备份 `/app/data` 即可，重点内容：
+
+- `pansou-admin.db`：用户、会话、设置、OAuth、SMTP、搜索日志；
+- `upstream-defaults.env`：运行期同步的上游默认值；
+- `cache/`、`logs/`、`ssl/`。
+
+## 从旧版 `AUTH_USERS` 迁移
+
+旧版基于环境变量的简单认证（`AUTH_ENABLED` / `AUTH_USERS`）已由账户体系取代。
+升级后请：
+
+1. 使用默认管理员登录；
+2. 在「用户管理」中为原有用户创建账号；
+3. 在「认证与站点」中按需开启邮箱注册 / OAuth；
+4. 删除旧的 `AUTH_USERS` 配置，避免混淆。
+
+## 致谢
+
+- 后端与插件生态：[fish2018/pansou](https://github.com/fish2018/pansou)
+- 原前端项目：[fish2018/pansou-web](https://github.com/fish2018/pansou-web)
