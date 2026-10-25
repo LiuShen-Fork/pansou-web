@@ -15,6 +15,7 @@ import (
 
 	"golang.org/x/net/netutil"
 
+	"pansou/admin"
 	"pansou/api"
 	"pansou/config"
 	"pansou/plugin"
@@ -121,6 +122,19 @@ func main() {
 	} else {
 		fmt.Printf("[启动] 未设置堆软上限：%s\n", reason)
 	}
+
+	// 初始化账户数据库（默认管理员、设置、OAuth 与会话）。
+	// 必须在 api.SetupRouter 之前完成，因为路由会挂载账户相关中间件。
+	if err := admin.Init(); err != nil {
+		log.Fatalf("账户系统初始化失败: %v", err)
+	}
+	go func() {
+		ticker := time.NewTicker(time.Hour)
+		defer ticker.Stop()
+		for range ticker.C {
+			admin.CleanupExpiredAuthData()
+		}
+	}()
 
 	// 初始化应用
 	initApp()
