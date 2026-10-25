@@ -317,7 +317,7 @@ func printServiceInfo(port string, pluginManager *plugin.PluginManager) {
 	if os.Getenv("CONCURRENCY") != "" {
 		fmt.Printf("默认并发数: %d (由环境变量CONCURRENCY指定)\n", config.AppConfig.DefaultConcurrency)
 	} else {
-		channelCount := len(config.AppConfig.DefaultChannels)
+		channelCount := len(config.GetDefaultChannels())
 		pluginCount := 0
 		// 只有插件启用时才计算插件数
 		if config.AppConfig.AsyncPluginEnabled && pluginManager != nil {

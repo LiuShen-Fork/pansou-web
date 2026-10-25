@@ -186,7 +186,7 @@ func SearchHandler(c *gin.Context) {
 
 	// 检查并设置默认值
 	if len(req.Channels) == 0 {
-		req.Channels = config.AppConfig.DefaultChannels
+		req.Channels = config.GetDefaultChannels()
 	}
 
 	// 如果未指定结果类型，默认返回merge并转换为merged_by_type

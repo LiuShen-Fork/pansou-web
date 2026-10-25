@@ -44,6 +44,10 @@ func RegisterRoutes(r *gin.Engine) {
 
 		admin.GET("/search-logs", AdminSearchLogs)
 
+		admin.GET("/upstream-sync", AdminGetUpstreamSync)
+		admin.PUT("/upstream-sync", AdminPutUpstreamSync)
+		admin.POST("/upstream-sync/run", AdminRunUpstreamSync)
+
 		admin.GET("/oauth-providers", AdminListOAuthProviders)
 		admin.POST("/oauth-providers", AdminSaveOAuthProvider)
 		admin.PUT("/oauth-providers", AdminSaveOAuthProvider)

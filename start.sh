@@ -9,14 +9,19 @@ export CACHE_PATH=${CACHE_PATH:-/app/data/cache}
 export LOG_PATH=${LOG_PATH:-/app/data/logs}
 export ADMIN_DB_PATH=${ADMIN_DB_PATH:-/app/data/pansou-admin.db}
 
-# 构建时从上游 pansou Dockerfile 抓取的默认插件/频道。
+# 上游默认插件/频道。优先使用管理后台运行时同步到 /app/data 的版本，
+# 其次使用镜像构建时抓取并打包的版本。
 # 仅当用户没有显式设置 CHANNELS / ENABLED_PLUGINS 时生效。
-if [ -f /app/upstream-defaults.env ]; then
-    # shellcheck disable=SC1091
-    . /app/upstream-defaults.env
-    export CHANNELS=${CHANNELS:-$UPSTREAM_CHANNELS}
-    export ENABLED_PLUGINS=${ENABLED_PLUGINS:-$UPSTREAM_ENABLED_PLUGINS}
-fi
+for defaults_file in /app/data/upstream-defaults.env /app/upstream-defaults.env; do
+    if [ -f "$defaults_file" ]; then
+        # shellcheck disable=SC1091
+        . "$defaults_file"
+        export CHANNELS=${CHANNELS:-$UPSTREAM_CHANNELS}
+        export ENABLED_PLUGINS=${ENABLED_PLUGINS:-$UPSTREAM_ENABLED_PLUGINS}
+        echo "✓ 已加载上游默认值: $defaults_file"
+        break
+    fi
+done
 
 # 健康检查配置
 export HEALTH_CHECK_INTERVAL=${HEALTH_CHECK_INTERVAL:-30}

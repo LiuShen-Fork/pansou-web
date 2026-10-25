@@ -59,7 +59,7 @@ func SetupRouter(searchService *service.SearchService) *gin.Engine {
 			}
 
 			// 获取频道信息
-			channels := config.AppConfig.DefaultChannels
+			channels := config.GetDefaultChannels()
 			channelsCount := len(channels)
 
 			adminSettings := admin.LoadSettings()

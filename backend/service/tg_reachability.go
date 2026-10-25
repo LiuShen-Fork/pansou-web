@@ -203,9 +203,10 @@ func logTGProbeResult(reachable bool, reason string) {
 // tgProbeURL 取配置里的第一个频道作为探测目标——用真实频道页而不是站点首页，
 // 因为"首页能开但 /s/ 路径被单独阻断"是可能发生的，探测必须覆盖真正要走的路径。
 func tgProbeURL() string {
+	channels := config.GetDefaultChannels()
 	channel := ""
-	if config.AppConfig != nil && len(config.AppConfig.DefaultChannels) > 0 {
-		channel = config.AppConfig.DefaultChannels[0]
+	if len(channels) > 0 {
+		channel = channels[0]
 	}
 	if channel == "" {
 		return "https://t.me/"

@@ -6,6 +6,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"pansou/util/cpu"
@@ -166,6 +167,42 @@ func getDefaultChannels() []string {
 	return strings.Split(channelsEnv, ",")
 }
 
+var defaultChannelsMu sync.RWMutex
+
+// GetDefaultChannels 返回当前默认 TG 频道列表的副本。
+// 管理后台的上游自动同步会热更新该列表，因此所有读取都必须走这里，
+// 不能直接读 AppConfig.DefaultChannels（否则与写入产生数据竞争）。
+func GetDefaultChannels() []string {
+	defaultChannelsMu.RLock()
+	defer defaultChannelsMu.RUnlock()
+	if AppConfig == nil || len(AppConfig.DefaultChannels) == 0 {
+		return nil
+	}
+	out := make([]string, len(AppConfig.DefaultChannels))
+	copy(out, AppConfig.DefaultChannels)
+	return out
+}
+
+// SetDefaultChannels 热更新默认 TG 频道列表（由管理后台调用）。
+func SetDefaultChannels(channels []string) {
+	defaultChannelsMu.Lock()
+	defer defaultChannelsMu.Unlock()
+	if AppConfig == nil {
+		return
+	}
+	cleaned := make([]string, 0, len(channels))
+	seen := make(map[string]bool, len(channels))
+	for _, ch := range channels {
+		ch = strings.TrimSpace(ch)
+		if ch == "" || seen[ch] {
+			continue
+		}
+		seen[ch] = true
+		cleaned = append(cleaned, ch)
+	}
+	AppConfig.DefaultChannels = cleaned
+}
+
 // 从环境变量获取默认并发数，如果未设置则使用基于环境变量的简单计算
 func getDefaultConcurrency() int {
 	concurrencyEnv := os.Getenv("CONCURRENCY")
@@ -218,7 +255,7 @@ func UpdateDefaultConcurrency(pluginCount int) {
 	}
 
 	// 计算频道数
-	channelCount := len(AppConfig.DefaultChannels)
+	channelCount := len(GetDefaultChannels())
 
 	// 计算并发数 = 频道数 + 插件数（插件禁用时为0）+ 10
 	concurrency := channelCount + pluginCount + 10
