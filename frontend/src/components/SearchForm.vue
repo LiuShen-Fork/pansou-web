@@ -34,23 +34,31 @@ const loadUserConfig = () => {
       return {
         channels: savedChannels ? JSON.parse(savedChannels) : [],
         plugins: savedPlugins ? JSON.parse(savedPlugins) : [],
-        cloudTypes: savedDiskTypes ? JSON.parse(savedDiskTypes) : undefined
+        cloudTypes: savedDiskTypes ? JSON.parse(savedDiskTypes) : undefined,
+        explicitChannels: savedChannels !== null,
+        explicitPlugins: savedPlugins !== null
       };
     }
-    
-    // 如果用户未设置，使用传入的后端配置
+
+    // 如果用户未设置，使用传入的后端配置作为“是否存在数据源”的判断依据。
+    // 注意：不把这里的 channels/plugins 发给后端，让后端使用当前默认值，
+    // 这样管理后台热更新 TG 频道后，已打开的页面无需刷新也能生效。
     if (props.backendHealth) {
       return {
         channels: props.backendHealth.channels || [],
         plugins: props.backendHealth.plugins || [],
-        cloudTypes: savedDiskTypes ? JSON.parse(savedDiskTypes) : undefined
+        cloudTypes: savedDiskTypes ? JSON.parse(savedDiskTypes) : undefined,
+        explicitChannels: false,
+        explicitPlugins: false
       };
     }
-    
+
     return {
       channels: [],
       plugins: [],
-      cloudTypes: undefined
+      cloudTypes: undefined,
+      explicitChannels: false,
+      explicitPlugins: false
     };
   } catch (err) {
     console.error('加载配置失败:', err);
@@ -96,13 +104,13 @@ const handleSearch = () => {
     src: src
   };
   
-  // 添加用户配置的参数
-  if (hasChannels) {
-    // 将频道数组转为逗号分隔的字符串
+  // 只有用户显式保存过配置才发送 channels/plugins；
+  // 否则交给后端使用当前默认值（支持运行期热更新频道）。
+  if (hasChannels && userConfig.explicitChannels) {
     (params as any).channels = userConfig.channels.join(',');
   }
-  
-  if (hasPlugins) {
+
+  if (hasPlugins && userConfig.explicitPlugins) {
     params.plugins = userConfig.plugins.join(',');
   }
   
