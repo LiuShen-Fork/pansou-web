@@ -8,11 +8,22 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+frontend/node_modules
 .DS_Store
 dist
+frontend/dist
 dist-ssr
 coverage
 *.local
+bin
+backend/pansou
+backend/pansou.exe
+backend/cache
+backend/data
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal
+.env
 
 /cypress/videos/
 /cypress/screenshots/

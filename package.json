@@ -1,0 +1,18 @@
+{
+  "name": "pansou-web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "PanSou 前后端同仓：Vue 前端 + Go 后端 + 账户/管理后台",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "preview": "npm --prefix frontend run preview",
+    "install:frontend": "npm --prefix frontend ci",
+    "dev:backend": "cd backend && go run .",
+    "build:backend": "cd backend && go build -trimpath -o ../bin/pansou .",
+    "test:backend": "cd backend && go test ./...",
+    "sync:defaults": "node scripts/sync-upstream-defaults.mjs",
+    "sync:backend": "bash scripts/sync-backend.sh",
+    "check": "bash scripts/check.sh"
+  }
+}

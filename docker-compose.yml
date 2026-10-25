@@ -1,65 +1,61 @@
-version: '3.3'
+version: "3.3"
 
 services:
   pansou:
-    image: ghcr.io/fish2018/pansou-web:latest
+    image: ${PANSOU_IMAGE:-ghcr.io/willow-god/pansou-web:latest}
     container_name: pansou-app
     labels:
-      - "autoheal=true"  # 标记此容器允许被autoheal重启
+      - "autoheal=true"
     ports:
       - "80:80"
     environment:
       # 基础配置
-      - DOMAIN=localhost
+      - DOMAIN=${DOMAIN:-localhost}
       - PANSOU_PORT=8888
       - PANSOU_HOST=127.0.0.1
-      
-      # 数据目录配置（统一在/app/data下）
+
+      # 数据目录（缓存、日志、SSL、管理后台数据库都在 /app/data 下）
       - CACHE_PATH=/app/data/cache
       - LOG_PATH=/app/data/logs
-      
-      # 插件配置（镜像已包含推荐插件，如需自定义可取消注释并修改）
-      - ENABLED_PLUGINS=dyyjpro,duoduo,feikuai,gaoqing888,gying,hdmoli,haitunsou,hunhepan,ikantv,jutoushe,kkv,libvio,lingjisp,lou1,melost,meitizy,miosou,nyaa,ouge,panlian,pansearch,qqpd,quark4k,quarksoo,quarktv,sousou,thepiratebay,ting77,wanou,weibo,xb6v,xiaokupan,xiaozhang,xiaoyu,yunso,yunsou,zlxapp,zxzj,rrbt,quarkres,diduan,huban,labi,muou,shandian,zhizhen,clxiong,cyg,jsnoteclub,duanjuw,dyyj,nsgame,cldi,clmao,susu,u3c3,5266ys,dygang,leso,btbtlb,kpkuang,aipan,sopanya,hjzhencai,pan365,buerchen,erxiaopan,woniu
-      
-      # Telegram频道配置（镜像已包含这些默认频道，如需自定义可取消注释）
-      - CHANNELS=tgsearchers7,Aliyun_4K_Movies,yunpanx,yp123pan,yunpanxunlei,tianyifc,peccxinpd,gotopan,PanjClub,baicaoZY,MCPH02,MCPH03,bdwpzhpd,Q66Share,ucwpzy,shareAliyun,Quark_Movies,XiangxiuNBB,ucquark,xx123pan,yingshifenxiang123,zyfb123,Lsp115,taoxgzy,Channel_Shares_115,vip115hot,wp123zy,yunpan139,yunpan189,yunpanuc,yydf_hzl,leoziyuan,yoyokuakeduanju,TG654TG,QukanMovie,yeqingjie_GJG666,movielover8888_film3,Baidu_netdisk,D_wusun,FLMdongtianfudi,KaiPanshare,rjyxfx,PikPak_Share_Channel,newproductsourcing,QuarkFree,yunpanNB,kkdj001,xxzlzn,pxyunpanxunlei,jxwpzy,kuakedongman,xiangnikanj,solidsexydoll,guoman4K,zdqxm,kduanju,cilidianying,CBduanju,SharePanFilms,dzsgx,BooksRealm,douerpan,Netdisk_Movies,yunpanquark,ciliziyuanku,jzmm_123pan,wpan8,mqte5,regengguangya,regeng115,regeng123,yy80986098,pan_guangya,guangyapan_episode,guangya_hdhive,guangyapindao,quark_res,domgmingapk,dianying4k,tgbokee,ucshare,gokuapan,WFYSFX03,gimy100,gimy115iso,fcij5,xvth5,xuexiziliaobaibaoku,phzvip,jdbigdiscount,youxigs,zhoulanziyuan,seedhub_pro,jnjy_5,xxziliao,wpzyk,ruanjianfenxiang77,jpnd5,XunLeiPinDao,a123fxme,WPpindao,kuyupan,djya5,zh_vip,gdsharing,guangyaya2026,alyp_17362,baidyunpan,yunpans,rbzhwpzy,Panzi88com
-      
+      - ADMIN_DB_PATH=/app/data/pansou-admin.db
+
+      # 插件与 TG 频道默认值由镜像内 /app/upstream-defaults.env 提供，
+      # 构建时从上游 fish2018/pansou 的 Dockerfile 自动抓取。
+      # 需要覆盖时取消下面两行注释并填写自己的值：
+      # - ENABLED_PLUGINS=pansearch,qqpd,weibo
+      # - CHANNELS=tgsearchers7,Quark_Movies
+
       # 代理配置（可选）
       # - PROXY=socks5://xxx.xxx.xxx.xxx:7897
-      
-      # 性能配置（镜像已包含默认值，如需调整可取消注释）
+
+      # 性能配置（镜像已包含默认值）
       # - CACHE_ENABLED=true
       # - CACHE_TTL=60
       # - MAX_CONCURRENCY=200
       # - MAX_PAGES=30
-      
-      # 健康检查配置（容器内部监控）
-      - HEALTH_CHECK_INTERVAL=30  # 后端服务健康检查间隔（秒）
-      - HEALTH_CHECK_TIMEOUT=10   # 健康检查超时时间（秒）
-      - HEALTH_CHECK_RETRIES=3    # 失败重试次数
-      
-      # 认证配置（可选，默认不启用）
-      # - AUTH_ENABLED=true
-      # - AUTH_USERS=admin:admin123,user:pass456
-      # - AUTH_TOKEN_EXPIRY=24
-      # - AUTH_JWT_SECRET=your-secret-key-here
+
+      # 健康检查（容器内部监控）
+      - HEALTH_CHECK_INTERVAL=30
+      - HEALTH_CHECK_TIMEOUT=10
+      - HEALTH_CHECK_RETRIES=3
+
+      # 旧版简单认证（已由管理后台取代，保持关闭）
+      # - AUTH_ENABLED=false
     volumes:
-      # 数据持久化（统一挂载/app/data，包含缓存、日志、SSL证书等所有数据）
       - pansou-data:/app/data
-      # 如果需要从宿主机挂载SSL证书，可以使用：
+      # 如需使用自己的 SSL 证书：
       # - ./ssl:/app/data/ssl
     restart: unless-stopped
 
-  # 自动健康检查和重启服务（容器级别监控）
   autoheal:
     image: willfarrell/autoheal:latest
     container_name: pansou-autoheal
     restart: always
     environment:
-      - AUTOHEAL_CONTAINER_LABEL=autoheal  # 只监控带有autoheal标签的容器
-      - AUTOHEAL_INTERVAL=30  # 每30秒检查一次容器健康状态
-      - AUTOHEAL_START_PERIOD=60  # 启动后60秒开始检查
-      - AUTOHEAL_DEFAULT_STOP_TIMEOUT=10  # 停止容器的超时时间
+      - AUTOHEAL_CONTAINER_LABEL=autoheal
+      - AUTOHEAL_INTERVAL=30
+      - AUTOHEAL_START_PERIOD=60
+      - AUTOHEAL_DEFAULT_STOP_TIMEOUT=10
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 

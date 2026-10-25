@@ -23,60 +23,17 @@ jobs:
       packages: write
 
     steps:
-      - name: Checkout frontend repository
+      - name: Checkout repository
         uses: actions/checkout@v5
-        with:
-          path: frontend
-
-      - name: Checkout backend repository
-        uses: actions/checkout@v5
-        with:
-          repository: fish2018/pansou
-          path: backend
 
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: "18"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          node-version: "22"
 
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: "1.25"
-          cache-dependency-path: backend/go.sum
-
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: npm ci
-
-      - name: Build frontend
-        working-directory: frontend
-        run: |
-          npm run build
-          ls -la dist/
-
-      - name: Install backend dependencies
-        working-directory: backend
-        run: go mod download
-
-      - name: Build backend for multiple architectures
-        working-directory: backend
-        run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o pansou-amd64 .
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -installsuffix cgo -o pansou-arm64 .
-          chmod +x pansou-*
-
-      - name: Prepare build context
-        run: |
-          mkdir -p build-context
-          cp -r frontend/dist build-context/frontend-dist
-          cp backend/pansou-amd64 build-context/
-          cp backend/pansou-arm64 build-context/
-          cp frontend/Dockerfile build-context/
-          cp frontend/start.sh build-context/
-          chmod +x build-context/start.sh
+      # 构建时抓取上游最新的插件/TG频道默认值；抓取失败会保留仓库内快照。
+      - name: Sync upstream plugin and channel defaults
+        run: node scripts/sync-upstream-defaults.mjs
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -104,7 +61,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: build-context
+          context: .
+          file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
@@ -117,3 +75,5 @@ jobs:
             BUILDTIME=${{ github.run_id }}
             VERSION=${{ steps.image.outputs.tag }}
             REVISION=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,0 +1,55 @@
+name: Sync Upstream Backend
+
+on:
+  workflow_dispatch:
+    inputs:
+      upstream_ref:
+        description: "Upstream ref (branch, tag or commit), default main"
+        required: false
+        default: main
+        type: string
+  schedule:
+    # 每周一 03:17 UTC 检查一次上游后端
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync backend subtree and defaults
+        run: bash scripts/sync-backend.sh "${{ github.event.inputs.upstream_ref || 'main' }}"
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/sync-upstream-backend
+          delete-branch: true
+          title: "chore: 同步上游 pansou 后端最新代码"
+          commit-message: "chore: 同步上游 pansou 后端最新代码"
+          body: |
+            自动同步 `fish2018/pansou` 到 `backend/`，并刷新构建时使用的插件/TG 频道默认值。
+
+            请重点确认：
+            - `backend/admin/` 未被覆盖；
+            - `backend/api/router.go` 中的 `admin.RegisterRoutes` 与 `admin.AccessGate` 仍在；
+            - `backend/main.go` 中的 `admin.Init()` 仍在；
+            - CI 构建通过。

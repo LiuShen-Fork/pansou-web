@@ -1,0 +1,39 @@
+name: Sync Upstream Data Defaults
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 每天 02:41 UTC 抓取一次上游插件/TG 频道默认值
+    - cron: "41 2 * * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Sync defaults from upstream Dockerfile
+        run: node scripts/sync-upstream-defaults.mjs
+        env:
+          STRICT: "1"
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/sync-upstream-defaults
+          delete-branch: true
+          title: "chore: 更新上游插件与 TG 频道默认值"
+          commit-message: "chore: 更新上游插件与 TG 频道默认值"
+          body: |
+            自动从 `fish2018/pansou` 的 Dockerfile 抓取最新的 `CHANNELS` 与
+            `ENABLED_PLUGINS`，更新 `deploy/upstream-defaults.env`。
