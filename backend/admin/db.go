@@ -72,7 +72,6 @@ func Init() error {
 			return
 		}
 		log.Printf("[admin] 账户数据库已就绪: %s", path)
-		StartUpstreamSyncScheduler()
 	})
 	return initErr
 }

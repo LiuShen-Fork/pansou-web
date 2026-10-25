@@ -139,6 +139,9 @@ func main() {
 	// 初始化应用
 	initApp()
 
+	// config.Init 完成后才能安全热更新频道列表，因此调度器放在这里启动。
+	admin.StartUpstreamSyncScheduler()
+
 	// 启动服务器
 	startServer()
 }
