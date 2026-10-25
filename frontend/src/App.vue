@@ -85,6 +85,7 @@ const isAuthenticated = ref(false);
 const currentUsername = ref('');
 const isAdminUser = ref(false);
 const currentView = ref<'search' | 'user' | 'admin'>('search');
+const siteName = computed(() => authState.config?.site.name || 'Qingyu PanSou');
 const globalNotice = ref('');
 const globalError = ref('');
 
@@ -1279,7 +1280,7 @@ onUnmounted(() => {
         <div class="brand-lockup cursor-pointer" @click="switchToSearch">
           <img src="/favicon.ico" alt="Qingyu PanSou" class="brand-icon" />
           <div>
-            <h1 class="brand-title">Qingyu PanSou</h1>
+            <h1 class="brand-title">{{ siteName }}</h1>
             <p class="brand-subtitle">清羽盘搜</p>
           </div>
         </div>
@@ -1443,7 +1444,7 @@ onUnmounted(() => {
         <div class="footer-links">
           <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">陕ICP备2024028531号</a>
           <a href="https://beian.mps.gov.cn/#/query/webSearch?code=61011602000637" target="_blank" rel="noopener noreferrer">陕公网安备61011602000637号</a>
-          <span>© {{ new Date().getFullYear() }} Qingyu PanSou</span>
+          <span>© {{ new Date().getFullYear() }} {{ siteName }}</span>
         </div>
       </div>
     </footer>
