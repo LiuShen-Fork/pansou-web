@@ -62,7 +62,12 @@ export interface HealthStatus {
   plugin_count: number;
   plugins: string[];
   channels: string[];
+  channels_count?: number;
   auth_enabled?: boolean;
+  admin_enabled?: boolean;
+  api_require_login?: boolean;
+  web_search_enabled?: boolean;
+  email_register_enabled?: boolean;
 }
 
 // 登录请求参数
@@ -104,7 +109,12 @@ export const search = async (params: SearchParams): Promise<SearchResponse> => {
     ext: JSON.stringify({ referer: "https://dm.xueximeng.com" })
   };
   
-  const response = await api.get<ApiResponse<SearchResponse>>('/search', {
+  // 已登录走受保护的 /api/search；匿名走 /api/web/search，
+  // 后者由管理后台的「前端直接搜索」开关与匿名限流控制。
+  const token = localStorage.getItem('auth_token');
+  const endpoint = token ? '/search' : '/web/search';
+
+  const response = await api.get<ApiResponse<SearchResponse>>(endpoint, {
     params: searchParams,
     // 搜索是慢请求：服务端允许插件批次用到 PLUGIN_TIMEOUT（默认 10 秒），
     // 频道阶段还有各自的收集窗口。用 api 实例默认的 10 秒会在服务端还没返回时

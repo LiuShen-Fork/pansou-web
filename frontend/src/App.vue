@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, computed, nextTick, watch } from 'vue';
-import { search, logout, getHealth, verifyToken, type SearchParams, type HealthStatus } from '@/api';
+import { search, getHealth, type SearchParams, type HealthStatus } from '@/api';
+import UserCenter from '@/components/UserCenter.vue';
+import AdminPage from '@/components/admin/AdminPage.vue';
+import { authState, initAuth, isAdmin, isLoggedIn, logout as logoutUser, refreshMe } from '@/stores/auth';
 import type { SearchResponse, MergedResults, ExportField, ExportSettings } from '@/types';
 import SearchForm from '@/components/SearchForm.vue';
 import ResultTabs from '@/components/ResultTabs.vue';
@@ -80,6 +83,10 @@ const currentPage = ref<'search' | 'status' | 'docs' | 'accounts' | 'qqpd' | 'gy
 const showLogin = ref(false);
 const isAuthenticated = ref(false);
 const currentUsername = ref('');
+const isAdminUser = ref(false);
+const currentView = ref<'search' | 'user' | 'admin'>('search');
+const globalNotice = ref('');
+const globalError = ref('');
 
 // QQPD插件状态
 const isQQPDEnabled = ref(false);
@@ -184,6 +191,14 @@ const checkConfig = () => {
 
 // 处理搜索
 const handleSearch = async (params: SearchParams) => {
+  // 后台关闭网页直接搜索时，匿名用户先登录。
+  if (!isAuthenticated.value && authState.config && !authState.config.auth.web_search_enabled) {
+    globalError.value = '网页直接搜索已被管理员关闭，请登录后使用。';
+    showLogin.value = true;
+    return;
+  }
+  globalError.value = '';
+
   // 停止之前的更新
   stopUpdate();
 
@@ -266,6 +281,7 @@ const handleSearch = async (params: SearchParams) => {
       })
       .catch(error => {
         console.error('第一次搜索出错:', error);
+        handleSearchFailure(error);
         loading.value = false;
         isActivelySearching.value = false;
       });
@@ -932,60 +948,93 @@ const resetToInitial = () => {
   updateCount.value = 0;
 };
 
-// 检查认证状态（使用缓存的健康状态，避免重复调用API）
-const checkAuth = async () => {
-  try {
-    // 使用缓存的健康状态，避免重复调用 /health
-    const authEnabled = backendHealth.value?.auth_enabled || false;
-    const token = localStorage.getItem('auth_token');
-    
-    if (!authEnabled) {
-      // 认证未启用，不显示任何登录相关信息
-      isAuthenticated.value = false;
-      showLogin.value = false;
-      return;
-    }
-    
-    if (!token) {
-      // 需要认证但没有token
-      showLogin.value = true;
-      isAuthenticated.value = false;
-      return;
-    }
-    
-    // 验证token是否有效
-    const valid = await verifyToken();
-    if (valid) {
-      isAuthenticated.value = true;
-      currentUsername.value = localStorage.getItem('auth_username') || '';
-    } else {
-      showLogin.value = true;
-      isAuthenticated.value = false;
-    }
-  } catch (error) {
-    console.error('检查认证状态失败:', error);
-    // 出错时默认显示登录窗口
+// 同步认证状态到模板
+const syncAuthState = () => {
+  isAuthenticated.value = isLoggedIn.value;
+  isAdminUser.value = isAdmin.value;
+  currentUsername.value = authState.user?.username || '';
+};
+
+const switchView = (view: 'search' | 'user' | 'admin', updateHash = true) => {
+  if (view === 'admin' && !isAdmin.value) view = 'user';
+  if ((view === 'user' || view === 'admin') && !isLoggedIn.value) {
     showLogin.value = true;
-    isAuthenticated.value = false;
+    view = 'search';
+  }
+  currentView.value = view;
+  if (updateHash) {
+    window.location.hash = view === 'search' ? '#/' : `#/${view}`;
+  }
+  nextTick(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+};
+
+const goSearch = () => switchView('search');
+const goUser = () => switchView('user');
+const goAdmin = () => switchView('admin');
+
+// 处理 OAuth 回调与 #/user、#/admin 深链接
+const handleHashLanding = () => {
+  const raw = (window.location.hash || '').replace(/^#\/?/, '');
+  const [path, query] = raw.split('?');
+  const params = new URLSearchParams(query || '');
+  const oauthError = params.get('oauth_error');
+  const oauth = params.get('oauth');
+  if (oauthError) {
+    globalError.value = decodeURIComponent(oauthError);
+    showLogin.value = true;
+  }
+  if (oauth) {
+    globalNotice.value = oauth === 'bound' ? '第三方账号绑定成功' : '登录成功';
+    switchView('user', false);
+    return;
+  }
+  if (path === 'user') switchView('user', false);
+  else if (path === 'admin') switchView('admin', false);
+  else if (path === 'login') {
+    showLogin.value = true;
+    switchView('search', false);
   }
 };
 
-// 监听401事件
+const initAuthState = async () => {
+  await initAuth();
+  syncAuthState();
+  handleHashLanding();
+};
+
+// 监听 401 / 需要登录事件
 const handleAuthRequired = () => {
   showLogin.value = true;
 };
 
+const handleSearchFailure = (error: any) => {
+  const status = error?.response?.status;
+  const code = error?.response?.data?.code;
+  const msg = error?.response?.data?.error;
+  if (status === 401 || code === 'WEB_SEARCH_DISABLED') {
+    globalError.value = msg || '请先登录后再搜索';
+    showLogin.value = true;
+  } else if (code === 'DAILY_LIMIT_REACHED' || code === 'RATE_LIMITED') {
+    globalError.value = msg || '搜索过于频繁，请稍后再试';
+  }
+};
+
 // 登录成功处理
-const handleLoginSuccess = () => {
-  window.location.reload();
+const handleLoginSuccess = async () => {
+  await refreshMe();
+  syncAuthState();
+  showLogin.value = false;
+  if (authState.user?.must_change_password) {
+    switchView('user');
+  }
 };
 
 // 退出登录
 const handleLogout = async () => {
-  if (confirm('确定要退出登录吗？')) {
-    await logout();
-    window.location.reload();
-  }
+  if (!confirm('确定要退出登录吗？')) return;
+  await logoutUser();
+  syncAuthState();
+  switchView('search');
 };
 
 // 检查QQPD插件是否显示（后端支持时默认显示，除非用户主动禁用）
@@ -1183,8 +1232,8 @@ onMounted(async () => {
   loadExportSettings();
   syncMobileSearchLayout();
   
-  // 然后初始化其他状态
-  checkAuth();
+  // 然后初始化账户状态与站点配置
+  await initAuthState();
   checkQQPDPlugin();
   checkGyingPlugin();
   checkPanlianPlugin();
@@ -1252,18 +1301,47 @@ onUnmounted(() => {
           >
             站长博客
           </a>
+          <template v-if="isAuthenticated">
+            <span class="nav-user" :title="'当前用户: ' + currentUsername">@{{ currentUsername }}</span>
+            <button
+              v-if="currentView !== 'user'"
+              @click="goUser"
+              class="nav-button"
+              title="用户中心"
+            >
+              <span class="nav-text">用户中心</span>
+            </button>
+            <button
+              v-if="isAdminUser && currentView !== 'admin'"
+              @click="goAdmin"
+              class="nav-button"
+              title="管理后台"
+            >
+              <span class="nav-text">管理后台</span>
+            </button>
+            <button
+              v-if="currentView !== 'search'"
+              @click="goSearch"
+              class="nav-button"
+              title="返回搜索"
+            >
+              <span class="nav-text">返回搜索</span>
+            </button>
+            <button
+              @click="handleLogout"
+              class="nav-button logout-button"
+              :title="'退出登录 (当前用户: ' + currentUsername + ')'"
+            >
+              <span class="nav-text">退出</span>
+            </button>
+          </template>
           <button
-            v-if="isAuthenticated"
-            @click="handleLogout"
-            class="nav-button logout-button"
-            :title="'退出登录 (当前用户: ' + currentUsername + ')'"
+            v-else
+            @click="showLogin = true"
+            class="nav-button login-entry"
+            title="登录 / 注册"
           >
-            <span class="nav-icon">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-              </svg>
-            </span>
-            <span class="nav-text">退出</span>
+            <span class="nav-text">登录 / 注册</span>
           </button>
         </nav>
       </div>
@@ -1273,10 +1351,23 @@ onUnmounted(() => {
     <main
       ref="mainContentRef"
       class="main-content container mx-auto px-4 py-8 flex-1"
-      :class="{ 'search-main': currentPage === 'search' }"
+      :class="{ 'search-main': currentView === 'search' }"
     >
       <!-- 搜索页面 -->
-      <div v-if="currentPage === 'search'" class="search-page">
+      <div v-if="currentView === 'search'" class="search-page">
+        <div v-if="globalError" class="global-banner error">{{ globalError }}</div>
+        <div v-if="globalNotice" class="global-banner ok">{{ globalNotice }}</div>
+        <div v-if="authState.config?.site.announcement" class="global-banner notice">
+          {{ authState.config.site.announcement }}
+        </div>
+        <div
+          v-if="!isAuthenticated && authState.config && !authState.config.auth.web_search_enabled"
+          class="global-banner notice"
+        >
+          网页直接搜索已关闭，请
+          <button class="banner-link" type="button" @click="showLogin = true">登录</button>
+          后使用。
+        </div>
         <!-- 搜索表单 -->
         <div class="search-form-block mb-6">
           <SearchForm 
@@ -1333,7 +1424,17 @@ onUnmounted(() => {
           @confirm="handleExportConfirm"
         />
       </div>
-      
+
+      <UserCenter
+        v-else-if="currentView === 'user'"
+        @back="goSearch"
+      />
+
+      <AdminPage
+        v-else-if="currentView === 'admin'"
+        @back="goSearch"
+        @user-center="goUser"
+      />
     </main>
     
     <!-- 页脚 -->
@@ -1502,6 +1603,60 @@ onUnmounted(() => {
   color: #fff;
   border-color: rgba(15, 23, 42, 0.92);
   box-shadow: none;
+}
+
+.nav-user {
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(49, 46, 129, 0.72);
+  font-size: 0.8rem;
+  font-weight: 550;
+  padding: 0 0.25rem;
+}
+
+.login-entry {
+  color: rgba(49, 46, 129, 0.92);
+  border-color: rgba(199, 210, 254, 0.8);
+}
+
+.global-banner {
+  max-width: 60rem;
+  margin: 0 auto 1rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: 0.7rem;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  text-align: center;
+  white-space: pre-wrap;
+}
+
+.global-banner.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+.global-banner.ok {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+}
+
+.global-banner.notice {
+  background: rgba(238, 242, 255, 0.86);
+  border: 1px solid rgba(199, 210, 254, 0.8);
+  color: rgba(49, 46, 129, 0.92);
+}
+
+.banner-link {
+  border: 0;
+  background: transparent;
+  color: hsl(var(--primary));
+  font-weight: 650;
+  cursor: pointer;
+  padding: 0 0.15rem;
 }
 
 .logout-button {
