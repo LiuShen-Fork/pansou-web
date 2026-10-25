@@ -26,7 +26,13 @@ const REPO = process.env.UPSTREAM_REPO || 'fish2018/pansou';
 const REF = process.env.UPSTREAM_REF || 'main';
 const STRICT = process.env.STRICT === '1' || process.argv.includes('--strict');
 
-const RAW_DOCKERFILE = `https://raw.githubusercontent.com/${REPO}/${REF}/Dockerfile`;
+// 依次尝试 GitHub raw 与 jsDelivr 镜像；国内网络经常连不上 raw.githubusercontent.com。
+const DOCKERFILE_URLS = process.env.UPSTREAM_DOCKERFILE_URL
+  ? [process.env.UPSTREAM_DOCKERFILE_URL]
+  : [
+      `https://raw.githubusercontent.com/${REPO}/${REF}/Dockerfile`,
+      `https://cdn.jsdelivr.net/gh/${REPO}@${REF}/Dockerfile`,
+    ];
 
 function parseEnvValues(dockerfile) {
   // 把行尾反斜杠续行拼成一行，便于用简单正则匹配 ENV 值。
@@ -56,15 +62,26 @@ async function resolveRevision() {
 
 async function main() {
   let dockerfile = '';
-  try {
-    const resp = await fetch(RAW_DOCKERFILE, {
-      headers: { 'User-Agent': 'pansou-web-sync' },
-    });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    dockerfile = await resp.text();
-  } catch (err) {
-    console.warn(`[sync-upstream] 拉取上游 Dockerfile 失败：${err.message}`);
-    console.warn('[sync-upstream] 将继续使用仓库中已提交的默认值快照。');
+  let lastError = '';
+  for (const url of DOCKERFILE_URLS) {
+    try {
+      const resp = await fetch(url, {
+        headers: { 'User-Agent': 'pansou-web-sync' },
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      dockerfile = await resp.text();
+      if (url !== DOCKERFILE_URLS[0]) {
+        console.log(`[sync-upstream] 已通过镜像获取：${url}`);
+      }
+      break;
+    } catch (err) {
+      lastError = `${url} -> ${err.message}`;
+      console.warn(`[sync-upstream] 拉取失败：${lastError}`);
+    }
+  }
+  if (!dockerfile) {
+    console.warn('[sync-upstream] 所有上游地址均不可用，将继续使用仓库中已提交的默认值快照。');
     if (STRICT) process.exit(1);
     try {
       await readFile(OUTPUT, 'utf8');

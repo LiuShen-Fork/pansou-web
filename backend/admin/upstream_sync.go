@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"pansou/util/json"
 	"path/filepath"
@@ -132,27 +133,57 @@ func splitSafe(raw string) []string {
 	return out
 }
 
+func upstreamDockerfileURLs(repo, ref string) []string {
+	if override := strings.TrimSpace(os.Getenv("UPSTREAM_DOCKERFILE_URL")); override != "" {
+		return []string{override}
+	}
+	// raw 优先；国内网络经常连不上 raw.githubusercontent.com，回退到 jsDelivr。
+	return []string{
+		fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/Dockerfile", repo, ref),
+		fmt.Sprintf("https://cdn.jsdelivr.net/gh/%s@%s/Dockerfile", repo, ref),
+	}
+}
+
+func upstreamHTTPClient(timeout time.Duration) *http.Client {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	// 标准 HTTPS_PROXY 已由 DefaultTransport 处理；这里额外兼容项目常用的 PROXY
+	// 变量（仅 http/https 形式，socks5 交给部署层的全局代理）。
+	if proxy := strings.TrimSpace(os.Getenv("PROXY")); strings.HasPrefix(proxy, "http://") || strings.HasPrefix(proxy, "https://") {
+		if u, err := url.Parse(proxy); err == nil {
+			transport.Proxy = http.ProxyURL(u)
+		}
+	}
+	return &http.Client{Timeout: timeout, Transport: transport}
+}
+
 func fetchUpstreamDockerfile(ctx context.Context, repo, ref string) (string, error) {
-	url := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/Dockerfile", repo, ref)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return "", err
+	client := upstreamHTTPClient(25 * time.Second)
+	var errs []string
+	for _, endpoint := range upstreamDockerfileURLs(repo, ref) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+		if err != nil {
+			errs = append(errs, err.Error())
+			continue
+		}
+		req.Header.Set("User-Agent", "pansou-web-upstream-sync")
+		resp, err := client.Do(req)
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("%s: %v", endpoint, err))
+			continue
+		}
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			errs = append(errs, fmt.Sprintf("%s: HTTP %d", endpoint, resp.StatusCode))
+			continue
+		}
+		if readErr != nil {
+			errs = append(errs, fmt.Sprintf("%s: %v", endpoint, readErr))
+			continue
+		}
+		return string(body), nil
 	}
-	req.Header.Set("User-Agent", "pansou-web-upstream-sync")
-	client := &http.Client{Timeout: 25 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("上游 Dockerfile 返回 HTTP %d", resp.StatusCode)
-	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
-	if err != nil {
-		return "", err
-	}
-	return string(body), nil
+	return "", fmt.Errorf("所有上游地址均不可用：%s", strings.Join(errs, "; "))
 }
 
 func fetchUpstreamRevision(ctx context.Context, repo, ref string) string {

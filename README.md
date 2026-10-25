@@ -134,6 +134,7 @@ bash scripts/check.sh
 | `PORT` | `8888` | 后端监听端口 |
 | `ADMIN_DB_PATH` | `data/pansou-admin.db` | 账户数据库路径；镜像内为 `/app/data/pansou-admin.db` |
 | `UPSTREAM_DEFAULTS_OUTPUT` | `/app/data/upstream-defaults.env`（容器内） | 运行期同步写出的默认值文件 |
+| `UPSTREAM_DOCKERFILE_URL` | 无 | 自定义上游 Dockerfile 镜像地址；不设置时依次尝试 GitHub raw 与 jsDelivr |
 | `CHANNELS` | 上游快照 | 显式覆盖 TG 频道列表，逗号分隔 |
 | `ENABLED_PLUGINS` | 上游快照 | 显式覆盖启用插件，逗号分隔 |
 | `PROXY` | 无 | 访问 TG/外站使用的代理 |
@@ -149,6 +150,7 @@ bash scripts/check.sh
    `CHANNELS` / `ENABLED_PLUGINS`，生成 `deploy/upstream-defaults.env` 并打包进镜像。
    抓取失败时使用仓库内已提交的快照，不会中断构建。
 2. **运行时（管理后台）**：默认每 24 小时抓取一次上游 Dockerfile。
+   - GitHub raw 不可达时自动回退到 jsDelivr；也可用 `UPSTREAM_DOCKERFILE_URL` 指向自己的镜像；
    - **TG 频道立即热更新**，无需重启；
    - 插件列表写入 `/app/data/upstream-defaults.env`，重启后生效（新插件代码仍需更新镜像）；
    - 可在「管理后台 → 上游自动同步」修改仓库/分支/间隔或点击“立即同步”，
