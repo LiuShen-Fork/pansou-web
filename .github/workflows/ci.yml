@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache-dependency-path: backend/go.sum
+      - name: Download modules
+        working-directory: backend
+        run: go mod download
+      - name: Build all packages
+        working-directory: backend
+        run: CGO_ENABLED=0 go build ./...
+      - name: Test account / config / API packages
+        working-directory: backend
+        run: go test ./admin/... ./config/... ./api/...
+
+  smoke:
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - name: Sync upstream defaults
+        run: node scripts/sync-upstream-defaults.mjs
+      - name: Verify defaults snapshot
+        run: |
+          test -s deploy/upstream-defaults.env
+          grep -q "UPSTREAM_CHANNELS=" deploy/upstream-defaults.env
+          grep -q "UPSTREAM_ENABLED_PLUGINS=" deploy/upstream-defaults.env
