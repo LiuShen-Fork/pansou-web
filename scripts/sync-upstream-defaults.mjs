@@ -82,6 +82,21 @@ async function main() {
     return;
   }
 
+  // 值与已提交快照一致时不重写文件，避免每次构建/校验都产生时间戳噪音。
+  try {
+    const existing = await readFile(OUTPUT, 'utf8');
+    const pick = (name) => {
+      const m = existing.match(new RegExp(`^${name}='([^']*)'`, 'm'));
+      return m ? m[1] : '';
+    };
+    if (pick('UPSTREAM_CHANNELS') === channels && pick('UPSTREAM_ENABLED_PLUGINS') === plugins) {
+      console.log('[sync-upstream] 上游默认值与本地快照一致，无需更新。');
+      return;
+    }
+  } catch {
+    // 快照不存在时继续生成
+  }
+
   const revision = await resolveRevision();
   const stamp = new Date().toISOString();
   const content = [

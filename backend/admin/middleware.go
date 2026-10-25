@@ -206,14 +206,12 @@ func AccessGate() gin.HandlerFunc {
 			}
 		}
 
-		if isSearch || isWebSearch || isPluginWeb || isCheck {
+		// 只有真正的搜索计入搜索日志与配额；插件 Web 接口/链接检测
+		// 属于账户操作，不应消耗用户的每日搜索次数。
+		if isSearch || isWebSearch {
 			source := "api"
 			if isWebSearch {
 				source = "web"
-			} else if isPluginWeb {
-				source = "plugin_web"
-			} else if isCheck {
-				source = "link_check"
 			}
 			RecordSearch(user, source, c.Query("kw"), c.ClientIP())
 		}

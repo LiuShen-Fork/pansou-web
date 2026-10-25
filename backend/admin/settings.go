@@ -325,4 +325,6 @@ func CleanupExpiredAuthData() {
 	_, _ = DB.Exec(`DELETE FROM oauth_states WHERE expires_at < ?`, now)
 	_, _ = DB.Exec(`DELETE FROM email_codes WHERE expires_at < ?`, now)
 	_, _ = DB.Exec(`DELETE FROM login_attempts WHERE created_at < ?`, timeMinus(7*24*60*60))
+	// 搜索日志保留 180 天，避免长期运行把 SQLite 撑大；更早的统计不再保留。
+	_, _ = DB.Exec(`DELETE FROM search_logs WHERE created_at < ?`, timeMinus(180*24*60*60))
 }
