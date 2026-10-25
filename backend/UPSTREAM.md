@@ -7,7 +7,7 @@
 
 - 上游仓库：`https://github.com/fish2018/pansou`
 - 引入方式：`git subtree add --prefix=backend --squash`
-- 上游提交：见本仓库引入 `backend/` 时的 subtree 提交说明
+- 当前基线：`221665fb2c9279f22af4684ea2d8c0c331eac1cc`（2026-10-12，新增插件 488run）
 
 ## 本仓库对上游代码的改动
 
