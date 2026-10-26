@@ -21,13 +21,13 @@ var (
 )
 
 const userColumns = `id, username, email, password_hash, role, status, must_change_password,
-	COALESCE(daily_search_limit, 0), created_at, updated_at, COALESCE(last_login_at, '')`
+	COALESCE(daily_search_limit, 0), COALESCE(api_daily_search_limit, 0), created_at, updated_at, COALESCE(last_login_at, '')`
 
 func scanUser(row rowScanner) (*User, error) {
 	u := &User{}
 	var mustChange int
 	if err := row.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role, &u.Status,
-		&mustChange, &u.DailySearchLimit, &u.CreatedAt, &u.UpdatedAt, &u.LastLoginAt); err != nil {
+		&mustChange, &u.DailySearchLimit, &u.APIDailySearchLimit, &u.CreatedAt, &u.UpdatedAt, &u.LastLoginAt); err != nil {
 		return nil, err
 	}
 	u.MustChangePassword = mustChange == 1
@@ -98,6 +98,16 @@ func CreateUser(username, email, password, role string) (*User, error) {
 	}
 	if role != RoleAdmin && role != RoleUser {
 		role = RoleUser
+	}
+	if role == RoleAdmin {
+		// 管理员全局唯一，只由初始化流程创建；接口层永远不能新增管理员。
+		var admins int
+		if err := DB.QueryRow(`SELECT COUNT(*) FROM users WHERE role = ?`, RoleAdmin).Scan(&admins); err != nil {
+			return nil, err
+		}
+		if admins > 0 {
+			return nil, fmt.Errorf("管理员账号全局唯一，不能创建新的管理员")
+		}
 	}
 	hash, err := HashPassword(password)
 	if err != nil {
@@ -228,18 +238,20 @@ func ListUsers(query, role, status string, page, pageSize int) ([]User, int, err
 	rows.Close()
 	for i := range list {
 		list[i].SearchCountToday, _ = UserSearchCountToday(list[i].ID)
+		list[i].APISearchCountToday, _ = UserAPISearchCountToday(list[i].ID)
 	}
 	return list, total, nil
 }
 
 type UserUpdate struct {
-	Username         *string `json:"username"`
-	Email            *string `json:"email"`
-	Role             *string `json:"role"`
-	Status           *string `json:"status"`
-	DailySearchLimit *int    `json:"daily_search_limit"`
-	Password         *string `json:"password"`
-	MustChangePass   *bool   `json:"must_change_password"`
+	Username            *string `json:"username"`
+	Email               *string `json:"email"`
+	Role                *string `json:"role"`
+	Status              *string `json:"status"`
+	DailySearchLimit    *int    `json:"daily_search_limit"`
+	APIDailySearchLimit *int    `json:"api_daily_search_limit"`
+	Password            *string `json:"password"`
+	MustChangePass      *bool   `json:"must_change_password"`
 }
 
 func UpdateUser(id int64, upd UserUpdate) (*User, error) {
@@ -285,18 +297,13 @@ func UpdateUser(id int64, upd UserUpdate) (*User, error) {
 		if role != RoleAdmin && role != RoleUser {
 			return nil, fmt.Errorf("角色只能是 admin 或 user")
 		}
-		// 不允许把最后一个管理员降级。
-		if u.Role == RoleAdmin && role != RoleAdmin {
-			var admins int
-			if err := DB.QueryRow(`SELECT COUNT(*) FROM users WHERE role = ?`, RoleAdmin).Scan(&admins); err != nil {
-				return nil, err
+		// 管理员全局唯一且不可通过接口变更：既不能把普通用户提升为管理员，
+		// 也不能降级唯一的管理员，避免权限扩散或后台被锁死。
+		if role != u.Role {
+			if role == RoleAdmin {
+				return nil, fmt.Errorf("管理员账号全局唯一，不能提升其他用户为管理员")
 			}
-			if admins <= 1 {
-				return nil, fmt.Errorf("不能降级最后一个管理员")
-			}
-		}
-		if _, err := DB.Exec(`UPDATE users SET role = ?, updated_at = ? WHERE id = ?`, role, Now(), id); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("不能降级唯一的管理员")
 		}
 	}
 	if upd.Status != nil {
@@ -317,6 +324,15 @@ func UpdateUser(id int64, upd UserUpdate) (*User, error) {
 			return nil, fmt.Errorf("每日搜索上限不合法")
 		}
 		if _, err := DB.Exec(`UPDATE users SET daily_search_limit = ?, updated_at = ? WHERE id = ?`, limit, Now(), id); err != nil {
+			return nil, err
+		}
+	}
+	if upd.APIDailySearchLimit != nil {
+		limit := *upd.APIDailySearchLimit
+		if limit < 0 || limit > 100000 {
+			return nil, fmt.Errorf("每日 API 调用上限不合法")
+		}
+		if _, err := DB.Exec(`UPDATE users SET api_daily_search_limit = ?, updated_at = ? WHERE id = ?`, limit, Now(), id); err != nil {
 			return nil, err
 		}
 	}
@@ -353,13 +369,7 @@ func DeleteUser(id, currentUserID int64) error {
 		return err
 	}
 	if u.Role == RoleAdmin {
-		var admins int
-		if err := DB.QueryRow(`SELECT COUNT(*) FROM users WHERE role = ?`, RoleAdmin).Scan(&admins); err != nil {
-			return err
-		}
-		if admins <= 1 {
-			return fmt.Errorf("不能删除最后一个管理员")
-		}
+		return fmt.Errorf("管理员账号全局唯一，不能删除")
 	}
 	_, err = DB.Exec(`DELETE FROM users WHERE id = ?`, id)
 	return err
@@ -454,34 +464,99 @@ func DeleteOtherSessions(userID int64, keepSessionID string) {
 
 // ---------------- API 令牌 ----------------
 
-func GetAPIToken(userID int64) (*APIToken, error) {
-	t := &APIToken{}
-	err := DB.QueryRow(
-		`SELECT id, user_id, prefix, created_at, COALESCE(last_used_at,'') FROM api_tokens WHERE user_id = ?`, userID,
-	).Scan(&t.ID, &t.UserID, &t.Prefix, &t.CreatedAt, &t.LastUsedAt)
-	if isNoRows(err) {
-		return nil, sql.ErrNoRows
+// MaxAPITokensPerUser 单个用户最多可持有的令牌数量。
+// 所有令牌共享同一账号的每日搜索配额。
+const MaxAPITokensPerUser = 10
+
+const defaultTokenName = "默认令牌"
+
+func normalizeTokenName(name string) string {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return defaultTokenName
 	}
-	return t, err
+	runes := []rune(name)
+	if len(runes) > 32 {
+		name = string(runes[:32])
+	}
+	return name
 }
 
-// ResetAPIToken 生成新令牌并返回明文；旧令牌立即失效。
-func ResetAPIToken(userID int64) (*APIToken, string, error) {
+func ListAPITokens(userID int64) ([]APIToken, error) {
+	rows, err := DB.Query(
+		`SELECT id, user_id, name, prefix, created_at, COALESCE(last_used_at,'')
+		 FROM api_tokens WHERE user_id = ? ORDER BY id ASC`, userID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]APIToken, 0, 4)
+	for rows.Next() {
+		var t APIToken
+		if err := rows.Scan(&t.ID, &t.UserID, &t.Name, &t.Prefix, &t.CreatedAt, &t.LastUsedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, t)
+	}
+	return items, rows.Err()
+}
+
+// GetAPIToken 返回用户最早创建的令牌，保留给旧接口与概览使用。
+func GetAPIToken(userID int64) (*APIToken, error) {
+	items, err := ListAPITokens(userID)
+	if err != nil {
+		return nil, err
+	}
+	if len(items) == 0 {
+		return nil, sql.ErrNoRows
+	}
+	return &items[0], nil
+}
+
+// CreateAPIToken 新增一个令牌并返回明文；明文只在此刻出现一次。
+func CreateAPIToken(userID int64, name string) (*APIToken, string, error) {
+	items, err := ListAPITokens(userID)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(items) >= MaxAPITokensPerUser {
+		return nil, "", fmt.Errorf("最多只能创建 %d 个 API 令牌", MaxAPITokensPerUser)
+	}
 	token := "ps_" + randomHex(24)
 	hash := sha256Hex(token)
 	prefix := token[:11]
 	now := Now()
-	_, err := DB.Exec(
-		`INSERT INTO api_tokens (user_id, token_hash, prefix, created_at, last_used_at) VALUES (?, ?, ?, ?, '')
-		 ON CONFLICT(user_id) DO UPDATE SET token_hash = excluded.token_hash, prefix = excluded.prefix,
-		 created_at = excluded.created_at, last_used_at = ''`,
-		userID, hash, prefix, now,
+	res, err := DB.Exec(
+		`INSERT INTO api_tokens (user_id, name, token_hash, prefix, created_at, last_used_at) VALUES (?, ?, ?, ?, ?, '')`,
+		userID, normalizeTokenName(name), hash, prefix, now,
 	)
 	if err != nil {
 		return nil, "", err
 	}
-	t, err := GetAPIToken(userID)
-	return t, token, err
+	id, _ := res.LastInsertId()
+	return &APIToken{ID: id, UserID: userID, Name: normalizeTokenName(name), Prefix: prefix, CreatedAt: now}, token, nil
+}
+
+// DeleteAPIToken 删除属于该用户的指定令牌。
+func DeleteAPIToken(userID, id int64) error {
+	res, err := DB.Exec(`DELETE FROM api_tokens WHERE id = ? AND user_id = ?`, id, userID)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+// ResetAPIToken 撤销全部旧令牌并新建一个，返回明文。
+func ResetAPIToken(userID int64) (*APIToken, string, error) {
+	if _, err := DB.Exec(`DELETE FROM api_tokens WHERE user_id = ?`, userID); err != nil {
+		return nil, "", err
+	}
+	return CreateAPIToken(userID, defaultTokenName)
 }
 
 func GetUserByAPIToken(token string) (*User, error) {
@@ -496,7 +571,7 @@ func GetUserByAPIToken(token string) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, _ = DB.Exec(`UPDATE api_tokens SET last_used_at = ? WHERE user_id = ?`, Now(), userID)
+	_, _ = DB.Exec(`UPDATE api_tokens SET last_used_at = ? WHERE token_hash = ?`, Now(), sha256Hex(token))
 	u, err := GetUserByID(userID)
 	if err != nil || !u.Active() {
 		return nil, ErrSessionInvalid
@@ -528,12 +603,57 @@ func EffectiveDailyLimit(u *User, s Settings) int {
 	return s.DefaultDailySearchLimit
 }
 
+// EffectiveAPIDailyLimit 返回用户每日 API 调用额度。
+// 用户单独设置了 API 额度时优先使用；否则与网页搜索共享每日额度。
+func EffectiveAPIDailyLimit(u *User, s Settings) int {
+	if u != nil && u.APIDailySearchLimit > 0 {
+		return u.APIDailySearchLimit
+	}
+	return EffectiveDailyLimit(u, s)
+}
+
 func UserSearchCountToday(userID int64) (int, error) {
 	if userID <= 0 {
 		return 0, nil
 	}
 	var count int
 	err := DB.QueryRow(`SELECT COUNT(*) FROM search_logs WHERE user_id = ? AND created_at >= ?`, userID, todayStart()).Scan(&count)
+	return count, err
+}
+
+// UserAPISearchCountToday 只统计通过 /api/search 的调用，用于独立 API 额度。
+func UserAPISearchCountToday(userID int64) (int, error) {
+	if userID <= 0 {
+		return 0, nil
+	}
+	var count int
+	err := DB.QueryRow(
+		`SELECT COUNT(*) FROM search_logs WHERE user_id = ? AND source = 'api' AND created_at >= ?`,
+		userID, todayStart(),
+	).Scan(&count)
+	return count, err
+}
+
+// AnonymousIPSearchCountToday 统计同一 IP 当天的匿名搜索次数。
+func AnonymousIPSearchCountToday(ip string) (int, error) {
+	if strings.TrimSpace(ip) == "" {
+		return 0, nil
+	}
+	var count int
+	err := DB.QueryRow(
+		`SELECT COUNT(*) FROM search_logs WHERE user_id = 0 AND ip = ? AND created_at >= ?`,
+		ip, todayStart(),
+	).Scan(&count)
+	return count, err
+}
+
+// AnonymousGlobalSearchCountToday 统计全站当天的匿名搜索总次数。
+func AnonymousGlobalSearchCountToday() (int, error) {
+	var count int
+	err := DB.QueryRow(
+		`SELECT COUNT(*) FROM search_logs WHERE user_id = 0 AND created_at >= ?`,
+		todayStart(),
+	).Scan(&count)
 	return count, err
 }
 

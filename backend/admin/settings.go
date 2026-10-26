@@ -75,6 +75,12 @@ func LoadSettings() Settings {
 	if s.SiteName == "" {
 		s.SiteName = DefaultSettings().SiteName
 	}
+	if strings.TrimSpace(s.SiteSlogan) == "" {
+		s.SiteSlogan = DefaultSettings().SiteSlogan
+	}
+	if strings.TrimSpace(s.SiteIcon) == "" {
+		s.SiteIcon = DefaultSettings().SiteIcon
+	}
 
 	settingsCache.Lock()
 	settingsCache.value = s

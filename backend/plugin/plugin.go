@@ -214,6 +214,7 @@ func GetPluginByName(name string) (AsyncSearchPlugin, bool) {
 
 // PluginManager 异步插件管理器
 type PluginManager struct {
+	mu      sync.RWMutex
 	plugins []AsyncSearchPlugin
 }
 
@@ -226,15 +227,59 @@ func NewPluginManager() *PluginManager {
 
 // RegisterPlugin 注册异步插件
 func (pm *PluginManager) RegisterPlugin(plugin AsyncSearchPlugin) {
+	if !initializePlugin(plugin) {
+		return
+	}
+	pm.mu.Lock()
+	pm.plugins = append(pm.plugins, plugin)
+	pm.mu.Unlock()
+}
+
+func initializePlugin(plugin AsyncSearchPlugin) bool {
 	// 如果插件支持延迟初始化，先执行初始化
 	if initPlugin, ok := plugin.(InitializablePlugin); ok {
 		if err := initPlugin.Initialize(); err != nil {
 			fmt.Printf("[PluginManager] 插件 %s 初始化失败: %v，跳过注册\n", plugin.Name(), err)
-			return
+			return false
+		}
+	}
+	return true
+}
+
+// Reload 根据新的启用列表原地刷新插件，不需要重启进程。
+// 仍然启用的插件保留原实例（避免重复初始化），新增的插件执行初始化，
+// 被移除的插件只从列表里摘除。
+func (pm *PluginManager) Reload(enabled []string) {
+	desired := make(map[string]bool, len(enabled))
+	for _, name := range enabled {
+		name = strings.TrimSpace(name)
+		if name != "" {
+			desired[name] = true
 		}
 	}
 
-	pm.plugins = append(pm.plugins, plugin)
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+
+	existing := make(map[string]AsyncSearchPlugin, len(pm.plugins))
+	for _, p := range pm.plugins {
+		existing[p.Name()] = p
+	}
+
+	next := make([]AsyncSearchPlugin, 0, len(desired))
+	for _, p := range GetRegisteredPlugins() {
+		if !desired[p.Name()] {
+			continue
+		}
+		if current, ok := existing[p.Name()]; ok {
+			next = append(next, current)
+			continue
+		}
+		if initializePlugin(p) {
+			next = append(next, p)
+		}
+	}
+	pm.plugins = next
 }
 
 // RegisterAllGlobalPlugins 注册所有全局异步插件
@@ -274,9 +319,13 @@ func (pm *PluginManager) RegisterGlobalPluginsWithFilter(enabledPlugins []string
 	}
 }
 
-// GetPlugins 获取所有注册的异步插件
+// GetPlugins 获取所有注册的异步插件（返回副本，避免调用方遍历时与 Reload 竞争）
 func (pm *PluginManager) GetPlugins() []AsyncSearchPlugin {
-	return pm.plugins
+	pm.mu.RLock()
+	defer pm.mu.RUnlock()
+	out := make([]AsyncSearchPlugin, len(pm.plugins))
+	copy(out, pm.plugins)
+	return out
 }
 
 // ============================================================

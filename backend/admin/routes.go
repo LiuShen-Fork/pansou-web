@@ -8,6 +8,7 @@ import "github.com/gin-gonic/gin"
 func RegisterRoutes(r *gin.Engine) {
 	// 公开接口
 	r.GET("/api/auth/public-config", PublicConfig)
+	r.GET("/api/web/token", WebTokenIssue)
 	r.POST("/api/auth/login", Login)
 	r.POST("/api/auth/register", Register)
 	r.POST("/api/auth/register/send-code", SendRegisterCode)
@@ -24,6 +25,9 @@ func RegisterRoutes(r *gin.Engine) {
 		auth.POST("/profile", UpdateProfile)
 		auth.GET("/token", APITokenGet)
 		auth.POST("/token/reset", APITokenReset)
+		auth.GET("/tokens", APITokenGet)
+		auth.POST("/tokens", APITokenCreate)
+		auth.DELETE("/tokens/:id", APITokenDelete)
 		auth.GET("/oauth/bindings", OAuthBindings)
 		auth.DELETE("/oauth/bindings", UnbindOAuth)
 	}

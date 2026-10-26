@@ -26,10 +26,13 @@ type User struct {
 	Status             string `json:"status"`
 	MustChangePassword bool   `json:"must_change_password"`
 	DailySearchLimit   int    `json:"daily_search_limit"`
-	SearchCountToday   int    `json:"search_count_today,omitempty"`
-	CreatedAt          string `json:"created_at"`
-	UpdatedAt          string `json:"updated_at"`
-	LastLoginAt        string `json:"last_login_at,omitempty"`
+	// APIDailySearchLimit 仅统计 /api/search 的调用；0 表示跟随每日搜索额度。
+	APIDailySearchLimit int    `json:"api_daily_search_limit"`
+	APISearchCountToday int    `json:"api_search_count_today,omitempty"`
+	SearchCountToday    int    `json:"search_count_today,omitempty"`
+	CreatedAt           string `json:"created_at"`
+	UpdatedAt           string `json:"updated_at"`
+	LastLoginAt         string `json:"last_login_at,omitempty"`
 
 	PasswordHash string `json:"-"`
 }
@@ -49,6 +52,7 @@ type Session struct {
 type APIToken struct {
 	ID         int64  `json:"id"`
 	UserID     int64  `json:"user_id"`
+	Name       string `json:"name"`
 	Prefix     string `json:"prefix"`
 	CreatedAt  string `json:"created_at"`
 	LastUsedAt string `json:"last_used_at,omitempty"`
@@ -58,7 +62,11 @@ type APIToken struct {
 type Settings struct {
 	SiteName        string `json:"site_name"`
 	SiteDescription string `json:"site_description"`
-	Announcement    string `json:"announcement"`
+	// SiteSlogan 显示在首页 Logo 下方的副标题。
+	SiteSlogan string `json:"site_slogan"`
+	// SiteIcon 支持 http(s) 地址、站内路径或 data:image/*。
+	SiteIcon     string `json:"site_icon"`
+	Announcement string `json:"announcement"`
 
 	// 邮箱登录：允许用「用户名或邮箱 + 密码」登录。管理员账号始终允许密码登录，避免锁死。
 	EmailLoginEnabled bool `json:"email_login_enabled"`
@@ -78,23 +86,31 @@ type Settings struct {
 	DefaultDailySearchLimit int `json:"default_daily_search_limit"`
 	// AnonymousWebSearchLimit 匿名网页搜索的每分钟请求数上限。
 	AnonymousWebSearchLimit int `json:"anonymous_web_search_limit"`
-	SessionTTLHours         int `json:"session_ttl_hours"`
+	// AnonymousDailyLimit 同一 IP 每天可用的匿名搜索次数，0 表示不限制。
+	AnonymousDailyLimit int `json:"anonymous_daily_limit"`
+	// AnonymousGlobalDailyLimit 全站每天允许的匿名搜索总次数，0 表示不限制。
+	AnonymousGlobalDailyLimit int `json:"anonymous_global_daily_limit"`
+	SessionTTLHours           int `json:"session_ttl_hours"`
 }
 
 func DefaultSettings() Settings {
 	return Settings{
-		SiteName:                "Qingyu PanSou",
-		SiteDescription:         "网盘资源搜索",
-		EmailLoginEnabled:       true,
-		EmailRegisterEnabled:    false,
-		OAuthLoginEnabled:       false,
-		OAuthRegisterEnabled:    false,
-		APIRequireLogin:         true,
-		WebSearchEnabled:        true,
-		AllowUserAPITokens:      true,
-		DefaultDailySearchLimit: 0,
-		AnonymousWebSearchLimit: 20,
-		SessionTTLHours:         168,
+		SiteName:                  "Qingyu PanSou",
+		SiteDescription:           "网盘资源搜索",
+		SiteSlogan:                "清羽飞扬自建网盘搜索，众多资源，一键直达",
+		SiteIcon:                  "/favicon.ico",
+		EmailLoginEnabled:         true,
+		EmailRegisterEnabled:      false,
+		OAuthLoginEnabled:         false,
+		OAuthRegisterEnabled:      false,
+		APIRequireLogin:           true,
+		WebSearchEnabled:          true,
+		AllowUserAPITokens:        true,
+		DefaultDailySearchLimit:   0,
+		AnonymousWebSearchLimit:   20,
+		AnonymousDailyLimit:       0,
+		AnonymousGlobalDailyLimit: 0,
+		SessionTTLHours:           168,
 	}
 }
 

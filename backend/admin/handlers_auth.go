@@ -46,6 +46,8 @@ func PublicConfig(c *gin.Context) {
 		"site": gin.H{
 			"name":         s.SiteName,
 			"description":  s.SiteDescription,
+			"slogan":       s.SiteSlogan,
+			"icon":         s.SiteIcon,
 			"announcement": s.Announcement,
 		},
 		"auth": gin.H{
@@ -74,6 +76,8 @@ func Me(c *gin.Context) {
 	accounts, _ := ListUserOAuthAccounts(u.ID)
 	count, _ := UserSearchCountToday(u.ID)
 	u.SearchCountToday = count
+	apiCount, _ := UserAPISearchCountToday(u.ID)
+	u.APISearchCountToday = apiCount
 	c.JSON(http.StatusOK, gin.H{
 		"user": u,
 		"auth": gin.H{
@@ -314,30 +318,78 @@ func UpdateProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"user": updated})
 }
 
+func apiTokensAllowed(c *gin.Context) bool {
+	if LoadSettings().AllowUserAPITokens {
+		return true
+	}
+	c.JSON(http.StatusForbidden, gin.H{"error": "管理员已关闭个人 API 令牌", "code": "API_TOKEN_DISABLED"})
+	return false
+}
+
+// APITokenGet 列出当前用户的全部令牌（不返回明文）。
 func APITokenGet(c *gin.Context) {
-	settings := LoadSettings()
-	if !settings.AllowUserAPITokens {
-		c.JSON(http.StatusForbidden, gin.H{"error": "管理员已关闭个人 API 令牌", "code": "API_TOKEN_DISABLED"})
+	if !apiTokensAllowed(c) {
 		return
 	}
 	u := CurrentUser(c)
-	t, err := GetAPIToken(u.ID)
-	if errors.Is(err, sql.ErrNoRows) {
-		// 首次使用：不自动生成不可见的令牌，由用户点击「生成」后一次性展示。
-		c.JSON(http.StatusOK, gin.H{"token": nil})
-		return
-	}
+	items, err := ListAPITokens(u.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "读取令牌失败", "code": "TOKEN_FAILED"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"token": t})
+	var first *APIToken
+	if len(items) > 0 {
+		first = &items[0]
+	}
+	// token 字段保留给旧版用户中心；items 为新版多令牌列表。
+	c.JSON(http.StatusOK, gin.H{"token": first, "items": items, "max": MaxAPITokensPerUser})
 }
 
+type createTokenRequest struct {
+	Name string `json:"name"`
+}
+
+// APITokenCreate 创建一个新令牌，明文只返回这一次。
+func APITokenCreate(c *gin.Context) {
+	if !apiTokensAllowed(c) {
+		return
+	}
+	var req createTokenRequest
+	_ = c.ShouldBindJSON(&req)
+	u := CurrentUser(c)
+	item, token, err := CreateAPIToken(u.ID, req.Name)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": "TOKEN_LIMIT"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"token": token, "item": item, "max": MaxAPITokensPerUser})
+}
+
+// APITokenDelete 删除指定令牌。
+func APITokenDelete(c *gin.Context) {
+	if !apiTokensAllowed(c) {
+		return
+	}
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "令牌 ID 无效", "code": "BAD_REQUEST"})
+		return
+	}
+	u := CurrentUser(c)
+	if err := DeleteAPIToken(u.ID, id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "令牌不存在", "code": "NOT_FOUND"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除令牌失败", "code": "TOKEN_FAILED"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// APITokenReset 撤销全部旧令牌并生成一个新的默认令牌。
 func APITokenReset(c *gin.Context) {
-	settings := LoadSettings()
-	if !settings.AllowUserAPITokens {
-		c.JSON(http.StatusForbidden, gin.H{"error": "管理员已关闭个人 API 令牌", "code": "API_TOKEN_DISABLED"})
+	if !apiTokensAllowed(c) {
 		return
 	}
 	u := CurrentUser(c)

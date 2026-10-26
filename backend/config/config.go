@@ -168,6 +168,39 @@ func getDefaultChannels() []string {
 }
 
 var defaultChannelsMu sync.RWMutex
+var enabledPluginsMu sync.RWMutex
+
+// GetEnabledPlugins 返回当前启用插件列表的副本。
+func GetEnabledPlugins() []string {
+	enabledPluginsMu.RLock()
+	defer enabledPluginsMu.RUnlock()
+	if AppConfig == nil || len(AppConfig.EnabledPlugins) == 0 {
+		return nil
+	}
+	out := make([]string, len(AppConfig.EnabledPlugins))
+	copy(out, AppConfig.EnabledPlugins)
+	return out
+}
+
+// SetEnabledPlugins 热更新启用插件列表；插件管理器会随后执行 Reload。
+func SetEnabledPlugins(plugins []string) {
+	enabledPluginsMu.Lock()
+	defer enabledPluginsMu.Unlock()
+	if AppConfig == nil {
+		return
+	}
+	cleaned := make([]string, 0, len(plugins))
+	seen := make(map[string]bool, len(plugins))
+	for _, name := range plugins {
+		name = strings.TrimSpace(name)
+		if name == "" || seen[name] {
+			continue
+		}
+		seen[name] = true
+		cleaned = append(cleaned, name)
+	}
+	AppConfig.EnabledPlugins = cleaned
+}
 
 // GetDefaultChannels 返回当前默认 TG 频道列表的副本。
 // 管理后台的上游自动同步会热更新该列表，因此所有读取都必须走这里，

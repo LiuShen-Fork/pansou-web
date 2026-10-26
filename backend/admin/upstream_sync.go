@@ -27,7 +27,28 @@ const (
 var (
 	upstreamSyncMu      sync.Mutex
 	upstreamSyncRunning bool
+
+	pluginReloaderMu sync.RWMutex
+	pluginReloader   func([]string)
 )
+
+// SetPluginReloader 注入插件管理器的热重载能力。由 main 在创建插件管理器后调用。
+func SetPluginReloader(fn func([]string)) {
+	pluginReloaderMu.Lock()
+	pluginReloader = fn
+	pluginReloaderMu.Unlock()
+}
+
+func reloadPlugins(plugins []string) bool {
+	pluginReloaderMu.RLock()
+	fn := pluginReloader
+	pluginReloaderMu.RUnlock()
+	if fn == nil {
+		return false
+	}
+	fn(plugins)
+	return true
+}
 
 type UpstreamSyncSettings struct {
 	Enabled       bool   `json:"enabled"`
@@ -305,19 +326,20 @@ func RunUpstreamSync(force bool) (UpstreamSyncStatus, error) {
 
 	revision := fetchUpstreamRevision(ctx, settings.Repo, settings.Ref)
 	currentChannels := config.GetDefaultChannels()
-	currentPlugins := []string{}
-	if config.AppConfig != nil {
-		currentPlugins = config.AppConfig.EnabledPlugins
-	}
+	currentPlugins := config.GetEnabledPlugins()
 	st.ChannelCount = len(channels)
 	st.PluginCount = len(plugins)
 	st.ChannelsChanged = !sameStrings(currentChannels, channels)
 	st.PluginsChanged = !sameStrings(currentPlugins, plugins)
-	st.RestartRequired = st.PluginsChanged
 	st.LastRevision = firstNonEmpty(revision, settings.Ref)
 
 	if st.ChannelsChanged {
 		config.SetDefaultChannels(channels)
+	}
+	if st.PluginsChanged {
+		config.SetEnabledPlugins(plugins)
+		// 已编译进二进制的插件可以原地启停；写入环境文件用于容器重启后保持一致。
+		st.RestartRequired = !reloadPlugins(plugins)
 	}
 	if st.ChannelsChanged || st.PluginsChanged {
 		if err := writeUpstreamDefaultsFile(settings, revision, channels, plugins); err != nil {
@@ -328,8 +350,8 @@ func RunUpstreamSync(force bool) (UpstreamSyncStatus, error) {
 		st.LastSuccessAt = Now()
 	}
 	saveUpstreamSyncStatus(st)
-	log.Printf("[admin] 上游同步完成：频道 %d 个（变化=%v），插件 %d 个（变化=%v），重启后生效",
-		len(channels), st.ChannelsChanged, len(plugins), st.PluginsChanged)
+	log.Printf("[admin] 上游同步完成：频道 %d 个（变化=%v），插件 %d 个（变化=%v），插件已热更新=%v",
+		len(channels), st.ChannelsChanged, len(plugins), st.PluginsChanged, !st.RestartRequired)
 	return st, nil
 }
 
@@ -387,12 +409,7 @@ func AdminGetUpstreamSync(c *gin.Context) {
 }
 
 func enabledPluginsSnapshot() []string {
-	if config.AppConfig == nil {
-		return nil
-	}
-	out := make([]string, len(config.AppConfig.EnabledPlugins))
-	copy(out, config.AppConfig.EnabledPlugins)
-	return out
+	return config.GetEnabledPlugins()
 }
 
 func AdminPutUpstreamSync(c *gin.Context) {

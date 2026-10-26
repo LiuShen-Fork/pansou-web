@@ -12,6 +12,8 @@ import (
 type adminSiteSettings struct {
 	Name         string `json:"name"`
 	Description  string `json:"description"`
+	Slogan       string `json:"slogan"`
+	Icon         string `json:"icon"`
 	Announcement string `json:"announcement"`
 }
 
@@ -19,6 +21,15 @@ type adminSettingsPayload struct {
 	Site  adminSiteSettings `json:"site"`
 	Auth  Settings          `json:"auth"`
 	Email EmailSettings     `json:"email"`
+}
+
+// isSafeIconURL 限制图标来源，避免把 javascript: 等危险协议写进页面。
+func isSafeIconURL(value string) bool {
+	lower := strings.ToLower(value)
+	return strings.HasPrefix(lower, "http://") ||
+		strings.HasPrefix(lower, "https://") ||
+		strings.HasPrefix(lower, "/") ||
+		strings.HasPrefix(lower, "data:image/")
 }
 
 func AdminGetSettings(c *gin.Context) {
@@ -33,6 +44,8 @@ func AdminGetSettings(c *gin.Context) {
 		"site": adminSiteSettings{
 			Name:         s.SiteName,
 			Description:  s.SiteDescription,
+			Slogan:       s.SiteSlogan,
+			Icon:         s.SiteIcon,
 			Announcement: s.Announcement,
 		},
 		"auth":               s,
@@ -55,6 +68,25 @@ func AdminPutSettings(c *gin.Context) {
 	s := payload.Auth
 	s.SiteName = strings.TrimSpace(payload.Site.Name)
 	s.SiteDescription = strings.TrimSpace(payload.Site.Description)
+	s.SiteSlogan = strings.TrimSpace(payload.Site.Slogan)
+	if s.SiteSlogan == "" {
+		s.SiteSlogan = DefaultSettings().SiteSlogan
+	}
+	s.SiteIcon = strings.TrimSpace(payload.Site.Icon)
+	if s.SiteIcon == "" {
+		s.SiteIcon = DefaultSettings().SiteIcon
+	}
+	if len(s.SiteIcon) > 2048*1024 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "站点图标过大，请使用不超过 2MB 的图片或外链", "code": "BAD_SITE_ICON"})
+		return
+	}
+	if !isSafeIconURL(s.SiteIcon) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "站点图标仅支持 http(s)、站内路径或图片 Data URL", "code": "BAD_SITE_ICON"})
+		return
+	}
+	if n := len([]rune(s.SiteSlogan)); n > 120 {
+		s.SiteSlogan = string([]rune(s.SiteSlogan)[:120])
+	}
 	s.Announcement = payload.Site.Announcement
 	if s.DefaultDailySearchLimit < 0 || s.DefaultDailySearchLimit > 100000 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "默认每日搜索上限不合法", "code": "BAD_LIMIT"})
@@ -62,6 +94,14 @@ func AdminPutSettings(c *gin.Context) {
 	}
 	if s.AnonymousWebSearchLimit < 0 || s.AnonymousWebSearchLimit > 100000 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "匿名搜索每分钟上限不合法", "code": "BAD_LIMIT"})
+		return
+	}
+	if s.AnonymousDailyLimit < 0 || s.AnonymousDailyLimit > 1000000 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "匿名搜索单 IP 每日上限不合法", "code": "BAD_LIMIT"})
+		return
+	}
+	if s.AnonymousGlobalDailyLimit < 0 || s.AnonymousGlobalDailyLimit > 100000000 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "匿名搜索全站每日上限不合法", "code": "BAD_LIMIT"})
 		return
 	}
 	if s.SessionTTLHours < 1 || s.SessionTTLHours > 8760 {
@@ -220,6 +260,10 @@ func AdminUpdateUser(c *gin.Context) {
 	var upd UserUpdate
 	if err := c.ShouldBindJSON(&upd); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "参数无效", "code": "BAD_REQUEST"})
+		return
+	}
+	if current := CurrentUser(c); current != nil && id == current.ID && upd.Status != nil && *upd.Status != StatusActive {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "不能禁用当前登录的管理员账号", "code": "CANNOT_DISABLE_SELF"})
 		return
 	}
 	user, err := UpdateUser(id, upd)

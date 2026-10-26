@@ -94,6 +94,10 @@ func migrate() error {
 			last_login_at TEXT NOT NULL DEFAULT ''
 		)`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email <> ''`,
+		// 管理员全局唯一：历史数据如存在多个管理员，只保留最早创建的一个。
+		`UPDATE users SET role = 'user' WHERE role = 'admin'
+			AND id NOT IN (SELECT id FROM users WHERE role = 'admin' ORDER BY id LIMIT 1)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_single_admin ON users(role) WHERE role = 'admin'`,
 		`CREATE TABLE IF NOT EXISTS sessions (
 			id TEXT PRIMARY KEY,
 			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -107,12 +111,14 @@ func migrate() error {
 		`CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at)`,
 		`CREATE TABLE IF NOT EXISTS api_tokens (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			name TEXT NOT NULL DEFAULT '默认令牌',
 			token_hash TEXT NOT NULL UNIQUE,
 			prefix TEXT NOT NULL,
 			created_at TEXT NOT NULL,
 			last_used_at TEXT NOT NULL DEFAULT ''
 		)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_tokens_user ON api_tokens(user_id)`,
 		`CREATE TABLE IF NOT EXISTS settings (
 			key TEXT PRIMARY KEY,
 			value TEXT NOT NULL,
@@ -180,11 +186,110 @@ func migrate() error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_search_logs_user_time ON search_logs(user_id, created_at)`,
 		`CREATE INDEX IF NOT EXISTS idx_search_logs_time ON search_logs(created_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_search_logs_ip_time ON search_logs(ip, created_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_search_logs_source_time ON search_logs(source, created_at)`,
 	}
-	for _, stmt := range statements {
+	for i, stmt := range statements {
 		if _, err := DB.Exec(stmt); err != nil {
-			return fmt.Errorf("迁移后台数据库失败: %w", err)
+			return fmt.Errorf("迁移后台数据库失败（第 %d 条）: %w", i+1, err)
 		}
+	}
+	if err := ensureColumn("users", "api_daily_search_limit",
+		`ALTER TABLE users ADD COLUMN api_daily_search_limit INTEGER NOT NULL DEFAULT 0`); err != nil {
+		return fmt.Errorf("迁移用户 API 额度字段失败: %w", err)
+	}
+	if err := migrateAPITokens(); err != nil {
+		return fmt.Errorf("迁移 API 令牌表失败: %w", err)
+	}
+	return nil
+}
+
+// ensureColumn 为旧库补充新增列。SQLite 不支持 ADD COLUMN IF NOT EXISTS。
+func ensureColumn(table, column, alterSQL string) error {
+	rows, err := DB.Query(`PRAGMA table_info(` + table + `)`)
+	if err != nil {
+		return err
+	}
+	found := false
+	for rows.Next() {
+		var cid, notNull, pk int
+		var name, typ string
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &typ, &notNull, &dflt, &pk); err != nil {
+			rows.Close()
+			return err
+		}
+		if name == column {
+			found = true
+		}
+	}
+	rows.Close()
+	if found {
+		return nil
+	}
+	_, err = DB.Exec(alterSQL)
+	return err
+}
+
+// migrateAPITokens 把旧版「每用户唯一一个令牌」的表迁移为「每用户最多 10 个令牌」。
+// SQLite 不能直接删除列上的 UNIQUE 约束，只能重建表。
+func migrateAPITokens() error {
+	rows, err := DB.Query(`PRAGMA table_info(api_tokens)`)
+	if err != nil {
+		return err
+	}
+	hasName := false
+	for rows.Next() {
+		var cid, notNull, pk int
+		var name, typ string
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &typ, &notNull, &dflt, &pk); err != nil {
+			rows.Close()
+			return err
+		}
+		if name == "name" {
+			hasName = true
+		}
+	}
+	rows.Close()
+	if hasName {
+		return nil
+	}
+
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`ALTER TABLE api_tokens RENAME TO api_tokens_legacy`); err != nil {
+		return fmt.Errorf("重命名旧令牌表: %w", err)
+	}
+	if _, err := tx.Exec(`CREATE TABLE api_tokens (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		name TEXT NOT NULL DEFAULT '默认令牌',
+		token_hash TEXT NOT NULL UNIQUE,
+		prefix TEXT NOT NULL,
+		created_at TEXT NOT NULL,
+		last_used_at TEXT NOT NULL DEFAULT ''
+	)`); err != nil {
+		return fmt.Errorf("创建新令牌表: %w", err)
+	}
+	// 跳过已删除用户遗留的孤儿令牌，否则外键约束会阻止迁移。
+	if _, err := tx.Exec(`INSERT INTO api_tokens (id, user_id, name, token_hash, prefix, created_at, last_used_at)
+		SELECT t.id, t.user_id, '默认令牌', t.token_hash, t.prefix, t.created_at, t.last_used_at
+		FROM api_tokens_legacy t
+		WHERE EXISTS (SELECT 1 FROM users u WHERE u.id = t.user_id)`); err != nil {
+		return fmt.Errorf("迁移旧令牌数据: %w", err)
+	}
+	if _, err := tx.Exec(`DROP TABLE api_tokens_legacy`); err != nil {
+		return fmt.Errorf("删除旧令牌表: %w", err)
+	}
+	if _, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_api_tokens_user ON api_tokens(user_id)`); err != nil {
+		return fmt.Errorf("创建令牌索引: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("提交令牌迁移: %w", err)
 	}
 	return nil
 }

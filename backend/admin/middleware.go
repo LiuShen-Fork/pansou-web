@@ -182,6 +182,25 @@ func AccessGate() gin.HandlerFunc {
 			})
 			return
 		}
+		// 匿名网页搜索必须携带同源页面签发的短期凭证，避免直接把
+		// /api/web/search 当成公开 API。已登录/API 令牌请求不受此限制。
+		if user == nil && isWebSearch {
+			token := c.GetHeader("X-Web-Token")
+			if !sameOriginRequest(c) || !ValidateWebToken(token, c.ClientIP(), c.GetHeader("User-Agent")) {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+					"error": "网页搜索凭证无效，请刷新页面后重试",
+					"code":  "WEB_TOKEN_REQUIRED",
+				})
+				return
+			}
+		}
+		if user != nil && user.MustChangePassword {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"error": "请先修改默认密码后再使用搜索功能",
+				"code":  "MUST_CHANGE_PASSWORD",
+			})
+			return
+		}
 
 		if (isSearch || isWebSearch) && user == nil {
 			if !allowAnonymousSearch(c.ClientIP(), settings.AnonymousWebSearchLimit) {
@@ -190,6 +209,26 @@ func AccessGate() gin.HandlerFunc {
 					"code":  "RATE_LIMITED",
 				})
 				return
+			}
+			if settings.AnonymousDailyLimit > 0 {
+				count, err := AnonymousIPSearchCountToday(c.ClientIP())
+				if err == nil && count >= settings.AnonymousDailyLimit {
+					c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
+						"error": fmt.Sprintf("当前 IP 今日匿名搜索次数已达上限（%d 次），请登录后继续使用", settings.AnonymousDailyLimit),
+						"code":  "ANON_IP_DAILY_LIMIT",
+					})
+					return
+				}
+			}
+			if settings.AnonymousGlobalDailyLimit > 0 {
+				count, err := AnonymousGlobalSearchCountToday()
+				if err == nil && count >= settings.AnonymousGlobalDailyLimit {
+					c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
+						"error": "今日全站匿名搜索额度已用完，请登录后继续使用",
+						"code":  "ANON_GLOBAL_DAILY_LIMIT",
+					})
+					return
+				}
 			}
 		}
 		if (isSearch || isWebSearch) && user != nil {
@@ -201,6 +240,19 @@ func AccessGate() gin.HandlerFunc {
 						"code":  "DAILY_LIMIT_REACHED",
 					})
 					return
+				}
+			}
+			// API 独立额度：仅统计 /api/search，所有令牌共享。
+			if isSearch {
+				if limit := EffectiveAPIDailyLimit(user, settings); limit > 0 {
+					count, _ := UserAPISearchCountToday(user.ID)
+					if count >= limit {
+						c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
+							"error": fmt.Sprintf("今日 API 调用次数已达上限（%d 次）", limit),
+							"code":  "API_DAILY_LIMIT_REACHED",
+						})
+						return
+					}
 				}
 			}
 		}

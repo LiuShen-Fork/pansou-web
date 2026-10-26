@@ -192,8 +192,10 @@ func startServer() {
 
 	// 注册全局插件（根据配置过滤）
 	if config.AppConfig.AsyncPluginEnabled {
-		pluginManager.RegisterGlobalPluginsWithFilter(config.AppConfig.EnabledPlugins)
+		pluginManager.RegisterGlobalPluginsWithFilter(config.GetEnabledPlugins())
 	}
+	// 上游同步发现插件列表变化时，原地刷新插件，无需重启容器。
+	admin.SetPluginReloader(pluginManager.Reload)
 
 	// 更新默认并发数（如果插件被禁用则使用0）
 	pluginCount := 0
