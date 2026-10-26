@@ -39,3 +39,6 @@ backend/*.db-wal
 *.sw?
 
 *.tsbuildinfo
+
+# 本地开发数据（账户数据库/缓存/日志）
+/data/
