@@ -3,7 +3,7 @@ import { ref, reactive, onMounted, onUnmounted, computed, nextTick, watch } from
 import { search, getHealth, type SearchParams, type HealthStatus } from '@/api';
 import UserCenter from '@/components/UserCenter.vue';
 import AdminPage from '@/components/admin/AdminPage.vue';
-import { authState, initAuth, isAdmin, isLoggedIn, logout as logoutUser, refreshMe } from '@/stores/auth';
+import { authState, initAuth, isAdmin, isLoggedIn, logout as logoutUser, mustChangePassword, refreshMe } from '@/stores/auth';
 import type { SearchResponse, MergedResults, ExportField, ExportSettings } from '@/types';
 import SearchForm from '@/components/SearchForm.vue';
 import ResultTabs from '@/components/ResultTabs.vue';
@@ -959,6 +959,10 @@ const syncAuthState = () => {
 
 const switchView = (view: 'search' | 'user' | 'admin', updateHash = true) => {
   if (view === 'admin' && !isAdmin.value) view = 'user';
+  if (view === 'admin' && mustChangePassword.value) {
+    globalError.value = '请先修改默认密码后再进入管理后台。';
+    view = 'user';
+  }
   if ((view === 'user' || view === 'admin') && !isLoggedIn.value) {
     showLogin.value = true;
     view = 'search';
@@ -1432,6 +1436,7 @@ onUnmounted(() => {
         v-else-if="currentView === 'user'"
         @back="goSearch"
         @logout="handleLogout"
+        @admin="goAdmin"
       />
 
       <AdminPage

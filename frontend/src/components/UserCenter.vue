@@ -17,6 +17,9 @@
         </div>
       </div>
       <div class="hero-actions">
+        <button v-if="user?.role === 'admin'" class="btn btn-primary" type="button" @click="openAdmin">
+          <AdminIcon name="shield" :size="15" /> 管理后台
+        </button>
         <button class="btn" type="button" @click="$emit('back')"><AdminIcon name="arrowLeft" :size="15" /> 返回搜索</button>
         <button class="btn btn-danger" type="button" @click="$emit('logout')"><AdminIcon name="logout" :size="15" /> 退出登录</button>
       </div>
@@ -24,7 +27,7 @@
 
     <div v-if="user?.must_change_password" class="notice notice-warning">
       <AdminIcon name="alert" :size="16" />
-      <div>当前仍在使用默认密码。请先在下方修改密码，修改后才能访问 API 令牌等完整功能。</div>
+      <div>当前仍在使用默认密码。请先在下方修改密码；改密后即可进入管理后台并使用 API 令牌等完整功能。</div>
     </div>
 
     <div class="user-grid">
@@ -165,7 +168,7 @@ import { authState, refreshMe } from '@/stores/auth';
 import AdminIcon from './admin/AdminIcon.vue';
 import { toast } from '@/lib/toast';
 
-defineEmits<{ back: []; logout: [] }>();
+const emit = defineEmits<{ back: []; logout: []; admin: [] }>();
 
 const user = computed(() => authState.user);
 const limitText = computed(() => {
@@ -217,6 +220,14 @@ onMounted(async () => {
     profile.email = user.value.email || '';
   }
 });
+
+const openAdmin = () => {
+  if (user.value?.must_change_password) {
+    toast.info('请先修改密码', '修改默认密码后即可进入管理后台');
+    return;
+  }
+  emit('admin');
+};
 
 const saveProfile = async () => {
   savingProfile.value = true;
@@ -349,6 +360,8 @@ const removeBinding = async (providerId: number) => {
 .binding-copy strong { display: block; font-size: 0.8rem; }
 .binding-copy span { display: block; font-size: 0.68rem; color: hsl(var(--muted-foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bind-actions { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.6rem; }
+.hero-actions { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+
 @media (max-width: 860px) {
   .user-grid { grid-template-columns: 1fr; }
   .user-hero { flex-direction: column; align-items: flex-start; }
