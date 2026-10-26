@@ -1,76 +1,148 @@
 <template>
-  <div class="user-center">
-    <div class="page-head">
-      <div>
-        <p class="eyebrow">账户中心</p>
-        <h2>{{ user?.username || '未登录' }}</h2>
-        <p class="sub">
-          {{ user?.role === 'admin' ? '管理员' : '普通用户' }} ·
-          今日搜索 {{ user?.search_count_today || 0 }}{{ limitText }}
-        </p>
+  <div class="user-page page-stack">
+    <section class="user-hero">
+      <div class="hero-main">
+        <div class="hero-avatar">{{ (user?.username || '?').slice(0, 1).toUpperCase() }}</div>
+        <div class="hero-copy">
+          <div class="hero-title">
+            <h2>{{ user?.username || '未登录' }}</h2>
+            <span class="badge" :class="user?.role === 'admin' ? 'badge-primary' : ''">{{ user?.role === 'admin' ? '管理员' : '普通用户' }}</span>
+            <span v-if="user?.status === 'disabled'" class="badge badge-danger">已禁用</span>
+          </div>
+          <p>{{ user?.email || '未绑定邮箱' }} · 注册于 {{ shortDate(user?.created_at) }}</p>
+          <div class="hero-meta">
+            <span><AdminIcon name="search" :size="14" /> 今日搜索 {{ user?.search_count_today || 0 }}{{ limitText }}</span>
+            <span><AdminIcon name="clock" :size="14" /> 最近登录 {{ user?.last_login_at ? shortTime(user.last_login_at) : '—' }}</span>
+          </div>
+        </div>
       </div>
-      <button class="ghost-button" type="button" @click="$emit('back')">← 返回搜索</button>
+      <div class="hero-actions">
+        <button class="btn" type="button" @click="$emit('back')"><AdminIcon name="arrowLeft" :size="15" /> 返回搜索</button>
+        <button class="btn btn-danger" type="button" @click="$emit('logout')"><AdminIcon name="logout" :size="15" /> 退出登录</button>
+      </div>
+    </section>
+
+    <div v-if="user?.must_change_password" class="notice notice-warning">
+      <AdminIcon name="alert" :size="16" />
+      <div>当前仍在使用默认密码。请先在下方修改密码，修改后才能访问 API 令牌等完整功能。</div>
     </div>
 
-    <div v-if="user?.must_change_password" class="alert warn">
-      当前仍在使用默认密码，请立即修改后再使用管理功能。
+    <div class="user-grid">
+      <section class="section-card">
+        <div class="section-head">
+          <div>
+            <div class="section-title"><AdminIcon name="user" :size="16" /> 个人资料</div>
+            <div class="section-desc">用户名用于登录；邮箱可用于找回与登录</div>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="field">
+            <label>用户名</label>
+            <input v-model="profile.username" class="input" maxlength="32" />
+          </div>
+          <div class="field" style="margin-top: 0.7rem">
+            <label>邮箱</label>
+            <input v-model="profile.email" class="input" type="email" placeholder="可选" />
+          </div>
+          <button class="btn btn-primary" style="margin-top: 0.8rem" type="button" :disabled="savingProfile" @click="saveProfile">
+            <AdminIcon name="check" :size="15" /> {{ savingProfile ? '保存中…' : '保存资料' }}
+          </button>
+        </div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-head">
+          <div>
+            <div class="section-title"><AdminIcon name="lock" :size="16" /> 修改密码</div>
+            <div class="section-desc">修改后其他设备上的会话会退出</div>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="field">
+            <label>当前密码</label>
+            <input v-model="password.current" class="input" type="password" placeholder="OAuth 注册的账号可留空" autocomplete="current-password" />
+          </div>
+          <div class="field" style="margin-top: 0.7rem">
+            <label>新密码</label>
+            <input v-model="password.next" class="input" type="password" placeholder="至少 8 位" autocomplete="new-password" />
+          </div>
+          <button class="btn btn-primary" style="margin-top: 0.8rem" type="button" :disabled="savingPassword" @click="savePassword">
+            <AdminIcon name="shield" :size="15" /> {{ savingPassword ? '提交中…' : '更新密码' }}
+          </button>
+        </div>
+      </section>
     </div>
-    <div v-if="message" class="alert ok">{{ message }}</div>
-    <div v-if="error" class="alert error">{{ error }}</div>
 
-    <div class="grid">
-      <section class="panel">
-        <h3>个人资料</h3>
-        <label>用户名<input v-model="profile.username" type="text" maxlength="32" /></label>
-        <label>邮箱<input v-model="profile.email" type="email" placeholder="可选" /></label>
-        <button class="primary-button" :disabled="savingProfile" @click="saveProfile">
-          {{ savingProfile ? '保存中...' : '保存资料' }}
-        </button>
+    <div class="user-grid">
+      <section class="section-card">
+        <div class="section-head">
+          <div>
+            <div class="section-title"><AdminIcon name="key" :size="16" /> API 令牌</div>
+            <div class="section-desc">用于脚本或第三方客户端调用受保护的搜索 API</div>
+          </div>
+          <span class="badge" :class="tokenMeta ? 'badge-success' : ''">{{ tokenMeta ? '已生成' : '未生成' }}</span>
+        </div>
+        <div class="section-body">
+          <p class="api-hint">
+            请求头示例：<code class="mono">Authorization: Bearer ps_...</code><br />
+            接口：<code class="mono">GET /api/search?kw=关键词</code>
+          </p>
+          <div v-if="tokenMeta" class="token-box">
+            <div>
+              <div class="field-label">当前令牌</div>
+              <div class="mono">{{ tokenMeta.prefix }}••••••••</div>
+              <div class="hint">创建于 {{ shortTime(tokenMeta.created_at) }}<template v-if="tokenMeta.last_used_at"> · 最近使用 {{ shortTime(tokenMeta.last_used_at) }}</template></div>
+            </div>
+            <button class="btn btn-sm" type="button" @click="resetToken">
+              <AdminIcon name="refresh" :size="14" /> {{ tokenMeta ? '重置' : '生成' }}
+            </button>
+          </div>
+          <div v-else class="empty-state" style="padding: 1.2rem 0">
+            <AdminIcon name="key" :size="22" />
+            <strong>尚未生成 API 令牌</strong>
+            <span>点击下方按钮生成，令牌只完整显示一次</span>
+          </div>
+          <div v-if="newToken" class="new-token">
+            <div class="field-label">新令牌（仅显示一次）</div>
+            <div class="new-token-row">
+              <input class="input mono" :value="newToken" readonly @focus="($event.target as HTMLInputElement).select()" />
+              <button class="btn btn-sm" type="button" @click="copyToken"><AdminIcon name="copy" :size="14" /> 复制</button>
+            </div>
+          </div>
+          <button v-if="!tokenMeta" class="btn btn-primary" style="margin-top: 0.75rem" type="button" :disabled="resetting" @click="resetToken">
+            <AdminIcon name="plus" :size="15" /> {{ resetting ? '生成中…' : '生成 API 令牌' }}
+          </button>
+        </div>
       </section>
 
-      <section class="panel">
-        <h3>修改密码</h3>
-        <label>当前密码<input v-model="password.current" type="password" placeholder="OAuth 注册的账号可留空" /></label>
-        <label>新密码<input v-model="password.next" type="password" placeholder="至少 8 位" /></label>
-        <button class="primary-button" :disabled="savingPassword" @click="savePassword">
-          {{ savingPassword ? '提交中...' : '更新密码' }}
-        </button>
-      </section>
+      <section class="section-card">
+        <div class="section-head">
+          <div>
+            <div class="section-title"><AdminIcon name="shield" :size="16" /> 第三方账号绑定</div>
+            <div class="section-desc">绑定后可以使用 OAuth2 登录；至少保留一种登录方式</div>
+          </div>
+        </div>
+        <div class="section-body">
+          <div v-if="bindings.length" class="binding-list">
+            <div v-for="item in bindings" :key="item.provider_id" class="binding-row">
+              <div class="binding-icon">{{ item.provider_name.slice(0, 1).toUpperCase() }}</div>
+              <div class="binding-copy">
+                <strong>{{ item.provider_name }}</strong>
+                <span>{{ item.email || '已绑定' }}</span>
+              </div>
+              <button class="btn btn-sm btn-danger" type="button" @click="removeBinding(item.provider_id)">解绑</button>
+            </div>
+          </div>
+          <p v-else class="hint" style="margin-bottom: 0.6rem">尚未绑定第三方账号。</p>
 
-      <section class="panel">
-        <h3>API 令牌</h3>
-        <p class="muted">使用 <code>Authorization: Bearer &lt;令牌&gt;</code> 调用 <code>/api/search</code>。</p>
-        <div v-if="tokenMeta" class="token-line">
-          <code>{{ tokenMeta.prefix }}••••••••</code>
-          <span class="muted">创建于 {{ shortTime(tokenMeta.created_at) }}</span>
+          <div v-if="bindableProviders.length" class="bind-actions">
+            <span class="field-label">可绑定</span>
+            <a v-for="provider in bindableProviders" :key="provider.slug" class="btn btn-sm" :href="oauthStartUrl(provider.slug, 'bind')">
+              <AdminIcon name="external" :size="14" /> {{ provider.name }}
+            </a>
+          </div>
+          <p v-else-if="!bindings.length" class="hint">管理员尚未开启 OAuth 登录/注册，或所有服务商都已绑定。</p>
         </div>
-        <div v-if="newToken" class="token-line">
-          <input class="token-input" :value="newToken" readonly />
-          <button class="ghost-button" type="button" @click="copyToken">复制</button>
-        </div>
-        <p v-if="newToken" class="muted">新令牌只显示一次，请立即保存。</p>
-        <button class="ghost-button" type="button" :disabled="resetting" @click="resetToken">
-          {{ resetting ? '重置中...' : '重置令牌' }}
-        </button>
-      </section>
-
-      <section class="panel">
-        <h3>第三方账号绑定</h3>
-        <p v-if="!bindings.length" class="muted">尚未绑定 OAuth 账号。</p>
-        <div v-for="item in bindings" :key="item.provider_id" class="binding-row">
-          <span>
-            <strong>{{ item.provider_name }}</strong>
-            <small v-if="item.email">{{ item.email }}</small>
-          </span>
-          <button class="text-button danger" type="button" @click="removeBinding(item.provider_id)">解绑</button>
-        </div>
-        <div class="binding-row" v-for="provider in bindableProviders" :key="`bind-${provider.slug}`">
-          <span>{{ provider.name }}</span>
-          <a class="text-button" :href="oauthStartUrl(provider.slug, 'bind')">绑定</a>
-        </div>
-        <p v-if="!authState.config?.auth.oauth_login_enabled && !authState.config?.auth.oauth_register_enabled" class="muted">
-          管理员尚未开启 OAuth 登录/注册。
-        </p>
       </section>
     </div>
   </div>
@@ -90,14 +162,17 @@ import {
   type OAuthAccount,
 } from '@/api/auth';
 import { authState, refreshMe } from '@/stores/auth';
+import AdminIcon from './admin/AdminIcon.vue';
+import { toast } from '@/lib/toast';
 
-defineEmits<{ back: [] }>();
+defineEmits<{ back: []; logout: [] }>();
 
 const user = computed(() => authState.user);
 const limitText = computed(() => {
   const limit = user.value?.daily_search_limit || 0;
   return limit > 0 ? ` / ${limit}` : '（不限）';
 });
+const bindings = ref<OAuthAccount[]>([]);
 const bindableProviders = computed(() => {
   const bound = new Set(bindings.value.map((item) => item.provider_slug));
   return (authState.config?.oauth_providers || []).filter((provider) => !bound.has(provider.slug));
@@ -107,19 +182,16 @@ const profile = reactive({ username: authState.user?.username || '', email: auth
 const password = reactive({ current: '', next: '' });
 const tokenMeta = ref<APIToken | null>(null);
 const newToken = ref('');
-const bindings = ref<OAuthAccount[]>([]);
 const savingProfile = ref(false);
 const savingPassword = ref(false);
 const resetting = ref(false);
-const message = ref('');
-const error = ref('');
 
-const shortTime = (s: string) => (s ? new Date(s).toLocaleString() : '');
-
-const clearMessages = () => {
-  message.value = '';
-  error.value = '';
-};
+function shortTime(value?: string) {
+  return value ? new Date(value).toLocaleString() : '';
+}
+function shortDate(value?: string) {
+  return value ? new Date(value).toLocaleDateString() : '—';
+}
 
 const loadToken = async () => {
   if (!authState.config?.auth.allow_user_api_tokens) return;
@@ -147,23 +219,21 @@ onMounted(async () => {
 });
 
 const saveProfile = async () => {
-  clearMessages();
   savingProfile.value = true;
   try {
-    await updateProfile(profile.username, profile.email);
+    await updateProfile(profile.username.trim(), profile.email.trim());
     await refreshMe();
-    message.value = '资料已保存';
+    toast.success('资料已保存');
   } catch (err: any) {
-    error.value = err.response?.data?.error || '保存失败';
+    toast.error('保存失败', err.response?.data?.error || '');
   } finally {
     savingProfile.value = false;
   }
 };
 
 const savePassword = async () => {
-  clearMessages();
   if (password.next.length < 8) {
-    error.value = '新密码至少 8 位';
+    toast.error('新密码至少 8 位');
     return;
   }
   savingPassword.value = true;
@@ -173,25 +243,24 @@ const savePassword = async () => {
     password.next = '';
     await refreshMe();
     await Promise.all([loadToken(), loadBindings()]);
-    message.value = '密码已更新，其他设备的会话已退出';
+    toast.success('密码已更新', '其他设备的会话已退出');
   } catch (err: any) {
-    error.value = err.response?.data?.error || '修改密码失败';
+    toast.error('修改密码失败', err.response?.data?.error || '');
   } finally {
     savingPassword.value = false;
   }
 };
 
 const resetToken = async () => {
-  clearMessages();
-  if (!confirm('重置后旧令牌立即失效，确定继续？')) return;
+  if (tokenMeta.value && !window.confirm('重置后旧令牌立即失效，确定继续？')) return;
   resetting.value = true;
   try {
     const res = await resetAPIToken();
     newToken.value = res.token;
     await loadToken();
-    message.value = '令牌已重置';
+    toast.success('API 令牌已生成', '请立即保存，离开页面后将无法再次查看完整令牌');
   } catch (err: any) {
-    error.value = err.response?.data?.error || '重置失败';
+    toast.error('生成失败', err.response?.data?.error || '');
   } finally {
     resetting.value = false;
   }
@@ -200,76 +269,90 @@ const resetToken = async () => {
 const copyToken = async () => {
   try {
     await navigator.clipboard.writeText(newToken.value);
-    message.value = '已复制到剪贴板';
+    toast.success('已复制到剪贴板');
   } catch {
-    error.value = '复制失败，请手动选择令牌';
+    toast.error('复制失败，请手动选择令牌');
   }
 };
 
 const removeBinding = async (providerId: number) => {
-  clearMessages();
-  if (!confirm('确定解绑该第三方账号？')) return;
+  if (!window.confirm('确定解绑该第三方账号？')) return;
   try {
     await unbindOAuth(providerId);
     await loadBindings();
     await refreshMe();
-    message.value = '已解绑';
+    toast.success('已解绑');
   } catch (err: any) {
-    error.value = err.response?.data?.error || '解绑失败';
+    toast.error('解绑失败', err.response?.data?.error || '');
   }
 };
 </script>
 
 <style scoped>
-.user-center { max-width: 1080px; margin: 0 auto; }
-.page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.25rem; }
-.eyebrow { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
-.page-head h2 { font-size: 1.6rem; font-weight: 650; margin: 0.2rem 0; }
-.sub { color: hsl(var(--muted-foreground)); font-size: 0.88rem; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
-.panel {
-  background: hsl(var(--background-light, 0 0% 100%) / 0.9);
+.user-page { max-width: 1100px; margin: 0 auto; padding: 1.25rem 1rem 2rem; }
+.user-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 1.25rem;
   border: 1px solid hsl(var(--border));
+  border-radius: var(--console-radius);
+  background:
+    radial-gradient(circle at 90% -20%, rgba(99, 102, 241, 0.12), transparent 16rem),
+    hsl(var(--background-light, 0 0% 100%) / 0.94);
+  box-shadow: var(--console-shadow);
+}
+.hero-main { display: flex; align-items: center; gap: 0.9rem; min-width: 0; }
+.hero-avatar {
+  display: grid;
+  place-items: center;
+  width: 3.2rem;
+  height: 3.2rem;
   border-radius: 1rem;
-  padding: 1.15rem;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  background: linear-gradient(135deg, hsl(var(--primary)), #818cf8);
+  color: #fff;
+  font-size: 1.15rem;
+  font-weight: 750;
+  box-shadow: 0 10px 22px rgba(79, 70, 229, 0.25);
 }
-.panel h3 { font-size: 1rem; font-weight: 650; margin-bottom: 0.85rem; }
-.panel label { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.8rem; font-weight: 550; margin-bottom: 0.75rem; }
-.panel input {
-  padding: 0.6rem 0.7rem;
-  border: 1px solid hsl(var(--border));
-  border-radius: 0.55rem;
-  background: hsl(var(--background));
-  color: hsl(var(--foreground));
-  font-size: 0.88rem;
+.hero-copy { min-width: 0; }
+.hero-title { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.hero-title h2 { font-size: 1.2rem; font-weight: 750; letter-spacing: -0.02em; }
+.hero-copy p { margin-top: 0.15rem; font-size: 0.75rem; color: hsl(var(--muted-foreground)); }
+.hero-meta { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 0.4rem; font-size: 0.7rem; color: hsl(var(--muted-foreground)); }
+.hero-meta span { display: inline-flex; align-items: center; gap: 0.3rem; }
+.user-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
+.api-hint { font-size: 0.72rem; line-height: 1.6; color: hsl(var(--muted-foreground)); margin-bottom: 0.75rem; }
+.api-hint code { background: hsl(var(--muted)); padding: 0.1rem 0.3rem; border-radius: 0.3rem; }
+.token-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px dashed hsl(var(--border));
+  border-radius: 0.65rem;
+  background: hsl(var(--muted) / 0.3);
 }
-.panel input:focus { outline: none; border-color: hsl(var(--primary)); }
-.primary-button, .ghost-button, .text-button {
-  border-radius: 0.55rem;
-  cursor: pointer;
-  font-size: 0.84rem;
-  font-weight: 600;
-}
-.primary-button { width: 100%; padding: 0.62rem; border: 0; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
-.primary-button:disabled { opacity: 0.65; cursor: not-allowed; }
-.ghost-button { padding: 0.45rem 0.8rem; border: 1px solid hsl(var(--border)); background: transparent; color: hsl(var(--foreground)); }
-.ghost-button:hover { border-color: hsl(var(--primary)); color: hsl(var(--primary)); }
-.text-button { border: 0; background: transparent; color: hsl(var(--primary)); padding: 0.25rem; text-decoration: none; }
-.text-button.danger { color: #b91c1c; }
-.muted { color: hsl(var(--muted-foreground)); font-size: 0.8rem; line-height: 1.5; }
-.token-line { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
-.token-line code { background: hsl(var(--muted)); padding: 0.3rem 0.5rem; border-radius: 0.4rem; }
-.token-input { flex: 1; min-width: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-.binding-row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding: 0.5rem 0; border-bottom: 1px dashed hsl(var(--border)); }
+.new-token { margin-top: 0.75rem; padding: 0.7rem 0.8rem; border: 1px solid #a7f3d0; border-radius: 0.65rem; background: #ecfdf5; }
+.new-token-row { display: flex; gap: 0.4rem; margin-top: 0.35rem; }
+.new-token-row .input { flex: 1; }
+.binding-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.binding-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0; border-bottom: 1px dashed hsl(var(--border)); }
 .binding-row:last-child { border-bottom: 0; }
-.binding-row small { display: block; color: hsl(var(--muted-foreground)); font-size: 0.72rem; }
-.alert { padding: 0.7rem 0.9rem; border-radius: 0.65rem; font-size: 0.84rem; margin-bottom: 0.8rem; }
-.alert.warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
-.alert.ok { background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; }
-.alert.error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
-@media (max-width: 640px) {
-  .page-head { flex-direction: column; }
-  .page-head h2 { font-size: 1.35rem; }
+.binding-icon {
+  display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 0.6rem;
+  background: #eef2ff; color: #4338ca; font-size: 0.75rem; font-weight: 750;
+}
+.binding-copy { flex: 1; min-width: 0; }
+.binding-copy strong { display: block; font-size: 0.8rem; }
+.binding-copy span { display: block; font-size: 0.68rem; color: hsl(var(--muted-foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bind-actions { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.6rem; }
+@media (max-width: 860px) {
+  .user-grid { grid-template-columns: 1fr; }
+  .user-hero { flex-direction: column; align-items: flex-start; }
+  .hero-actions { width: 100%; }
+  .hero-actions .btn { width: 100%; }
 }
 </style>

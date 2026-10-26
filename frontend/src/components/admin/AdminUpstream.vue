@@ -1,99 +1,172 @@
 <template>
-  <div class="admin-content">
-    <div v-if="error" class="admin-alert error">{{ error }}</div>
-    <div v-if="message" class="admin-alert ok">{{ message }}</div>
-
-    <div class="admin-card">
-      <h3>上游自动同步</h3>
-      <p class="admin-muted">
-        定时抓取上游 <code class="admin-code">{{ form.repo }}</code> 的 Dockerfile，
-        刷新 TG 频道与启用插件列表。频道会立即生效；插件列表写入数据目录，重启后生效
-        （新插件还需要先更新镜像）。
-      </p>
-
-      <div class="admin-switch">
-        <div><strong>启用自动同步</strong><small>关闭后只能手动点击「立即同步」。</small></div>
-        <input v-model="form.enabled" type="checkbox" />
-      </div>
-      <div class="admin-grid">
-        <div class="admin-field">
-          <label>同步间隔（小时）</label>
-          <input v-model.number="form.interval_hours" type="number" min="1" max="720" />
+  <div class="page-stack">
+    <section class="section-card">
+      <div class="section-head">
+        <div>
+          <div class="section-title"><AdminIcon name="upstream" :size="16" /> 同步设置</div>
+          <div class="section-desc">定时抓取上游 Dockerfile 的 CHANNELS 与 ENABLED_PLUGINS，默认每 24 小时一次</div>
         </div>
-        <div class="admin-field">
-          <label>上游仓库</label>
-          <input v-model="form.repo" placeholder="fish2018/pansou" />
-        </div>
-        <div class="admin-field">
-          <label>分支 / Tag</label>
-          <input v-model="form.ref" placeholder="main" />
-        </div>
-      </div>
-      <div class="admin-actions">
-        <button class="admin-btn primary" type="button" :disabled="saving" @click="save">
-          {{ saving ? '保存中...' : '保存同步设置' }}
+        <button class="btn btn-primary btn-sm" type="button" :disabled="running" @click="runNow">
+          <AdminIcon name="refresh" :size="14" /> {{ running ? '同步中…' : '立即同步' }}
         </button>
-        <button class="admin-btn" type="button" :disabled="running" @click="runNow">
-          {{ running ? '同步中...' : '立即同步' }}
-        </button>
-        <span v-if="running" class="admin-muted">正在请求 GitHub，请稍候…</span>
+      </div>
+      <div class="section-body">
+        <div class="switch-row">
+          <div><strong>启用自动同步</strong><small>关闭后仍可手动点击「立即同步」；首次启动会检查一次。</small></div>
+          <label class="switch"><input v-model="form.enabled" type="checkbox" /><span /></label>
+        </div>
+        <div class="form-grid" style="margin-top: 0.8rem">
+          <div class="field">
+            <label>同步间隔（小时）</label>
+            <input v-model.number="form.interval_hours" class="input" type="number" min="1" max="720" />
+            <span class="hint">失败后最多每小时重试一次</span>
+          </div>
+          <div class="field">
+            <label>上游仓库</label>
+            <input v-model="form.repo" class="input" placeholder="fish2018/pansou" />
+          </div>
+          <div class="field">
+            <label>分支 / Tag</label>
+            <input v-model="form.ref" class="input" placeholder="main" />
+          </div>
+        </div>
+        <div class="toolbar" style="margin-top: 0.9rem">
+          <button class="btn" type="button" :disabled="saving" @click="save">
+            <AdminIcon name="check" :size="14" /> {{ saving ? '保存中…' : '保存设置' }}
+          </button>
+          <span class="section-desc">频道会热更新；插件列表写入数据目录，重启后生效。</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div>
+          <div class="stat-label">上游版本</div>
+          <div class="stat-value" style="font-size: 0.95rem">{{ shortRev(info?.status.last_revision) }}</div>
+          <div class="stat-meta">来源 {{ form.repo }}@{{ form.ref }}</div>
+        </div>
+        <div class="stat-icon violet"><AdminIcon name="upstream" :size="19" /></div>
+      </div>
+      <div class="stat-card">
+        <div>
+          <div class="stat-label">TG 频道</div>
+          <div class="stat-value">{{ info?.status.channel_count || info?.channels.length || 0 }}</div>
+          <div class="stat-meta">{{ info?.status.channels_changed ? '上次检查有变化' : '与当前一致' }}</div>
+        </div>
+        <div class="stat-icon"><AdminIcon name="users" :size="19" /></div>
+      </div>
+      <div class="stat-card">
+        <div>
+          <div class="stat-label">启用插件</div>
+          <div class="stat-value">{{ info?.status.plugin_count || info?.enabled_plugins.length || 0 }}</div>
+          <div class="stat-meta">{{ info?.status.plugins_changed ? '插件列表有变化' : '与当前一致' }}</div>
+        </div>
+        <div class="stat-icon emerald"><AdminIcon name="database" :size="19" /></div>
+      </div>
+      <div class="stat-card">
+        <div>
+          <div class="stat-label">上次检查</div>
+          <div class="stat-value" style="font-size: 0.95rem">{{ info?.status.last_check_at ? shortTime(info.status.last_check_at) : '尚未执行' }}</div>
+          <div class="stat-meta">下次 {{ info?.next_check_at ? shortTime(info.next_check_at) : '—' }}</div>
+        </div>
+        <div class="stat-icon amber"><AdminIcon name="clock" :size="19" /></div>
       </div>
     </div>
 
-    <div class="admin-card">
-      <div class="admin-actions" style="justify-content: space-between; margin-bottom: 0.7rem">
-        <h3 style="margin: 0">最近一次同步</h3>
-        <button class="admin-btn" type="button" @click="load">刷新状态</button>
-      </div>
-      <div class="admin-stats">
-        <div class="admin-stat"><span>频道数</span><strong>{{ info?.status.channel_count || info?.channels.length || 0 }}</strong></div>
-        <div class="admin-stat"><span>插件数</span><strong>{{ info?.status.plugin_count || info?.enabled_plugins.length || 0 }}</strong></div>
-        <div class="admin-stat"><span>频道变化</span><strong>{{ info?.status.channels_changed ? '是' : '否' }}</strong></div>
-        <div class="admin-stat"><span>插件变化</span><strong>{{ info?.status.plugins_changed ? '是' : '否' }}</strong></div>
-      </div>
-      <div class="upstream-lines">
-        <div><span>上次检查</span><strong>{{ info?.status.last_check_at ? shortTime(info.status.last_check_at) : '尚未执行' }}</strong></div>
-        <div><span>上次成功</span><strong>{{ info?.status.last_success_at ? shortTime(info.status.last_success_at) : '—' }}</strong></div>
-        <div><span>上游版本</span><strong><code>{{ info?.status.last_revision || '—' }}</code></strong></div>
-        <div><span>下次检查</span><strong>{{ info?.next_check_at ? shortTime(info.next_check_at) : '—' }}</strong></div>
-        <div><span>持久化文件</span><strong><code>{{ info?.defaults_env_path || '—' }}</code></strong></div>
-      </div>
-      <div v-if="info?.status.last_error" class="admin-alert error" style="margin-top: 0.8rem; margin-bottom: 0">
-        上次同步失败：{{ info.status.last_error }}
-      </div>
-      <div v-if="info?.status.restart_required" class="admin-alert warn" style="margin-top: 0.8rem; margin-bottom: 0">
-        插件列表已变化，需要重启容器后生效。频道列表已经热更新，无需重启。
-      </div>
-
-      <details v-if="info?.channels.length" class="upstream-details">
-        <summary>当前频道（{{ info.channels.length }}）</summary>
-        <p class="admin-code">{{ info.channels.join(', ') }}</p>
-      </details>
-      <details v-if="info?.enabled_plugins.length" class="upstream-details">
-        <summary>当前启用插件（{{ info.enabled_plugins.length }}）</summary>
-        <p class="admin-code">{{ info.enabled_plugins.join(', ') }}</p>
-      </details>
+    <div v-if="info?.status.restart_required" class="notice notice-warning">
+      <AdminIcon name="alert" :size="16" />
+      <div>插件列表已变化，需要重启容器后生效；TG 频道已经热更新，无需重启。</div>
     </div>
+    <div v-if="info?.status.last_error" class="notice notice-danger">
+      <AdminIcon name="alert" :size="16" />
+      <div>上次同步失败：{{ info.status.last_error }}</div>
+    </div>
+    <div v-else-if="info?.status.last_success_at" class="notice notice-success">
+      <AdminIcon name="check" :size="16" />
+      <div>上次成功：{{ shortTime(info.status.last_success_at) }} · 持久化文件 {{ info.defaults_env_path }}</div>
+    </div>
+
+    <div class="upstream-grid">
+      <section class="section-card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">当前频道（{{ info?.channels.length || 0 }}）</div>
+            <div class="section-desc">运行中实际生效的 TG 频道列表</div>
+          </div>
+        </div>
+        <div class="section-body">
+          <div v-if="info?.channels.length" class="token-cloud">
+            <span v-for="ch in visibleChannels" :key="ch" class="badge">{{ ch }}</span>
+            <span v-if="info.channels.length > visibleChannels.length" class="badge badge-primary">+{{ info.channels.length - visibleChannels.length }}</span>
+          </div>
+          <div v-else class="empty-state" style="padding: 1rem 0">
+            <span>暂无频道数据</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">当前启用插件（{{ info?.enabled_plugins.length || 0 }}）</div>
+            <div class="section-desc">启动时注册的插件列表</div>
+          </div>
+        </div>
+        <div class="section-body">
+          <div v-if="info?.enabled_plugins.length" class="token-cloud">
+            <span v-for="p in visiblePlugins" :key="p" class="badge badge-violet">{{ p }}</span>
+            <span v-if="info.enabled_plugins.length > visiblePlugins.length" class="badge badge-primary">+{{ info.enabled_plugins.length - visiblePlugins.length }}</span>
+          </div>
+          <div v-else class="empty-state" style="padding: 1rem 0">
+            <span>暂无插件数据</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <details class="section-card raw-card" v-if="info">
+      <summary>同步详情</summary>
+      <div class="section-body">
+        <div class="detail-list">
+          <div class="detail-row"><span>默认值文件</span><strong class="mono">{{ info.defaults_env_path }}</strong></div>
+          <div class="detail-row"><span>最近检查</span><strong>{{ info.status.last_check_at ? shortTime(info.status.last_check_at) : '—' }}</strong></div>
+          <div class="detail-row"><span>最近成功</span><strong>{{ info.status.last_success_at ? shortTime(info.status.last_success_at) : '—' }}</strong></div>
+          <div class="detail-row"><span>频道变化</span><strong>{{ info.status.channels_changed ? '是' : '否' }}</strong></div>
+          <div class="detail-row"><span>插件变化</span><strong>{{ info.status.plugins_changed ? '是' : '否' }}</strong></div>
+          <div class="detail-row"><span>运行中任务</span><strong>{{ info.running ? '是' : '否' }}</strong></div>
+        </div>
+      </div>
+    </details>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import {
   adminGetUpstreamSync,
   adminRunUpstreamSync,
   adminSaveUpstreamSync,
   type UpstreamSyncInfo,
 } from '@/api/auth';
+import AdminIcon from './AdminIcon.vue';
+import { toast } from '@/lib/toast';
 
 const info = ref<UpstreamSyncInfo | null>(null);
 const form = reactive({ enabled: true, interval_hours: 24, repo: 'fish2018/pansou', ref: 'main' });
 const saving = ref(false);
 const running = ref(false);
-const error = ref('');
-const message = ref('');
 
-const shortTime = (s: string) => (s ? new Date(s).toLocaleString() : '');
+const visibleChannels = computed(() => (info.value?.channels || []).slice(0, 40));
+const visiblePlugins = computed(() => (info.value?.enabled_plugins || []).slice(0, 40));
+
+function shortTime(value: string) {
+  return value ? new Date(value).toLocaleString() : '';
+}
+function shortRev(value?: string) {
+  if (!value) return '—';
+  return value.length > 12 ? value.slice(0, 12) : value;
+}
 
 const apply = (data: UpstreamSyncInfo) => {
   info.value = data;
@@ -102,39 +175,34 @@ const apply = (data: UpstreamSyncInfo) => {
 };
 
 const load = async () => {
-  error.value = '';
   try {
     apply(await adminGetUpstreamSync());
   } catch (err: any) {
-    error.value = err.response?.data?.error || '读取同步状态失败';
+    toast.error('读取同步状态失败', err.response?.data?.error || '');
   }
 };
 
 const save = async () => {
-  error.value = '';
-  message.value = '';
   saving.value = true;
   try {
     await adminSaveUpstreamSync({ ...form });
-    message.value = '同步设置已保存';
+    toast.success('同步设置已保存');
     await load();
   } catch (err: any) {
-    error.value = err.response?.data?.error || '保存失败';
+    toast.error('保存失败', err.response?.data?.error || '');
   } finally {
     saving.value = false;
   }
 };
 
 const runNow = async () => {
-  error.value = '';
-  message.value = '';
   running.value = true;
   try {
     const status = await adminRunUpstreamSync();
-    message.value = `同步完成：频道 ${status.channel_count} 个，插件 ${status.plugin_count} 个`;
+    toast.success('同步完成', `频道 ${status.channel_count} 个，插件 ${status.plugin_count} 个`);
     await load();
   } catch (err: any) {
-    error.value = err.response?.data?.error || '同步失败';
+    toast.error('同步失败', err.response?.data?.error || '');
   } finally {
     running.value = false;
     await load();
@@ -145,33 +213,8 @@ onMounted(load);
 </script>
 
 <style scoped>
-.upstream-lines {
-  margin-top: 0.8rem;
-  display: grid;
-  gap: 0.35rem;
-}
-.upstream-lines > div {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  font-size: 0.8rem;
-  border-bottom: 1px dashed hsl(var(--border));
-  padding-bottom: 0.35rem;
-}
-.upstream-lines span { color: hsl(var(--muted-foreground)); }
-.upstream-lines strong { font-weight: 550; text-align: right; word-break: break-all; }
-.upstream-details {
-  margin-top: 0.8rem;
-  font-size: 0.8rem;
-}
-.upstream-details summary {
-  cursor: pointer;
-  font-weight: 550;
-  margin-bottom: 0.4rem;
-}
-.upstream-details p {
-  max-height: 8rem;
-  overflow: auto;
-  line-height: 1.6;
-}
+.upstream-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
+.token-cloud { display: flex; flex-wrap: wrap; gap: 0.3rem; max-height: 12rem; overflow: auto; }
+.raw-card summary { padding: 0.85rem 1.1rem; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
+@media (max-width: 900px) { .upstream-grid { grid-template-columns: 1fr; } }
 </style>

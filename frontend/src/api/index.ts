@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { SearchResponse, LinkCheckItem, LinkCheckResponse } from '@/types';
+import type { SearchResponse, LinkCheckItem, LinkCheckResponse, LivenessReport } from '@/types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -68,6 +68,13 @@ export interface HealthStatus {
   api_require_login?: boolean;
   web_search_enabled?: boolean;
   email_register_enabled?: boolean;
+  liveness?: LivenessReport;
+  tg?: {
+    reachable?: boolean;
+    reason?: string;
+    checked_at?: string;
+    [key: string]: unknown;
+  };
 }
 
 // 登录请求参数

@@ -160,9 +160,9 @@ export const updateProfile = async (username: string, email: string) => {
   return data.user;
 };
 
-export const getAPIToken = async (): Promise<APIToken> => {
-  const { data } = await authApi.get<{ token: APIToken }>('/auth/token');
-  return data.token;
+export const getAPIToken = async (): Promise<APIToken | null> => {
+  const { data } = await authApi.get<{ token: APIToken | null }>('/auth/token');
+  return data.token ?? null;
 };
 
 export const resetAPIToken = async () => {
@@ -246,9 +246,33 @@ export const adminGetOverview = async (): Promise<Overview> => {
   return data;
 };
 
-export const adminListUsers = async (q = '', page = 1, pageSize = 20) => {
-  const { data } = await authApi.get('/admin/users', { params: { q, page, page_size: pageSize } });
+export const adminListUsers = async (q = '', page = 1, pageSize = 20, role = '', status = '') => {
+  const { data } = await authApi.get('/admin/users', {
+    params: { q, page, page_size: pageSize, role, status },
+  });
   return data as { items: AuthUser[]; total: number; page: number; page_size: number };
+};
+
+export interface DailyStat {
+  day: string;
+  searches: number;
+  new_users: number;
+}
+
+export interface TopUser {
+  username: string;
+  searches: number;
+}
+
+export interface StatsResponse {
+  days: number;
+  daily: DailyStat[];
+  top_users: TopUser[];
+}
+
+export const adminGetStats = async (days = 14): Promise<StatsResponse> => {
+  const { data } = await authApi.get<StatsResponse>('/admin/stats', { params: { days } });
+  return data;
 };
 
 export const adminCreateUser = async (payload: {
@@ -302,8 +326,10 @@ export const adminDeleteOAuthProvider = async (id: number) => {
   await authApi.delete(`/admin/oauth-providers/${id}`);
 };
 
-export const adminListSearchLogs = async (q = '', page = 1, pageSize = 20) => {
-  const { data } = await authApi.get('/admin/search-logs', { params: { q, page, page_size: pageSize } });
+export const adminListSearchLogs = async (q = '', page = 1, pageSize = 20, source = '') => {
+  const { data } = await authApi.get('/admin/search-logs', {
+    params: { q, page, page_size: pageSize, source },
+  });
   return data as { items: SearchLog[]; total: number; page: number; page_size: number };
 };
 

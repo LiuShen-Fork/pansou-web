@@ -1,119 +1,155 @@
 <template>
-  <div class="admin-content">
-    <div v-if="error" class="admin-alert error">{{ error }}</div>
-    <div v-if="message" class="admin-alert ok">{{ message }}</div>
+  <div class="page-stack">
+    <section class="section-card">
+      <div class="section-head">
+        <div>
+          <div class="section-title">用户列表</div>
+          <div class="section-desc">共 {{ total }} 个账号，支持按用户名、邮箱、角色与状态筛选</div>
+        </div>
+        <button class="btn btn-primary btn-sm" type="button" @click="openCreate">
+          <AdminIcon name="plus" :size="15" /> 新建用户
+        </button>
+      </div>
 
-    <div class="admin-card">
-      <div class="admin-actions" style="justify-content: space-between; margin-bottom: 0.8rem">
-        <h3 style="margin: 0">用户管理</h3>
-        <div class="admin-actions">
-          <input v-model="query" class="search-input" placeholder="搜索用户名 / 邮箱" @keydown.enter="load(1)" />
-          <button class="admin-btn" type="button" @click="load(1)">搜索</button>
-          <button class="admin-btn primary" type="button" @click="showCreate = !showCreate">
-            {{ showCreate ? '取消' : '新建用户' }}
+      <div class="section-body" style="padding-bottom: 0.6rem">
+        <div class="toolbar">
+          <input
+            v-model="filters.q"
+            class="input"
+            style="max-width: 16rem"
+            placeholder="搜索用户名或邮箱"
+            @keydown.enter="load(1)"
+          />
+          <select v-model="filters.role" class="select" style="max-width: 8rem" @change="load(1)">
+            <option value="">全部角色</option>
+            <option value="admin">管理员</option>
+            <option value="user">普通用户</option>
+          </select>
+          <select v-model="filters.status" class="select" style="max-width: 8rem" @change="load(1)">
+            <option value="">全部状态</option>
+            <option value="active">正常</option>
+            <option value="disabled">禁用</option>
+          </select>
+          <button class="btn btn-sm" type="button" :disabled="loading" @click="load(1)">
+            <AdminIcon name="search" :size="14" /> {{ loading ? '查询中' : '查询' }}
           </button>
         </div>
       </div>
 
-      <div v-if="showCreate" class="create-panel">
-        <div class="admin-grid">
-          <div class="admin-field"><label>用户名</label><input v-model="createForm.username" placeholder="2-32 位" /></div>
-          <div class="admin-field"><label>邮箱</label><input v-model="createForm.email" type="email" placeholder="可选" /></div>
-          <div class="admin-field"><label>初始密码</label><input v-model="createForm.password" type="password" placeholder="至少 8 位" /></div>
-          <div class="admin-field">
-            <label>角色</label>
-            <select v-model="createForm.role">
-              <option value="user">普通用户</option>
-              <option value="admin">管理员</option>
-            </select>
-          </div>
-          <div class="admin-field">
-            <label>每日搜索上限（0 = 跟随全局）</label>
-            <input v-model.number="createForm.daily_search_limit" type="number" min="0" />
-          </div>
-        </div>
-        <button class="admin-btn primary" type="button" :disabled="creating" @click="createUser">
-          {{ creating ? '创建中...' : '创建' }}
-        </button>
+      <div v-if="loading && !users.length" class="section-body">
+        <div class="skeleton" style="width: 100%; margin-bottom: 0.6rem" />
+        <div class="skeleton" style="width: 92%; margin-bottom: 0.6rem" />
+        <div class="skeleton" style="width: 96%" />
       </div>
-
-      <div class="admin-table-wrap">
-        <table class="admin-table">
+      <div v-else-if="!users.length" class="empty-state">
+        <AdminIcon name="users" :size="24" />
+        <strong>没有匹配的用户</strong>
+        <span>调整筛选条件，或创建一个新账号</span>
+      </div>
+      <div v-else class="table-wrap">
+        <table class="data-table">
           <thead>
             <tr>
-              <th>ID</th><th>用户名 / 邮箱</th><th>角色</th><th>状态</th><th>今日搜索</th>
-              <th>每日上限</th><th>最近登录</th><th>操作</th>
+              <th>用户</th>
+              <th>角色</th>
+              <th>状态</th>
+              <th>今日搜索</th>
+              <th>每日上限</th>
+              <th class="hide-sm">最近登录</th>
+              <th style="text-align: right">操作</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="u in users" :key="u.id">
-              <td>{{ u.id }}</td>
               <td>
-                <strong>{{ u.username }}</strong>
-                <div class="admin-muted">{{ u.email || '—' }}</div>
-                <span v-if="u.must_change_password" class="admin-badge warn">待改密</span>
-              </td>
-              <td><span class="admin-badge" :class="{ admin: u.role === 'admin' }">{{ u.role }}</span></td>
-              <td><span class="admin-badge" :class="u.status === 'active' ? 'ok' : 'bad'">{{ u.status }}</span></td>
-              <td>{{ u.search_count_today || 0 }}</td>
-              <td>{{ u.daily_search_limit || '跟随全局' }}</td>
-              <td>{{ u.last_login_at ? shortTime(u.last_login_at) : '—' }}</td>
-              <td>
-                <div class="admin-actions">
-                  <button class="admin-btn" type="button" @click="startEdit(u)">编辑</button>
-                  <button class="admin-btn danger" type="button" @click="removeUser(u)">删除</button>
+                <div class="user-cell">
+                  <span class="mini-avatar" :class="{ admin: u.role === 'admin' }">{{ (u.username || '?').slice(0, 1).toUpperCase() }}</span>
+                  <div>
+                    <div class="cell-strong">{{ u.username }} <span v-if="u.must_change_password" class="badge badge-warning">待改密</span></div>
+                    <div class="cell-sub">{{ u.email || '未绑定邮箱' }} · ID {{ u.id }}</div>
+                  </div>
                 </div>
               </td>
-            </tr>
-            <tr v-if="!users.length">
-              <td colspan="8" class="admin-muted">暂无用户。</td>
+              <td><span class="badge" :class="u.role === 'admin' ? 'badge-primary' : ''">{{ u.role === 'admin' ? '管理员' : '普通用户' }}</span></td>
+              <td><span class="badge" :class="u.status === 'active' ? 'badge-success' : 'badge-danger'">{{ u.status === 'active' ? '正常' : '禁用' }}</span></td>
+              <td class="mono">{{ u.search_count_today || 0 }}</td>
+              <td>{{ u.daily_search_limit ? u.daily_search_limit : '跟随全局' }}</td>
+              <td class="hide-sm cell-sub">{{ u.last_login_at ? shortTime(u.last_login_at) : '从未登录' }}</td>
+              <td>
+                <div class="cell-actions" style="justify-content: flex-end">
+                  <button class="btn btn-ghost btn-sm" type="button" @click="openEdit(u)">编辑</button>
+                  <button class="btn btn-ghost btn-sm" type="button" @click="resetPassword(u)">重置密码</button>
+                  <button class="btn btn-ghost btn-sm" type="button" style="color: #b91c1c" :disabled="u.id === authState.user?.id" @click="removeUser(u)">删除</button>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div class="admin-actions pager">
-        <button class="admin-btn" type="button" :disabled="page <= 1" @click="load(page - 1)">上一页</button>
-        <span class="admin-muted">第 {{ page }} 页 / 共 {{ total }} 个用户</span>
-        <button class="admin-btn" type="button" :disabled="page * pageSize >= total" @click="load(page + 1)">下一页</button>
+      <div class="pager">
+        <span>第 {{ page }} 页 · 共 {{ total }} 个</span>
+        <button class="btn btn-sm" type="button" :disabled="page <= 1" @click="load(page - 1)">上一页</button>
+        <button class="btn btn-sm" type="button" :disabled="page * pageSize >= total" @click="load(page + 1)">下一页</button>
       </div>
-    </div>
+    </section>
 
-    <div v-if="editing" class="admin-card">
-      <h3>编辑用户：{{ editing.username }}</h3>
-      <div class="admin-grid">
-        <div class="admin-field"><label>用户名</label><input v-model="editForm.username" /></div>
-        <div class="admin-field"><label>邮箱</label><input v-model="editForm.email" type="email" /></div>
-        <div class="admin-field">
-          <label>角色</label>
-          <select v-model="editForm.role">
-            <option value="user">普通用户</option>
-            <option value="admin">管理员</option>
-          </select>
-        </div>
-        <div class="admin-field">
-          <label>状态</label>
-          <select v-model="editForm.status">
-            <option value="active">正常</option>
-            <option value="disabled">禁用</option>
-          </select>
-        </div>
-        <div class="admin-field">
-          <label>每日搜索上限（0 = 跟随全局）</label>
-          <input v-model.number="editForm.daily_search_limit" type="number" min="0" />
-        </div>
-        <div class="admin-field">
-          <label>重置密码（留空则不修改）</label>
-          <input v-model="editForm.password" type="password" placeholder="至少 8 位" />
+    <Teleport to="body">
+      <div v-if="modal.open" class="modal-backdrop" @click.self="modal.open = false">
+        <div class="modal">
+          <div class="modal-head">
+            <div>
+              <h3>{{ modal.mode === 'create' ? '新建用户' : `编辑用户 · ${modal.original?.username || ''}` }}</h3>
+              <p>{{ modal.mode === 'create' ? '创建后用户即可使用账号密码登录' : '修改角色、状态、配额或密码' }}</p>
+            </div>
+            <button class="icon-btn" type="button" aria-label="关闭" @click="modal.open = false">
+              <AdminIcon name="close" :size="16" />
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-grid">
+              <div class="field">
+                <label>用户名</label>
+                <input v-model="form.username" class="input" placeholder="2-32 位字母、数字、下划线" />
+              </div>
+              <div class="field">
+                <label>邮箱</label>
+                <input v-model="form.email" class="input" type="email" placeholder="可选" />
+              </div>
+              <div class="field">
+                <label>角色</label>
+                <select v-model="form.role" class="select">
+                  <option value="user">普通用户</option>
+                  <option value="admin">管理员</option>
+                </select>
+              </div>
+              <div class="field" v-if="modal.mode === 'edit'">
+                <label>状态</label>
+                <select v-model="form.status" class="select">
+                  <option value="active">正常</option>
+                  <option value="disabled">禁用</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>每日搜索上限</label>
+                <input v-model.number="form.daily_search_limit" class="input" type="number" min="0" />
+                <span class="hint">0 表示跟随全局默认，0 且全局为 0 时不限制</span>
+              </div>
+              <div class="field">
+                <label>{{ modal.mode === 'create' ? '初始密码' : '新密码' }}</label>
+                <input v-model="form.password" class="input" type="password" :placeholder="modal.mode === 'edit' ? '留空则不修改' : '至少 8 位'" />
+              </div>
+            </div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn" type="button" @click="modal.open = false">取消</button>
+            <button class="btn btn-primary" type="button" :disabled="saving" @click="save">
+              {{ saving ? '保存中…' : '保存' }}
+            </button>
+          </div>
         </div>
       </div>
-      <div class="admin-actions">
-        <button class="admin-btn primary" type="button" :disabled="savingEdit" @click="saveEdit">
-          {{ savingEdit ? '保存中...' : '保存' }}
-        </button>
-        <button class="admin-btn" type="button" @click="editing = null">取消</button>
-      </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
@@ -126,29 +162,26 @@ import {
   adminUpdateUser,
   type AuthUser,
 } from '@/api/auth';
+import { authState } from '@/stores/auth';
+import AdminIcon from './AdminIcon.vue';
+import { toast } from '@/lib/toast';
 
 const users = ref<AuthUser[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = 20;
-const query = ref('');
+const pageSize = 12;
 const loading = ref(false);
-const error = ref('');
-const message = ref('');
+const saving = ref(false);
 
-const showCreate = ref(false);
-const creating = ref(false);
-const createForm = reactive({
-  username: '',
-  email: '',
-  password: '',
-  role: 'user',
-  daily_search_limit: 0,
+const filters = reactive({ q: '', role: '', status: '' });
+
+const modal = reactive<{ open: boolean; mode: 'create' | 'edit'; original: AuthUser | null }>({
+  open: false,
+  mode: 'create',
+  original: null,
 });
 
-const editing = ref<AuthUser | null>(null);
-const savingEdit = ref(false);
-const editForm = reactive({
+const form = reactive({
   username: '',
   email: '',
   role: 'user',
@@ -157,124 +190,136 @@ const editForm = reactive({
   password: '',
 });
 
-const shortTime = (s: string) => (s ? new Date(s).toLocaleString() : '');
+function shortTime(value: string) {
+  return value ? new Date(value).toLocaleString() : '';
+}
 
-const load = async (targetPage = page.value) => {
+function resetForm() {
+  form.username = '';
+  form.email = '';
+  form.role = 'user';
+  form.status = 'active';
+  form.daily_search_limit = 0;
+  form.password = '';
+}
+
+const load = async (target = page.value) => {
   loading.value = true;
-  error.value = '';
   try {
-    const res = await adminListUsers(query.value.trim(), targetPage, pageSize);
+    const res = await adminListUsers(filters.q.trim(), target, pageSize, filters.role, filters.status);
     users.value = res.items || [];
     total.value = res.total || 0;
-    page.value = res.page || targetPage;
+    page.value = res.page || target;
   } catch (err: any) {
-    error.value = err.response?.data?.error || '读取用户失败';
+    toast.error('加载用户失败', err.response?.data?.error || '');
   } finally {
     loading.value = false;
   }
 };
 
-const createUser = async () => {
-  error.value = '';
-  message.value = '';
-  if (!createForm.username.trim() || createForm.password.length < 8) {
-    error.value = '请填写用户名和至少 8 位密码';
+function openCreate() {
+  resetForm();
+  modal.mode = 'create';
+  modal.original = null;
+  modal.open = true;
+}
+
+function openEdit(user: AuthUser) {
+  resetForm();
+  modal.mode = 'edit';
+  modal.original = user;
+  form.username = user.username;
+  form.email = user.email || '';
+  form.role = user.role;
+  form.status = user.status;
+  form.daily_search_limit = user.daily_search_limit || 0;
+  modal.open = true;
+}
+
+async function save() {
+  if (!form.username.trim()) {
+    toast.error('请填写用户名');
     return;
   }
-  creating.value = true;
-  try {
-    await adminCreateUser({
-      username: createForm.username.trim(),
-      email: createForm.email.trim(),
-      password: createForm.password,
-      role: createForm.role,
-      daily_search_limit: createForm.daily_search_limit || 0,
-    });
-    message.value = '用户已创建';
-    createForm.username = '';
-    createForm.email = '';
-    createForm.password = '';
-    createForm.role = 'user';
-    createForm.daily_search_limit = 0;
-    showCreate.value = false;
-    await load(1);
-  } catch (err: any) {
-    error.value = err.response?.data?.error || '创建失败';
-  } finally {
-    creating.value = false;
+  if (modal.mode === 'create' && form.password.length < 8) {
+    toast.error('初始密码至少 8 位');
+    return;
   }
-};
-
-const startEdit = (u: AuthUser) => {
-  editing.value = u;
-  editForm.username = u.username;
-  editForm.email = u.email || '';
-  editForm.role = u.role;
-  editForm.status = u.status;
-  editForm.daily_search_limit = u.daily_search_limit || 0;
-  editForm.password = '';
-};
-
-const saveEdit = async () => {
-  if (!editing.value) return;
-  error.value = '';
-  message.value = '';
-  savingEdit.value = true;
+  saving.value = true;
   try {
-    const payload: Record<string, unknown> = {
-      username: editForm.username.trim(),
-      email: editForm.email.trim(),
-      role: editForm.role,
-      status: editForm.status,
-      daily_search_limit: editForm.daily_search_limit || 0,
-    };
-    if (editForm.password) payload.password = editForm.password;
-    await adminUpdateUser(editing.value.id, payload);
-    message.value = '用户已更新';
-    editing.value = null;
+    if (modal.mode === 'create') {
+      await adminCreateUser({
+        username: form.username.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        role: form.role,
+        daily_search_limit: form.daily_search_limit || 0,
+      });
+      toast.success('用户已创建');
+    } else if (modal.original) {
+      const payload: Record<string, unknown> = {
+        username: form.username.trim(),
+        email: form.email.trim(),
+        role: form.role,
+        status: form.status,
+        daily_search_limit: form.daily_search_limit || 0,
+      };
+      if (form.password) payload.password = form.password;
+      await adminUpdateUser(modal.original.id, payload);
+      toast.success('用户已更新');
+    }
+    modal.open = false;
+    await load(modal.mode === 'create' ? 1 : page.value);
+  } catch (err: any) {
+    toast.error('保存失败', err.response?.data?.error || '');
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function resetPassword(user: AuthUser) {
+  const next = window.prompt(`为「${user.username}」设置新密码（至少 8 位）`);
+  if (!next) return;
+  if (next.length < 8) {
+    toast.error('密码至少 8 位');
+    return;
+  }
+  try {
+    await adminUpdateUser(user.id, { password: next });
+    toast.success('密码已重置', `用户 ${user.username} 需要重新登录`);
     await load();
   } catch (err: any) {
-    error.value = err.response?.data?.error || '保存失败';
-  } finally {
-    savingEdit.value = false;
+    toast.error('重置密码失败', err.response?.data?.error || '');
   }
-};
+}
 
-const removeUser = async (u: AuthUser) => {
-  error.value = '';
-  message.value = '';
-  if (!confirm(`确定删除用户「${u.username}」？该操作不可恢复。`)) return;
+async function removeUser(user: AuthUser) {
+  if (!window.confirm(`确定删除用户「${user.username}」？该操作不可恢复。`)) return;
   try {
-    await adminDeleteUser(u.id);
-    message.value = '用户已删除';
+    await adminDeleteUser(user.id);
+    toast.success('用户已删除');
     await load();
   } catch (err: any) {
-    error.value = err.response?.data?.error || '删除失败';
+    toast.error('删除失败', err.response?.data?.error || '');
   }
-};
+}
 
 onMounted(() => load(1));
 </script>
 
 <style scoped>
-.search-input {
-  padding: 0.48rem 0.65rem;
-  border: 1px solid hsl(var(--border));
-  border-radius: 0.5rem;
-  background: hsl(var(--background));
-  color: hsl(var(--foreground));
-  font-size: 0.82rem;
-  min-width: 180px;
+.user-cell { display: flex; align-items: center; gap: 0.55rem; }
+.mini-avatar {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 999px;
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex: 0 0 auto;
 }
-.create-panel {
-  border: 1px dashed hsl(var(--border));
-  border-radius: 0.8rem;
-  padding: 0.9rem;
-  margin-bottom: 1rem;
-  background: hsl(var(--muted) / 0.35);
-}
-.pager {
-  margin-top: 0.9rem;
-  justify-content: flex-end;
-}
+.mini-avatar.admin { background: #eef2ff; color: #4338ca; }
 </style>

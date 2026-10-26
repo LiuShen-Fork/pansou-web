@@ -9,6 +9,7 @@ import SearchForm from '@/components/SearchForm.vue';
 import ResultTabs from '@/components/ResultTabs.vue';
 import SearchStats from '@/components/SearchStats.vue';
 import LoginDialog from '@/components/LoginDialog.vue';
+import ToastHost from '@/components/ToastHost.vue';
 import QQPDManager from '@/components/QQPDManager.vue';
 import AccountCenter from '@/components/AccountCenter.vue';
 import GyingManager from '@/components/GyingManager.vue';
@@ -1261,13 +1262,14 @@ onUnmounted(() => {
 <template>
   <div class="app-shell min-h-screen bg-mine-background text-foreground transition-colors duration-300 flex flex-col">
     <!-- 登录对话框 -->
-    <LoginDialog 
-      v-model:visible="showLogin" 
+    <LoginDialog
+      v-model:visible="showLogin"
       @success="handleLoginSuccess"
     />
+    <ToastHost />
     
     <!-- 背景装饰 -->
-    <div class="bg-decorative" aria-hidden="true">
+    <div v-if="currentView === 'search'" class="bg-decorative" aria-hidden="true">
       <span>青海长云暗雪山</span>
       <span>孤城遥望玉门关</span>
       <span>黄沙百战穿金甲</span>
@@ -1275,7 +1277,7 @@ onUnmounted(() => {
     </div>
     
     <!-- 导航栏 -->
-    <nav ref="navHeaderRef" class="nav-header">
+    <nav v-if="currentView === 'search'" ref="navHeaderRef" class="nav-header">
       <div class="container mx-auto px-4 nav-inner">
         <div class="brand-lockup cursor-pointer" @click="switchToSearch">
           <img src="/favicon.ico" alt="Qingyu PanSou" class="brand-icon" />
@@ -1351,8 +1353,8 @@ onUnmounted(() => {
     <!-- 主要内容区域 -->
     <main
       ref="mainContentRef"
-      class="main-content container mx-auto px-4 py-8 flex-1"
-      :class="{ 'search-main': currentView === 'search' }"
+      class="main-content flex-1"
+      :class="currentView === 'search' ? 'container mx-auto px-4 py-8 search-main' : 'console-main'"
     >
       <!-- 搜索页面 -->
       <div v-if="currentView === 'search'" class="search-page">
@@ -1429,17 +1431,19 @@ onUnmounted(() => {
       <UserCenter
         v-else-if="currentView === 'user'"
         @back="goSearch"
+        @logout="handleLogout"
       />
 
       <AdminPage
         v-else-if="currentView === 'admin'"
         @back="goSearch"
         @user-center="goUser"
+        @logout="handleLogout"
       />
     </main>
     
     <!-- 页脚 -->
-    <footer ref="footerRef" class="footer-shell mt-auto">
+    <footer v-if="currentView === 'search'" ref="footerRef" class="footer-shell mt-auto">
       <div class="container mx-auto px-4 py-5">
         <div class="footer-links">
           <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">陕ICP备2024028531号</a>
@@ -1479,6 +1483,20 @@ onUnmounted(() => {
 .footer-shell {
   position: relative;
   z-index: 1;
+}
+
+/* 管理后台/用户中心使用整页宽度，不受搜索页容器限制 */
+.main-content.console-main {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+}
+
+@media (max-width: 768px) {
+  .main-content.console-main {
+    padding: 0;
+    overflow-x: hidden;
+  }
 }
 
 .bg-decorative span {
