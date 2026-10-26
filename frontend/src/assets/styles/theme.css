@@ -1,0 +1,304 @@
+/* 深色主题：以 CSS 变量为主，少量历史硬编码颜色在这里统一覆盖。 */
+
+html.dark {
+  color-scheme: dark;
+
+  --background: 228 24% 9% / 0.82;
+  --background-light: 228 24% 11%;
+  --background-hover: 228 20% 16%;
+  --background-container: 228, 24%, 11%, 0.88;
+  --foreground: 220 24% 92%;
+  --dot-color: 230 20% 22%;
+
+  --card: 228 22% 13% / 0.86;
+  --card-hover: 228 20% 17%;
+  --card-active: 228 20% 21%;
+  --card-foreground: 220 24% 92%;
+
+  --popover: 228 24% 12%;
+  --popover-foreground: 220 24% 92%;
+
+  --primary: 238 76% 72%;
+  --primary-foreground: 230 32% 10%;
+
+  --secondary: 228 20% 17%;
+  --secondary-foreground: 220 18% 84%;
+
+  --muted: 228 20% 16%;
+  --muted-foreground: 225 12% 63%;
+
+  --accent: 245 72% 76%;
+  --accent-secondary: 234 60% 62%;
+  --accent-foreground: 230 32% 10%;
+
+  --destructive: 0 68% 62%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 152 52% 50%;
+  --success-foreground: 150 40% 8%;
+
+  --border: 228 16% 23%;
+  --border-hover: 228 16% 31%;
+  --border-active: 228 16% 38%;
+  --input: 228 16% 23%;
+  --input-unread: 238 70% 70%;
+  --ring: 238 70% 70%;
+
+  --text: 220 24% 92%;
+  --text-light: 0 0% 100%;
+  --text-secondary: 225 12% 63%;
+
+  --selection: 238 70% 70%;
+  --selection-foreground: 230 32% 10%;
+  --shadow: rgba(0, 0, 0, 0.35);
+}
+
+html.dark body {
+  background: hsl(var(--background-light));
+}
+
+html.dark .bg-mine-background {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(99, 102, 241, 0.18), transparent 30rem),
+    radial-gradient(circle at 88% 88%, rgba(56, 189, 248, 0.08), transparent 26rem),
+    linear-gradient(135deg, #0b0e17 0%, #101426 48%, #0a0d15 100%);
+}
+html.dark .bg-mine-background::before {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.18), rgba(15, 23, 42, 0.34));
+}
+html.dark .bg-decorative {
+  color: rgba(129, 140, 248, 0.11);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.28);
+  mix-blend-mode: normal;
+}
+
+/* 首页头部 / 页脚 */
+html.dark .brand-title { color: hsl(var(--foreground)); }
+html.dark .brand-subtitle { color: hsl(var(--primary)); }
+html.dark .brand-icon { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28); }
+html.dark .nav-link,
+html.dark .nav-button { color: hsl(var(--muted-foreground)); }
+html.dark .nav-link:hover,
+html.dark .nav-button:hover {
+  color: hsl(var(--foreground));
+  background: hsl(var(--muted));
+  border-color: hsl(var(--border));
+}
+html.dark .nav-button.active {
+  color: hsl(var(--primary-foreground));
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+}
+html.dark .login-entry { color: hsl(var(--foreground)); border-color: hsl(var(--border)); }
+html.dark .logout-button { color: hsl(var(--destructive)); }
+html.dark .logout-button:hover {
+  color: hsl(var(--destructive));
+  background: hsl(var(--destructive) / 0.12);
+  border-color: hsl(var(--destructive) / 0.32);
+}
+html.dark .global-banner.error {
+  background: hsl(var(--destructive) / 0.12);
+  border-color: hsl(var(--destructive) / 0.32);
+  color: #fca5a5;
+}
+html.dark .global-banner.ok {
+  background: hsl(var(--success) / 0.12);
+  border-color: hsl(var(--success) / 0.32);
+  color: #6ee7b7;
+}
+html.dark .global-banner.notice {
+  background: hsl(var(--primary) / 0.12);
+  border-color: hsl(var(--primary) / 0.3);
+  color: hsl(var(--foreground));
+}
+html.dark .footer-shell { border-top-color: hsl(var(--border)); }
+html.dark .footer-brand strong { color: hsl(var(--foreground)); }
+html.dark .footer-brand span { color: hsl(var(--muted-foreground)); }
+html.dark .footer-links,
+html.dark .footer-legal { color: hsl(var(--muted-foreground)); }
+html.dark .footer-links a:hover,
+html.dark .footer-legal a:hover { color: hsl(var(--foreground)); }
+html.dark .footer-legal { border-top-color: hsl(var(--border)); }
+html.dark .footer-brand img { background: #fff; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3); }
+html.dark .github-float {
+  background: #f8fafc;
+  color: #0f172a;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* 卡片 / 结果区域 */
+html.dark .results-container {
+  background: hsl(var(--card));
+  border-color: hsl(var(--border));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+html.dark .tabs {
+  background: hsl(var(--muted) / 0.55);
+  border-bottom-color: hsl(var(--border));
+}
+html.dark .tab-button { color: hsl(var(--muted-foreground)); }
+html.dark .tab-button:hover,
+html.dark .tab-button.active { color: hsl(var(--primary)); }
+html.dark .tab-button.active::after { background-color: hsl(var(--primary)); }
+html.dark .result-item { border-bottom-color: hsl(var(--border) / 0.7); }
+html.dark .result-item:hover { background: hsl(var(--muted) / 0.6); }
+html.dark .result-title { color: hsl(var(--foreground)); }
+html.dark .result-source {
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.12);
+  border-color: hsl(var(--primary) / 0.3);
+}
+html.dark .result-link { color: hsl(var(--primary)); }
+html.dark .result-date,
+html.dark .result-password,
+html.dark .empty-tab { color: hsl(var(--muted-foreground)); }
+html.dark .result-password:hover { color: hsl(var(--foreground)); }
+html.dark .result-password.copied {
+  color: #6ee7b7;
+  background: hsl(var(--success) / 0.12);
+  border-color: hsl(var(--success) / 0.3);
+}
+html.dark .password-value { color: #6ee7b7; }
+html.dark .meta-separator { color: hsl(var(--muted-foreground) / 0.6); }
+html.dark .empty-icon { background: hsl(var(--muted)); }
+html.dark .empty-icon .icon { color: hsl(var(--muted-foreground)); }
+html.dark .searching-icon { background: hsl(var(--primary) / 0.12); }
+html.dark .searching-spinner {
+  border-color: hsl(var(--border));
+  border-top-color: hsl(var(--primary));
+}
+html.dark .empty-title,
+html.dark .searching-title { color: hsl(var(--foreground)); }
+html.dark .empty-subtitle,
+html.dark .searching-subtitle { color: hsl(var(--muted-foreground)); }
+html.dark .detail-dialog {
+  background: hsl(var(--background-light));
+  border-color: hsl(var(--border));
+}
+
+html.dark .search-pill-input {
+  background: hsl(var(--background-light) / 0.9);
+  border-color: hsl(var(--border));
+  color: hsl(var(--foreground));
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+html.dark .search-pill-input::placeholder { color: hsl(var(--muted-foreground) / 0.82); }
+html.dark .search-pill-input:hover {
+  background: hsl(var(--background-light));
+  border-color: hsl(var(--border-hover));
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+html.dark .search-pill-input:focus {
+  background: hsl(var(--background-light));
+  border-color: hsl(var(--primary) / 0.65);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35), 0 0 0 3px hsl(var(--primary) / 0.16);
+}
+html.dark .search-submit-button { color: hsl(var(--muted-foreground)); }
+html.dark .search-submit-button:hover:not(:disabled) { color: hsl(var(--primary)); }
+html.dark .advanced-toggle-left { color: hsl(var(--muted-foreground)); }
+html.dark .advanced-toggle-left:hover,
+html.dark .advanced-toggle-left.active { color: hsl(var(--primary)); }
+html.dark .advanced-panel {
+  background: hsl(var(--background-light));
+  border-color: hsl(var(--border));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+html.dark .theme-button {
+  background: hsl(var(--muted));
+  border-color: hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+}
+html.dark .theme-button:hover { color: hsl(var(--primary)); border-color: hsl(var(--primary) / 0.5); }
+
+/* 登录 / 表单 */
+html.dark .login-dialog { background: hsl(var(--background-light)); }
+html.dark .login-overlay { background: rgba(2, 6, 23, 0.7); }
+html.dark .error-message {
+  background: hsl(var(--destructive) / 0.12);
+  border-color: hsl(var(--destructive) / 0.3);
+  color: #fca5a5;
+}
+html.dark .notice-message {
+  background: hsl(var(--primary) / 0.12);
+  border-color: hsl(var(--primary) / 0.3);
+  color: #bfdbfe;
+}
+
+/* 后台 / 用户中心通用卡片（旧样式里使用了白色半透明） */
+html.dark .app-shell .card,
+html.dark .account-center .stat-card,
+html.dark .account-center .placeholder-card,
+html.dark .account-center .empty-state,
+html.dark .config-container .stats-bar,
+html.dark .config-container .tabs-nav,
+html.dark .config-container .tab-content,
+html.dark .config-container .pane-header,
+html.dark .config-container .add-input-group,
+html.dark .config-container .item-card,
+html.dark .config-container .detection-card,
+html.dark .config-container .export-section,
+html.dark .qqpd-manager .user-card,
+html.dark .qqpd-manager .add-card,
+html.dark .gying-manager .user-card,
+html.dark .gying-manager .add-card,
+html.dark .panlian-manager .user-card,
+html.dark .panlian-manager .add-card,
+html.dark .weibo-manager .user-card,
+html.dark .weibo-manager .add-card,
+html.dark .service-card,
+html.dark .login-dialog,
+html.dark .export-modal,
+html.dark .modal-content,
+html.dark .detail-dialog {
+  border-color: hsl(var(--border)) !important;
+  background: hsl(var(--background-light) / 0.9) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28) !important;
+}
+html.dark .app-shell .card:hover,
+html.dark .account-center .stat-card:hover,
+html.dark .account-center .placeholder-card:hover,
+html.dark .config-container .item-card:hover,
+html.dark .qqpd-manager .user-card:hover,
+html.dark .qqpd-manager .add-card:hover,
+html.dark .gying-manager .user-card:hover,
+html.dark .gying-manager .add-card:hover,
+html.dark .panlian-manager .user-card:hover,
+html.dark .panlian-manager .add-card:hover,
+html.dark .weibo-manager .user-card:hover,
+html.dark .weibo-manager .add-card:hover,
+html.dark .service-card:hover {
+  border-color: hsl(var(--border-hover)) !important;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32) !important;
+}
+html.dark .config-container .config-header,
+html.dark .account-center .header-section,
+html.dark .qqpd-manager .header-section,
+html.dark .gying-manager .header-section,
+html.dark .panlian-manager .header-section,
+html.dark .weibo-manager .header-section {
+  border-bottom-color: hsl(var(--border)) !important;
+}
+
+/* 硬编码浅色文字 */
+html.dark .text-gray-900,
+html.dark .text-gray-800,
+html.dark .text-slate-900,
+html.dark .text-slate-800 { color: hsl(var(--foreground)); }
+html.dark .text-gray-500,
+html.dark .text-gray-600,
+html.dark .text-slate-500,
+html.dark .text-slate-600 { color: hsl(var(--muted-foreground)); }
+html.dark .bg-white { background-color: hsl(var(--background-light)); }
+html.dark .bg-gray-50,
+html.dark .bg-slate-50 { background-color: hsl(var(--muted)); }
+html.dark .border-gray-200,
+html.dark .border-slate-200 { border-color: hsl(var(--border)); }
+
+/* 滚动条 */
+html.dark * {
+  scrollbar-color: hsl(var(--border-hover)) transparent;
+}
+html.dark *::-webkit-scrollbar-thumb {
+  background: hsl(var(--border-hover));
+  border-radius: 999px;
+}
+html.dark *::-webkit-scrollbar-track { background: transparent; }

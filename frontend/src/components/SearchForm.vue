@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+import { authState } from '@/stores/auth';
 import type { SearchParams } from '@/api';
 import type { HealthStatus } from '@/api';
 import type { FilterConfig } from '@/types';
@@ -7,6 +8,11 @@ import { Button, Input, Icons } from '@/components/ui';
 import FilterIcon from '@/components/icons/FilterIcon.vue';
 
 const keyword = ref('');
+const siteName = computed(() => authState.config?.site.name || 'Qingyu PanSou');
+const siteSlogan = computed(
+  () => authState.config?.site.slogan || authState.config?.site.description || '清羽飞扬自建网盘搜索，众多资源，一键直达',
+);
+const siteIcon = computed(() => authState.config?.site.icon || '/favicon.ico');
 const loading = ref(false);
 const showAdvanced = ref(false);
 const includeKeywords = ref('');
@@ -132,23 +138,28 @@ const handleSearch = () => {
   }
   
   emit('search', params);
-  
+
   // 2秒后重置loading状态
   setTimeout(() => {
     loading.value = false;
     // 不再触发searchComplete事件
   }, 2000);
 };
+
+function onIconError(event: Event) {
+  const img = event.target as HTMLImageElement;
+  if (!img.src.endsWith('/favicon.ico')) img.src = '/favicon.ico';
+}
 </script>
 
 <template>
   <div class="w-full max-w-content mx-auto">
     <div class="text-center mb-8 mt-20">
-      <p class="text-4xl md:text-5xl lg:text-6xl font-bold mb-2 transition-all flex items-center justify-center gap-2">
-        <img src="/favicon.ico" alt="清羽盘搜" class="w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14" />
-        清羽盘搜
+      <p class="site-hero-title transition-all">
+        <img :src="siteIcon" :alt="siteName" class="w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14" @error="onIconError" />
+        <span>{{ siteName }}</span>
       </p>
-      <p class="text-sm md:text-base lg:text-lg text-muted-foreground/80 transition-all">清羽飞扬自建网盘搜索，众多资源，一键直达</p>
+      <p class="site-hero-slogan transition-all">{{ siteSlogan }}</p>
     </div>
     <div class="search-container">
       <!-- 主搜索框 -->
@@ -620,10 +631,32 @@ const handleSearch = () => {
     flex-direction: row;
     align-items: center;
   }
-  
+
   .search-button {
     width: auto;
     white-space: nowrap;
   }
+}
+
+.site-hero-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: clamp(1.9rem, 5vw, 3.75rem);
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.site-hero-title img { flex: 0 0 auto; }
+.site-hero-slogan {
+  font-size: clamp(0.8rem, 1.6vw, 1.125rem);
+  line-height: 1.5;
+  color: hsl(var(--muted-foreground) / 0.85);
+}
+@media (max-width: 480px) {
+  .site-hero-title { gap: 0.35rem; }
+  .site-hero-title img { width: 2rem; height: 2rem; }
 }
 </style>

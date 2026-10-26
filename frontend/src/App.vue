@@ -17,6 +17,9 @@ import PanlianManager from '@/components/PanlianManager.vue';
 import WeiboManager from '@/components/WeiboManager.vue';
 import WoniuManager from '@/components/WoniuManager.vue';
 import ExportResultsModal from '@/components/ExportResultsModal.vue';
+import AnnouncementModal from '@/components/AnnouncementModal.vue';
+import ThemeToggle from '@/components/ThemeToggle.vue';
+import { initTheme } from '@/lib/theme';
 import { getDiskTypeName, sortDiskTypes } from '@/utils/diskTypes';
 
 // 后端健康状态缓存（应用启动时获取一次）
@@ -87,8 +90,79 @@ const currentUsername = ref('');
 const isAdminUser = ref(false);
 const currentView = ref<'search' | 'user' | 'admin'>('search');
 const siteName = computed(() => authState.config?.site.name || 'Qingyu PanSou');
+const siteSlogan = computed(
+  () => authState.config?.site.slogan || authState.config?.site.description || '清羽飞扬自建网盘搜索，众多资源，一键直达',
+);
+const siteIcon = computed(() => authState.config?.site.icon || '/favicon.ico');
 const globalNotice = ref('');
 const globalError = ref('');
+
+// 公告弹窗：访问首页时展示，同一内容 5 分钟内不重复打扰。
+const ANNOUNCEMENT_KEY = 'pansou_announcement_seen';
+const ANNOUNCEMENT_INTERVAL = 5 * 60 * 1000;
+const announcementText = ref('');
+const showAnnouncement = ref(false);
+
+function announcementHash(text: string) {
+  let hash = 5381;
+  for (let i = 0; i < text.length; i++) hash = ((hash << 5) + hash + text.charCodeAt(i)) | 0;
+  return String(hash >>> 0);
+}
+
+function maybeShowAnnouncement() {
+  const text = String(authState.config?.site.announcement || '').trim();
+  if (!text || currentView.value !== 'search') return;
+  const hash = announcementHash(text);
+  try {
+    const seen = JSON.parse(localStorage.getItem(ANNOUNCEMENT_KEY) || '{}');
+    if (seen.hash === hash && Date.now() - Number(seen.at || 0) < ANNOUNCEMENT_INTERVAL) return;
+  } catch {
+    // 忽略损坏的本地记录
+  }
+  announcementText.value = text;
+  showAnnouncement.value = true;
+}
+
+function closeAnnouncement() {
+  showAnnouncement.value = false;
+  if (!announcementText.value) return;
+  localStorage.setItem(
+    ANNOUNCEMENT_KEY,
+    JSON.stringify({ hash: announcementHash(announcementText.value), at: Date.now() }),
+  );
+}
+
+function onSiteIconError(event: Event) {
+  const img = event.target as HTMLImageElement;
+  if (!img.src.endsWith('/favicon.ico')) img.src = '/favicon.ico';
+}
+
+function syncSiteMeta() {
+  const name = siteName.value;
+  document.title = `${name} - ${authState.config?.site.description || '网盘资源搜索'}`;
+  const href = siteIcon.value || '/favicon.ico';
+  let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'icon';
+    document.head.appendChild(link);
+  }
+  link.href = href;
+}
+
+watch([siteName, siteIcon, () => authState.config?.site.description], syncSiteMeta, { immediate: true });
+watch(
+  () => authState.config?.site.announcement,
+  () => nextTick(maybeShowAnnouncement),
+);
+watch(currentView, (view) => {
+  if (view === 'search') {
+    nextTick(maybeShowAnnouncement);
+  } else {
+    // 公告只属于站点首页，进入控制台时立即关闭。
+    showAnnouncement.value = false;
+  }
+});
 
 // QQPD插件状态
 const isQQPDEnabled = ref(false);
@@ -959,6 +1033,12 @@ const syncAuthState = () => {
 
 const switchView = (view: 'search' | 'user' | 'admin', updateHash = true) => {
   if (view === 'admin' && !isAdmin.value) view = 'user';
+  if (view === 'admin' && !isAdmin.value) {
+    // 前端也要拦截：普通用户不能进入管理控制台。后端所有 /api/admin 接口
+    // 仍会独立校验 RequireAdmin，这里只是避免展示无权页面。
+    globalError.value = '你没有访问管理后台的权限。';
+    view = isLoggedIn.value ? 'user' : 'search';
+  }
   if (view === 'admin' && mustChangePassword.value) {
     globalError.value = '请先修改默认密码后再进入管理后台。';
     view = 'user';
@@ -1017,11 +1097,19 @@ const handleSearchFailure = (error: any) => {
   const status = error?.response?.status;
   const code = error?.response?.data?.code;
   const msg = error?.response?.data?.error;
-  if (status === 401 || code === 'WEB_SEARCH_DISABLED') {
+  if (status === 401 || code === 'WEB_SEARCH_DISABLED' || code === 'MUST_CHANGE_PASSWORD') {
     globalError.value = msg || '请先登录后再搜索';
     showLogin.value = true;
-  } else if (code === 'DAILY_LIMIT_REACHED' || code === 'RATE_LIMITED') {
+  } else if (
+    code === 'DAILY_LIMIT_REACHED' ||
+    code === 'API_DAILY_LIMIT_REACHED' ||
+    code === 'ANON_IP_DAILY_LIMIT' ||
+    code === 'ANON_GLOBAL_DAILY_LIMIT' ||
+    code === 'RATE_LIMITED'
+  ) {
     globalError.value = msg || '搜索过于频繁，请稍后再试';
+  } else if (code === 'WEB_TOKEN_REQUIRED' || code === 'WEB_ORIGIN_REJECTED') {
+    globalError.value = msg || '搜索凭证失效，请刷新页面后重试';
   }
 };
 
@@ -1271,7 +1359,9 @@ onUnmounted(() => {
       @success="handleLoginSuccess"
     />
     <ToastHost />
-    
+
+    <AnnouncementModal :visible="showAnnouncement" :content="announcementText" @close="closeAnnouncement" />
+
     <!-- 背景装饰 -->
     <div v-if="currentView === 'search'" class="bg-decorative" aria-hidden="true">
       <span>青海长云暗雪山</span>
@@ -1284,32 +1374,16 @@ onUnmounted(() => {
     <nav v-if="currentView === 'search'" ref="navHeaderRef" class="nav-header">
       <div class="container mx-auto px-4 nav-inner">
         <div class="brand-lockup cursor-pointer" @click="switchToSearch">
-          <img src="/favicon.ico" alt="Qingyu PanSou" class="brand-icon" />
+          <img :src="siteIcon" :alt="siteName" class="brand-icon" @error="onSiteIconError" />
           <div>
             <h1 class="brand-title">{{ siteName }}</h1>
-            <p class="brand-subtitle">清羽盘搜</p>
+            <p class="brand-subtitle">{{ siteSlogan }}</p>
           </div>
         </div>
-        
-        <nav class="nav-actions" aria-label="站点链接">
-          <a
-            href="https://www.liushen.fun/"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="nav-link"
-          >
-            站长主页
-          </a>
-          <a
-            href="https://blog.liushen.fun/"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="nav-link"
-          >
-            站长博客
-          </a>
+
+        <nav class="nav-actions" aria-label="站点操作">
+          <ThemeToggle />
           <template v-if="isAuthenticated">
-            <span class="nav-user" :title="'当前用户: ' + currentUsername">@{{ currentUsername }}</span>
             <button
               v-if="currentView !== 'user'"
               @click="goUser"
@@ -1364,9 +1438,6 @@ onUnmounted(() => {
       <div v-if="currentView === 'search'" class="search-page">
         <div v-if="globalError" class="global-banner error">{{ globalError }}</div>
         <div v-if="globalNotice" class="global-banner ok">{{ globalNotice }}</div>
-        <div v-if="authState.config?.site.announcement" class="global-banner notice">
-          {{ authState.config.site.announcement }}
-        </div>
         <div
           v-if="!isAuthenticated && authState.config && !authState.config.auth.web_search_enabled"
           class="global-banner notice"
@@ -1447,10 +1518,37 @@ onUnmounted(() => {
       />
     </main>
     
+    <!-- 左下角 GitHub 悬浮按钮 -->
+    <a
+      v-if="currentView === 'search'"
+      class="github-float"
+      href="https://github.com/willow-god/pansou-web"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="访问项目 GitHub 仓库"
+      title="项目 GitHub"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 .5C5.73.5.75 5.48.75 11.75c0 4.98 3.23 9.2 7.71 10.69.56.1.77-.24.77-.54v-2.1c-3.14.68-3.8-1.33-3.8-1.33-.51-1.3-1.25-1.65-1.25-1.65-1.02-.7.08-.68.08-.68 1.13.08 1.73 1.16 1.73 1.16 1 1.72 2.63 1.22 3.27.93.1-.72.39-1.22.71-1.5-2.51-.29-5.15-1.26-5.15-5.6 0-1.24.44-2.25 1.16-3.04-.12-.29-.5-1.44.11-3 0 0 .95-.3 3.1 1.16a10.8 10.8 0 0 1 5.64 0c2.15-1.46 3.1-1.16 3.1-1.16.61 1.56.23 2.71.11 3 .72.79 1.16 1.8 1.16 3.04 0 4.35-2.65 5.3-5.17 5.58.4.35.76 1.04.76 2.1v3.12c0 .3.2.65.78.54a11.25 11.25 0 0 0 7.7-10.69C23.25 5.48 18.27.5 12 .5Z" />
+      </svg>
+    </a>
+
     <!-- 页脚 -->
     <footer v-if="currentView === 'search'" ref="footerRef" class="footer-shell mt-auto">
-      <div class="container mx-auto px-4 py-5">
+      <div class="container mx-auto px-4 footer-inner">
+        <div class="footer-brand">
+          <img :src="siteIcon" :alt="siteName" @error="onSiteIconError" />
+          <div>
+            <strong>{{ siteName }}</strong>
+            <span>{{ siteSlogan }}</span>
+          </div>
+        </div>
         <div class="footer-links">
+          <a href="https://www.liushen.fun/" target="_blank" rel="noopener noreferrer">站长主页</a>
+          <a href="https://blog.liushen.fun/" target="_blank" rel="noopener noreferrer">站长博客</a>
+          <a href="https://github.com/willow-god" target="_blank" rel="noopener noreferrer">站长 GitHub</a>
+        </div>
+        <div class="footer-legal">
           <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">陕ICP备2024028531号</a>
           <a href="https://beian.mps.gov.cn/#/query/webSearch?code=61011602000637" target="_blank" rel="noopener noreferrer">陕公网安备61011602000637号</a>
           <span>© {{ new Date().getFullYear() }} {{ siteName }}</span>
@@ -1716,24 +1814,117 @@ onUnmounted(() => {
   background: transparent;
 }
 
+.footer-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.9rem 1.5rem;
+  padding-top: 1.15rem;
+  padding-bottom: 1.15rem;
+}
+
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+.footer-brand img {
+  width: 2.1rem;
+  height: 2.1rem;
+  flex: 0 0 2.1rem;
+  padding: 0.15rem;
+  border-radius: 0.55rem;
+  background: #fff;
+  object-fit: contain;
+  box-shadow: 0 4px 14px rgba(49, 46, 129, 0.1);
+}
+.footer-brand div { min-width: 0; }
+.footer-brand strong { display: block; font-size: 0.82rem; color: rgba(30, 27, 75, 0.94); }
+.footer-brand span {
+  display: block;
+  margin-top: 0.12rem;
+  max-width: 30rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.68rem;
+  color: rgba(67, 56, 202, 0.62);
+}
+
 .footer-links {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 0.9rem;
   flex-wrap: wrap;
-  color: rgba(79, 70, 229, 0.58);
-  font-size: 0.82rem;
+  color: rgba(79, 70, 229, 0.7);
+  font-size: 0.78rem;
 }
 
 .footer-links a {
+  position: relative;
   color: inherit;
   text-decoration: none;
   transition: color 0.2s ease;
 }
+.footer-links a:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: -0.5rem;
+  top: 50%;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.45;
+  transform: translateY(-50%);
+}
 
 .footer-links a:hover {
   color: rgba(49, 46, 129, 0.94);
+}
+
+.footer-legal {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  flex-wrap: wrap;
+  /* 给左下角固定 GitHub 按钮留出空间，避免遮挡备案信息 */
+  padding: 0.8rem 0 0 3.8rem;
+  border-top: 1px dashed rgba(199, 210, 254, 0.55);
+  color: rgba(79, 70, 229, 0.52);
+  font-size: 0.7rem;
+}
+.footer-legal a { color: inherit; text-decoration: none; }
+.footer-legal a:hover { color: rgba(49, 46, 129, 0.9); }
+
+/* 左下角 GitHub 悬浮按钮 */
+.github-float {
+  position: fixed;
+  left: 1.15rem;
+  bottom: calc(1.15rem + env(safe-area-inset-bottom));
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #fff;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.28), 0 2px 6px rgba(15, 23, 42, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.github-float svg { width: 1.35rem; height: 1.35rem; fill: currentColor; }
+.github-float:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.34), 0 4px 10px rgba(15, 23, 42, 0.22);
+}
+.github-float:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 3px;
 }
 
 @keyframes fadeIn {
@@ -1766,6 +1957,8 @@ onUnmounted(() => {
     padding-top: 1rem;
     padding-bottom: 0.75rem;
     align-items: flex-start;
+    flex-wrap: wrap;
+    row-gap: 0.35rem;
   }
 
   .brand-icon {
@@ -1775,6 +1968,14 @@ onUnmounted(() => {
 
   .brand-title {
     font-size: 0.98rem;
+  }
+
+  .brand-lockup > div { min-width: 0; }
+  .brand-subtitle {
+    max-width: 42vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .nav-actions {
@@ -1806,20 +2007,25 @@ onUnmounted(() => {
 
   .footer-shell .container {
     box-sizing: border-box;
-    padding-top: 0.75rem;
-    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    padding-top: 0.7rem;
+    padding-bottom: calc(0.7rem + env(safe-area-inset-bottom));
   }
-
-  .footer-shell .container > div {
-    gap: 0.5rem 0.8rem;
-    font-size: 0.75rem;
-    line-height: 1.25;
-    flex-wrap: wrap;
-    align-items: center;
+  .footer-inner {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
   }
+  .footer-brand span { max-width: 100%; white-space: normal; line-height: 1.4; }
+  .footer-links { justify-content: flex-start; gap: 0.8rem; }
+  .footer-legal { flex-direction: column; align-items: flex-start; gap: 0.3rem; padding: 0.65rem 0 0 3.3rem; font-size: 0.66rem; }
+  .github-float {
+    left: 0.8rem;
+    bottom: calc(0.8rem + env(safe-area-inset-bottom));
+    width: 2.7rem;
+    height: 2.7rem;
+  }
+  .github-float svg { width: 1.2rem; height: 1.2rem; }
 
   .search-page {
     display: grid;
@@ -1848,17 +2054,16 @@ onUnmounted(() => {
     padding-right: 1rem;
   }
   
-  /* 移动端按钮样式 - 只显示图标 */
+  /* 移动端按钮保留文字：主题、登录与账户操作必须可辨认 */
   .nav-button {
-    padding: 0.5rem;
-    font-size: 0.8rem;
-    min-width: 2.5rem;
+    padding: 0.4rem 0.55rem;
+    min-height: 2.15rem;
+    font-size: 0.76rem;
     justify-content: center;
   }
-  
-  /* 移动端隐藏按钮文字 */
-  .nav-text {
-    display: none;
+  .nav-actions {
+    margin-left: auto;
+    row-gap: 0.3rem;
   }
 }
 

@@ -26,20 +26,46 @@
             </div>
           </div>
           <div class="section-body">
+            <div class="site-brand-preview">
+              <div class="brand-preview-icon">
+                <img v-if="site.icon" :src="site.icon" alt="站点图标" @error="iconBroken = true" @load="iconBroken = false" />
+                <AdminIcon v-else name="home" :size="22" />
+                <span v-if="iconBroken" class="brand-preview-fallback">!</span>
+              </div>
+              <div class="brand-preview-copy">
+                <strong>{{ site.name || '站点名称' }}</strong>
+                <span>{{ site.slogan || '站点 Slogan' }}</span>
+              </div>
+            </div>
             <div class="form-grid">
               <div class="field">
                 <label>站点名称</label>
-                <input v-model="site.name" class="input" placeholder="Qingyu PanSou" />
+                <input v-model="site.name" class="input" placeholder="Qingyu PanSou" maxlength="40" />
+              </div>
+              <div class="field">
+                <label>站点 Slogan</label>
+                <input v-model="site.slogan" class="input" placeholder="清羽飞扬自建网盘搜索，众多资源，一键直达" maxlength="80" />
               </div>
               <div class="field">
                 <label>站点描述</label>
-                <input v-model="site.description" class="input" placeholder="网盘资源搜索" />
+                <input v-model="site.description" class="input" placeholder="网盘资源搜索" maxlength="120" />
+              </div>
+              <div class="field">
+                <label>站点图标</label>
+                <div class="icon-input-row">
+                  <input v-model="site.icon" class="input" placeholder="/favicon.ico 或 https://…" />
+                  <label class="btn btn-sm icon-upload">
+                    上传
+                    <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp,image/x-icon" hidden @change="onIconFile" />
+                  </label>
+                </div>
+                <span class="hint">支持外链、站内路径或上传图片（≤ 2MB），会同步更新浏览器标签页图标。</span>
               </div>
             </div>
             <div class="field" style="margin-top: 0.8rem">
               <label>站点公告</label>
-              <textarea v-model="site.announcement" class="textarea" placeholder="留空则不显示公告；支持多行文本" />
-              <span class="hint">公告会显示在搜索页顶部，适合维护通知与使用说明。</span>
+              <textarea v-model="site.announcement" class="textarea announcement-input" placeholder="支持 Markdown：**加粗**、[链接](https://…)、- 列表、## 标题" />
+              <span class="hint">留空则不显示。公告会在访问首页时以弹窗展示，5 分钟内不重复打扰，支持 Markdown 语法。</span>
             </div>
           </div>
         </section>
@@ -101,7 +127,17 @@
             <div class="field">
               <label>匿名搜索限流（次/分钟）</label>
               <input v-model.number="auth.anonymous_web_search_limit" class="input" type="number" min="1" />
-              <span class="hint">按 IP 统计，仅作用于匿名网页搜索</span>
+              <span class="hint">按 IP 统计，仅作用于未登录访问</span>
+            </div>
+            <div class="field">
+              <label>单 IP 每日匿名额度</label>
+              <input v-model.number="auth.anonymous_daily_limit" class="input" type="number" min="0" />
+              <span class="hint">0 表示不限制；达到后该 IP 需登录才能继续搜索</span>
+            </div>
+            <div class="field">
+              <label>全站每日匿名额度</label>
+              <input v-model.number="auth.anonymous_global_daily_limit" class="input" type="number" min="0" />
+              <span class="hint">0 表示不限制；用于控制外部直接访问的总体消耗</span>
             </div>
             <div class="field">
               <label>会话有效期（小时）</label>
@@ -178,7 +214,8 @@ import { loadPublicConfig } from '@/stores/auth';
 import AdminIcon from './AdminIcon.vue';
 import { toast } from '@/lib/toast';
 
-const site = reactive({ name: '', description: '', announcement: '' });
+const site = reactive({ name: '', description: '', slogan: '', icon: '/favicon.ico', announcement: '' });
+const iconBroken = ref(false);
 const auth = reactive<AuthSettings>({
   site_name: '',
   site_description: '',
@@ -192,7 +229,11 @@ const auth = reactive<AuthSettings>({
   allow_user_api_tokens: true,
   default_daily_search_limit: 0,
   anonymous_web_search_limit: 20,
+  anonymous_daily_limit: 0,
+  anonymous_global_daily_limit: 0,
   session_ttl_hours: 168,
+  site_slogan: '',
+  site_icon: '/favicon.ico',
 });
 const email = reactive<EmailSettings>({
   enabled: false,
@@ -216,7 +257,10 @@ const load = async () => {
     const data = await adminGetSettings();
     site.name = data.site.name;
     site.description = data.site.description;
+    site.slogan = data.site.slogan || '';
+    site.icon = data.site.icon || '/favicon.ico';
     site.announcement = data.site.announcement;
+    iconBroken.value = false;
     Object.assign(auth, data.auth);
     Object.assign(email, data.email);
     email.password = '';
@@ -228,6 +272,24 @@ const load = async () => {
   }
 };
 
+const onIconFile = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    toast.error('图片过大', '请选择不超过 2MB 的图标');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    site.icon = String(reader.result || '');
+    iconBroken.value = false;
+  };
+  reader.onerror = () => toast.error('读取图片失败');
+  reader.readAsDataURL(file);
+};
+
 const save = async () => {
   if (auth.email_register_enabled && (!email.enabled || !email.host)) {
     toast.error('无法保存', '开启邮箱注册前必须启用并配置 SMTP');
@@ -237,7 +299,14 @@ const save = async () => {
   try {
     await adminSaveSettings({
       site: { ...site },
-      auth: { ...auth, site_name: site.name, site_description: site.description, announcement: site.announcement },
+      auth: {
+        ...auth,
+        site_name: site.name,
+        site_description: site.description,
+        site_slogan: site.slogan,
+        site_icon: site.icon,
+        announcement: site.announcement,
+      },
       email: { ...email },
     });
     await loadPublicConfig();
@@ -286,8 +355,48 @@ onMounted(load);
 }
 .settings-bar-copy strong { display: block; font-size: 0.82rem; }
 .settings-bar-copy span { display: block; margin-top: 0.15rem; font-size: 0.7rem; color: hsl(var(--muted-foreground)); }
-.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .smtp-test { display: flex; align-items: flex-end; gap: 0.6rem; margin-top: 0.9rem; }
+.site-brand-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 0.9rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px dashed hsl(var(--border));
+  border-radius: 0.7rem;
+  background: hsl(var(--muted) / 0.3);
+}
+.brand-preview-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.9rem;
+  height: 2.9rem;
+  flex: 0 0 2.9rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.8rem;
+  background: #fff;
+  color: hsl(var(--muted-foreground));
+  overflow: hidden;
+}
+.brand-preview-icon img { width: 100%; height: 100%; object-fit: contain; padding: 0.25rem; }
+.brand-preview-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: hsl(var(--destructive) / 0.1);
+  color: hsl(var(--destructive));
+  font-weight: 700;
+}
+.brand-preview-copy { min-width: 0; }
+.brand-preview-copy strong { display: block; font-size: 0.85rem; }
+.brand-preview-copy span { display: block; margin-top: 0.15rem; font-size: 0.7rem; color: hsl(var(--muted-foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.icon-input-row { display: flex; gap: 0.4rem; }
+.icon-input-row .input { flex: 1; min-width: 0; }
+.icon-upload { position: relative; flex: 0 0 auto; cursor: pointer; }
+.announcement-input { min-height: 8rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.75rem; line-height: 1.6; }
 @media (max-width: 900px) {
   .settings-grid { grid-template-columns: 1fr; }
   .settings-bar { position: static; flex-direction: column; align-items: flex-start; }
