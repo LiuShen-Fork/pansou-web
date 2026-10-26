@@ -8,7 +8,7 @@
     "build": "npm --prefix frontend run build",
     "preview": "npm --prefix frontend run preview",
     "install:frontend": "npm --prefix frontend ci",
-    "dev:backend": "cd backend && go run .",
+    "dev:backend": "bash scripts/dev-backend.sh",
     "build:backend": "cd backend && go build -trimpath -o ../bin/pansou .",
     "test:backend": "cd backend && go test ./...",
     "sync:defaults": "node scripts/sync-upstream-defaults.mjs",

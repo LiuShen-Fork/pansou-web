@@ -114,12 +114,16 @@ curl -H "Authorization: Bearer ps_xxxxxxxx" \
 # 安装前端依赖
 npm --prefix frontend ci
 
-# 启动后端（默认 :8888）
-cd backend && go run .
+# 终端 1：启动后端（默认 :8888，自动加载上游频道/插件默认值）
+npm run dev:backend
+# 等价于 bash scripts/dev-backend.sh
 
-# 另开终端启动前端（默认 :3000，自动代理 /api 到 :8888）
+# 终端 2：启动前端（默认 :3000，自动代理 /api 到 :8888）
 npm run dev
 ```
+
+打开 <http://localhost:3000>，首次登录 `admin / 123456`，会要求立即修改密码。
+本地数据位于 `data/pansou-admin.db`，删除该文件即可重置本地账户。
 
 一键校验（同步上游默认值 + 前端构建 + 后端测试/编译）：
 
