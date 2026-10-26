@@ -116,7 +116,6 @@ func CreateUser(username, email, password, role string) (*User, error) {
 		return nil, err
 	}
 	id, _ := res.LastInsertId()
-	_, _ = EnsureAPIToken(id)
 	return GetUserByID(id)
 }
 
@@ -177,19 +176,31 @@ func FindUserByAccount(account string) (*User, error) {
 	return nil, ErrUserNotFound
 }
 
-func ListUsers(query string, page, pageSize int) ([]User, int, error) {
+func ListUsers(query, role, status string, page, pageSize int) ([]User, int, error) {
 	if page < 1 {
 		page = 1
 	}
 	if pageSize < 1 || pageSize > 200 {
 		pageSize = 20
 	}
-	where := ""
+	conds := []string{}
 	args := []any{}
 	if q := strings.TrimSpace(query); q != "" {
-		where = ` WHERE username LIKE ? OR email LIKE ?`
+		conds = append(conds, `(username LIKE ? OR email LIKE ?)`)
 		like := "%" + q + "%"
 		args = append(args, like, like)
+	}
+	if role == RoleAdmin || role == RoleUser {
+		conds = append(conds, `role = ?`)
+		args = append(args, role)
+	}
+	if status == StatusActive || status == StatusDisabled {
+		conds = append(conds, `status = ?`)
+		args = append(args, status)
+	}
+	where := ""
+	if len(conds) > 0 {
+		where = ` WHERE ` + strings.Join(conds, ` AND `)
 	}
 	var total int
 	if err := DB.QueryRow(`SELECT COUNT(*) FROM users`+where, args...).Scan(&total); err != nil {
@@ -208,10 +219,17 @@ func ListUsers(query string, page, pageSize int) ([]User, int, error) {
 		if err != nil {
 			return nil, 0, err
 		}
-		u.SearchCountToday, _ = UserSearchCountToday(u.ID)
 		list = append(list, *u)
 	}
-	return list, total, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	// 必须先关闭结果集再逐条查搜索次数，否则会占着连接等待第二条连接。
+	rows.Close()
+	for i := range list {
+		list[i].SearchCountToday, _ = UserSearchCountToday(list[i].ID)
+	}
+	return list, total, nil
 }
 
 type UserUpdate struct {
@@ -436,14 +454,6 @@ func DeleteOtherSessions(userID int64, keepSessionID string) {
 
 // ---------------- API 令牌 ----------------
 
-func EnsureAPIToken(userID int64) (*APIToken, error) {
-	if t, err := GetAPIToken(userID); err == nil {
-		return t, nil
-	}
-	t, _, err := ResetAPIToken(userID)
-	return t, err
-}
-
 func GetAPIToken(userID int64) (*APIToken, error) {
 	t := &APIToken{}
 	err := DB.QueryRow(
@@ -540,19 +550,27 @@ func RecordSearch(u *User, source, keyword, ip string) {
 	)
 }
 
-func ListSearchLogs(page, pageSize int, query string) ([]SearchLog, int, error) {
+func ListSearchLogs(page, pageSize int, query, source string) ([]SearchLog, int, error) {
 	if page < 1 {
 		page = 1
 	}
 	if pageSize < 1 || pageSize > 200 {
 		pageSize = 20
 	}
-	where := ""
+	conds := []string{}
 	args := []any{}
 	if q := strings.TrimSpace(query); q != "" {
-		where = ` WHERE username LIKE ? OR keyword LIKE ?`
+		conds = append(conds, `(username LIKE ? OR keyword LIKE ?)`)
 		like := "%" + q + "%"
 		args = append(args, like, like)
+	}
+	if source = strings.TrimSpace(source); source != "" {
+		conds = append(conds, `source = ?`)
+		args = append(args, source)
+	}
+	where := ""
+	if len(conds) > 0 {
+		where = ` WHERE ` + strings.Join(conds, ` AND `)
 	}
 	var total int
 	if err := DB.QueryRow(`SELECT COUNT(*) FROM search_logs`+where, args...).Scan(&total); err != nil {
@@ -587,7 +605,7 @@ func GetOverview() (*Overview, error) {
 	_ = DB.QueryRow(`SELECT COUNT(*) FROM search_logs`).Scan(&o.SearchesTotal)
 	_ = DB.QueryRow(`SELECT COUNT(*) FROM search_logs WHERE user_id = 0 AND created_at >= ?`, todayStart()).Scan(&o.AnonymousToday)
 	_ = DB.QueryRow(`SELECT COUNT(*) FROM sessions WHERE expires_at > ?`, Now()).Scan(&o.SessionsActive)
-	logs, _, err := ListSearchLogs(1, 10, "")
+	logs, _, err := ListSearchLogs(1, 10, "", "")
 	if err != nil {
 		return nil, err
 	}

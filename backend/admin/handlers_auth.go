@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -319,7 +321,12 @@ func APITokenGet(c *gin.Context) {
 		return
 	}
 	u := CurrentUser(c)
-	t, err := EnsureAPIToken(u.ID)
+	t, err := GetAPIToken(u.ID)
+	if errors.Is(err, sql.ErrNoRows) {
+		// 首次使用：不自动生成不可见的令牌，由用户点击「生成」后一次性展示。
+		c.JSON(http.StatusOK, gin.H{"token": nil})
+		return
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "读取令牌失败", "code": "TOKEN_FAILED"})
 		return

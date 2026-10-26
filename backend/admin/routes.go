@@ -33,6 +33,7 @@ func RegisterRoutes(r *gin.Engine) {
 	admin.Use(RequireAuth(), RequireAdmin())
 	{
 		admin.GET("/overview", AdminOverview)
+		admin.GET("/stats", AdminStats)
 		admin.GET("/settings", AdminGetSettings)
 		admin.PUT("/settings", AdminPutSettings)
 		admin.POST("/settings/email/test", AdminTestEmail)

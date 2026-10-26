@@ -49,8 +49,10 @@ func Init() error {
 			initErr = fmt.Errorf("打开后台数据库失败: %w", err)
 			return
 		}
-		db.SetMaxOpenConns(1)
-		db.SetMaxIdleConns(1)
+		// SQLite 在 WAL 模式下支持多读单写。这里不能只留 1 条连接：
+		// 管理后台存在“遍历结果集时再查一次”的场景，单连接会自我死锁。
+		db.SetMaxOpenConns(8)
+		db.SetMaxIdleConns(8)
 		db.SetConnMaxLifetime(0)
 		if err := db.Ping(); err != nil {
 			_ = db.Close()
@@ -201,6 +203,27 @@ func ensureDefaultSettings() error {
 }
 
 func ensureDefaultAdmin() error {
+	// 救援开关：忘记密码时设置 PANSOU_RESET_ADMIN=1 启动一次，
+	// 会把第一个管理员重置为默认密码并强制改密，然后正常启动即可。
+	if os.Getenv("PANSOU_RESET_ADMIN") == "1" {
+		var id int64
+		if err := DB.QueryRow(`SELECT id FROM users WHERE role = ? ORDER BY id LIMIT 1`, RoleAdmin).Scan(&id); err == nil {
+			hash, hashErr := HashPassword(DefaultAdminPassword)
+			if hashErr != nil {
+				return hashErr
+			}
+			now := Now()
+			if _, err := DB.Exec(
+				`UPDATE users SET password_hash = ?, must_change_password = 1, status = ?, updated_at = ? WHERE id = ?`,
+				hash, StatusActive, now, id,
+			); err != nil {
+				return err
+			}
+			DeleteUserSessions(id)
+			log.Printf("[admin] PANSOU_RESET_ADMIN=1：已重置管理员 ID=%d 的密码为默认密码，请登录后立即修改", id)
+		}
+	}
+
 	var count int
 	if err := DB.QueryRow(`SELECT COUNT(*) FROM users WHERE role = ?`, RoleAdmin).Scan(&count); err != nil {
 		return err
@@ -221,8 +244,7 @@ func ensureDefaultAdmin() error {
 	if err != nil {
 		return fmt.Errorf("创建默认管理员失败: %w", err)
 	}
-	id, _ := res.LastInsertId()
-	_, _ = EnsureAPIToken(id)
+	_, _ = res.LastInsertId()
 	log.Printf("[admin] 已创建默认管理员 %s，首次登录后请立即修改密码", DefaultAdminUsername)
 	return nil
 }

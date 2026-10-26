@@ -162,10 +162,20 @@ func AdminOverview(c *gin.Context) {
 	c.JSON(http.StatusOK, o)
 }
 
+func AdminStats(c *gin.Context) {
+	days, _ := strconv.Atoi(c.DefaultQuery("days", "14"))
+	stats, err := GetStats(days)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, stats)
+}
+
 func AdminListUsers(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-	list, total, err := ListUsers(c.Query("q"), page, pageSize)
+	list, total, err := ListUsers(c.Query("q"), c.Query("role"), c.Query("status"), page, pageSize)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -237,7 +247,7 @@ func AdminDeleteUser(c *gin.Context) {
 func AdminSearchLogs(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-	list, total, err := ListSearchLogs(page, pageSize, c.Query("q"))
+	list, total, err := ListSearchLogs(page, pageSize, c.Query("q"), c.Query("source"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -304,7 +304,6 @@ func CreateOAuthUser(username, email string) (*User, error) {
 		)
 		if err == nil {
 			id, _ := res.LastInsertId()
-			_, _ = EnsureAPIToken(id)
 			return GetUserByID(id)
 		}
 		if !strings.Contains(strings.ToLower(err.Error()), "unique") {
