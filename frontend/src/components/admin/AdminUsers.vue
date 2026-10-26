@@ -53,8 +53,8 @@
               <th>用户</th>
               <th>角色</th>
               <th>状态</th>
-              <th>今日搜索</th>
-              <th>每日上限</th>
+              <th>今日（搜索/API）</th>
+              <th>每日额度（搜索/API）</th>
               <th class="hide-sm">最近登录</th>
               <th style="text-align: right">操作</th>
             </tr>
@@ -72,8 +72,12 @@
               </td>
               <td><span class="badge" :class="u.role === 'admin' ? 'badge-primary' : ''">{{ u.role === 'admin' ? '管理员' : '普通用户' }}</span></td>
               <td><span class="badge" :class="u.status === 'active' ? 'badge-success' : 'badge-danger'">{{ u.status === 'active' ? '正常' : '禁用' }}</span></td>
-              <td class="mono">{{ u.search_count_today || 0 }}</td>
-              <td>{{ u.daily_search_limit ? u.daily_search_limit : '跟随全局' }}</td>
+              <td class="mono">{{ u.search_count_today || 0 }} / {{ u.api_search_count_today || 0 }}</td>
+              <td>
+                <span class="quota-pill">{{ u.daily_search_limit || '不限' }}</span>
+                <span class="quota-sep">/</span>
+                <span class="quota-pill">{{ u.api_daily_search_limit || '跟随' }}</span>
+              </td>
               <td class="hide-sm cell-sub">{{ u.last_login_at ? shortTime(u.last_login_at) : '从未登录' }}</td>
               <td>
                 <div class="cell-actions" style="justify-content: flex-end">
@@ -118,10 +122,12 @@
               </div>
               <div class="field">
                 <label>角色</label>
-                <select v-model="form.role" class="select">
-                  <option value="user">普通用户</option>
-                  <option value="admin">管理员</option>
-                </select>
+                <div class="role-readonly">
+                  <span class="badge" :class="modal.original?.role === 'admin' ? 'badge-primary' : ''">
+                    {{ modal.original?.role === 'admin' ? '管理员' : '普通用户' }}
+                  </span>
+                  <span class="hint">管理员全局唯一，角色不可通过用户列表调整</span>
+                </div>
               </div>
               <div class="field" v-if="modal.mode === 'edit'">
                 <label>状态</label>
@@ -131,9 +137,14 @@
                 </select>
               </div>
               <div class="field">
-                <label>每日搜索上限</label>
+                <label>每日搜索额度（网页 + API）</label>
                 <input v-model.number="form.daily_search_limit" class="input" type="number" min="0" />
-                <span class="hint">0 表示跟随全局默认，0 且全局为 0 时不限制</span>
+                <span class="hint">0 表示跟随全局默认，不单独限制</span>
+              </div>
+              <div class="field">
+                <label>每日 API 额度</label>
+                <input v-model.number="form.api_daily_search_limit" class="input" type="number" min="0" />
+                <span class="hint">仅统计 /api/search；0 表示与每日搜索额度共享</span>
               </div>
               <div class="field">
                 <label>{{ modal.mode === 'create' ? '初始密码' : '新密码' }}</label>
@@ -187,6 +198,7 @@ const form = reactive({
   role: 'user',
   status: 'active',
   daily_search_limit: 0,
+  api_daily_search_limit: 0,
   password: '',
 });
 
@@ -200,6 +212,7 @@ function resetForm() {
   form.role = 'user';
   form.status = 'active';
   form.daily_search_limit = 0;
+  form.api_daily_search_limit = 0;
   form.password = '';
 }
 
@@ -233,6 +246,7 @@ function openEdit(user: AuthUser) {
   form.role = user.role;
   form.status = user.status;
   form.daily_search_limit = user.daily_search_limit || 0;
+  form.api_daily_search_limit = user.api_daily_search_limit || 0;
   modal.open = true;
 }
 
@@ -252,17 +266,18 @@ async function save() {
         username: form.username.trim(),
         email: form.email.trim(),
         password: form.password,
-        role: form.role,
+        role: 'user',
         daily_search_limit: form.daily_search_limit || 0,
+        api_daily_search_limit: form.api_daily_search_limit || 0,
       });
       toast.success('用户已创建');
     } else if (modal.original) {
       const payload: Record<string, unknown> = {
         username: form.username.trim(),
         email: form.email.trim(),
-        role: form.role,
         status: form.status,
         daily_search_limit: form.daily_search_limit || 0,
+        api_daily_search_limit: form.api_daily_search_limit || 0,
       };
       if (form.password) payload.password = form.password;
       await adminUpdateUser(modal.original.id, payload);
@@ -321,5 +336,15 @@ onMounted(() => load(1));
   font-weight: 700;
   flex: 0 0 auto;
 }
-.mini-avatar.admin { background: #eef2ff; color: #4338ca; }
+.mini-avatar.admin { background: hsl(var(--primary) / 0.12); color: hsl(var(--primary)); }
+.quota-pill {
+  display: inline-block;
+  padding: 0.08rem 0.35rem;
+  border-radius: 0.35rem;
+  background: hsl(var(--muted));
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+.quota-sep { margin: 0 0.15rem; color: hsl(var(--muted-foreground)); font-size: 0.66rem; }
+.role-readonly { display: flex; align-items: center; gap: 0.5rem; min-height: 2.5rem; flex-wrap: wrap; }
 </style>

@@ -22,7 +22,9 @@ export interface AuthUser {
   status: string;
   must_change_password: boolean;
   daily_search_limit: number;
+  api_daily_search_limit: number;
   search_count_today?: number;
+  api_search_count_today?: number;
   created_at: string;
   updated_at: string;
   last_login_at?: string;
@@ -49,6 +51,8 @@ export interface PublicConfig {
   site: {
     name: string;
     description: string;
+    slogan: string;
+    icon: string;
     announcement: string;
   };
   auth: PublicAuthConfig;
@@ -58,8 +62,12 @@ export interface PublicConfig {
 export interface AuthSettings extends PublicAuthConfig {
   site_name: string;
   site_description: string;
+  site_slogan: string;
+  site_icon: string;
   announcement: string;
   anonymous_web_search_limit: number;
+  anonymous_daily_limit: number;
+  anonymous_global_daily_limit: number;
   session_ttl_hours: number;
 }
 
@@ -92,6 +100,7 @@ export interface OAuthProvider {
 export interface APIToken {
   id: number;
   user_id: number;
+  name: string;
   prefix: string;
   created_at: string;
   last_used_at?: string;
@@ -160,6 +169,21 @@ export const updateProfile = async (username: string, email: string) => {
   return data.user;
 };
 
+export const listAPITokens = async (): Promise<{ items: APIToken[]; max: number }> => {
+  const { data } = await authApi.get<{ items: APIToken[]; max: number }>('/auth/tokens');
+  return { items: data.items || [], max: data.max || 10 };
+};
+
+export const createAPIToken = async (name: string): Promise<{ token: string; item: APIToken; max: number }> => {
+  const { data } = await authApi.post<{ token: string; item: APIToken; max: number }>('/auth/tokens', { name });
+  return data;
+};
+
+export const deleteAPIToken = async (id: number): Promise<void> => {
+  await authApi.delete(`/auth/tokens/${id}`);
+};
+
+// 兼容旧调用：返回最早创建的令牌元数据。
 export const getAPIToken = async (): Promise<APIToken | null> => {
   const { data } = await authApi.get<{ token: APIToken | null }>('/auth/token');
   return data.token ?? null;
@@ -207,7 +231,7 @@ export interface SearchLog {
 }
 
 export interface AdminSettingsPayload {
-  site: { name: string; description: string; announcement: string };
+  site: { name: string; description: string; slogan: string; icon: string; announcement: string };
   auth: AuthSettings;
   email: EmailSettings;
 }

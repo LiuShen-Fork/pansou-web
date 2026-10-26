@@ -5,7 +5,7 @@
     <aside class="console-sidebar" :class="{ open }">
       <div class="console-brand">
         <div class="brand-mark">
-          <img src="/favicon.ico" alt="" />
+          <img :src="siteIcon" :alt="siteName" @error="onIconError" />
         </div>
         <div class="brand-copy">
           <strong>{{ siteName }}</strong>
@@ -74,6 +74,7 @@
           <p v-if="subtitle">{{ subtitle }}</p>
         </div>
         <div class="topbar-actions">
+          <ThemeToggle />
           <slot name="actions" />
         </div>
       </header>
@@ -88,6 +89,7 @@
 import { computed, ref } from 'vue';
 import { authState, isAdmin } from '@/stores/auth';
 import AdminIcon from './AdminIcon.vue';
+import ThemeToggle from '@/components/ThemeToggle.vue';
 
 defineProps<{
   title: string;
@@ -108,7 +110,13 @@ const open = ref(false);
 const user = computed(() => authState.user);
 const isAdminUser = computed(() => isAdmin.value);
 const siteName = computed(() => authState.config?.site.name || 'Qingyu PanSou');
+const siteIcon = computed(() => authState.config?.site.icon || '/favicon.ico');
 const initial = computed(() => (user.value?.username || '?').slice(0, 1).toUpperCase());
+
+function onIconError(event: Event) {
+  const img = event.target as HTMLImageElement;
+  if (!img.src.endsWith('/favicon.ico')) img.src = '/favicon.ico';
+}
 </script>
 
 <style scoped>
@@ -157,8 +165,9 @@ const initial = computed(() => (user.value?.username || '?').slice(0, 1).toUpper
   width: 2.35rem;
   height: 2.35rem;
   border-radius: 0.8rem;
-  background: linear-gradient(135deg, hsl(var(--primary)), #818cf8);
-  box-shadow: 0 8px 18px rgba(79, 70, 229, 0.25);
+  background: #fff;
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
 .brand-mark img {

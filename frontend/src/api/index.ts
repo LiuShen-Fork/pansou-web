@@ -108,6 +108,32 @@ export const getHealth = async (): Promise<HealthStatus> => {
 // 等于客户端和服务端同时到点，前端必然先报 ECONNABORTED。
 const SEARCH_TIMEOUT_MS = 45000;
 
+// 匿名网页搜索凭证：同源页面先换取短期 token，再随搜索请求发送。
+// 服务端会校验来源、IP 与 User-Agent，避免 /api/web/search 被直接当成公开 API。
+let webTokenCache: { token: string; expiresAt: number } | null = null;
+let webTokenRequest: Promise<string> | null = null;
+
+const fetchWebToken = async (force = false): Promise<string> => {
+  const now = Date.now();
+  if (!force && webTokenCache && webTokenCache.expiresAt - 60_000 > now) {
+    return webTokenCache.token;
+  }
+  if (webTokenRequest) return webTokenRequest;
+  webTokenRequest = api
+    .get<{ token: string; expires_at: number }>('/web/token', { timeout: 8000 })
+    .then((response) => {
+      webTokenCache = {
+        token: response.data.token,
+        expiresAt: Number(response.data.expires_at || 0) * 1000,
+      };
+      return webTokenCache.token;
+    })
+    .finally(() => {
+      webTokenRequest = null;
+    });
+  return webTokenRequest;
+};
+
 // 搜索API
 export const search = async (params: SearchParams): Promise<SearchResponse> => {
   // 添加ext参数，包含referer信息
@@ -115,21 +141,39 @@ export const search = async (params: SearchParams): Promise<SearchResponse> => {
     ...params,
     ext: JSON.stringify({ referer: "https://dm.xueximeng.com" })
   };
-  
+
   // 已登录走受保护的 /api/search；匿名走 /api/web/search，
-  // 后者由管理后台的「前端直接搜索」开关与匿名限流控制。
+  // 后者由管理后台的「前端直接搜索」开关、网页凭证与匿名限流共同控制。
   const token = localStorage.getItem('auth_token');
   const endpoint = token ? '/search' : '/web/search';
 
-  const response = await api.get<ApiResponse<SearchResponse>>(endpoint, {
-    params: searchParams,
-    // 搜索是慢请求：服务端允许插件批次用到 PLUGIN_TIMEOUT（默认 10 秒），
-    // 频道阶段还有各自的收集窗口。用 api 实例默认的 10 秒会在服务端还没返回时
-    // 就把请求掐掉——前端只看到 AxiosError: timeout of 10000ms exceeded，
-    // 而服务端其实还在后台跑（它用的是脱离请求的 context），结果白丢一次。
-    // 超时值必须大于服务端最坏情况，这里跟 gying 接口的 30 秒档保持一致偏保守。
-    timeout: SEARCH_TIMEOUT_MS,
-  });
+  const request = (webToken?: string) =>
+    api.get<ApiResponse<SearchResponse>>(endpoint, {
+      params: searchParams,
+      // 搜索是慢请求：服务端允许插件批次用到 PLUGIN_TIMEOUT（默认 10 秒），
+      // 频道阶段还有各自的收集窗口。用 api 实例默认的 10 秒会在服务端还没返回时
+      // 就把请求掐掉——前端只看到 AxiosError: timeout of 10000ms exceeded，
+      // 而服务端其实还在后台跑（它用的是脱离请求的 context），结果白丢一次。
+      // 超时值必须大于服务端最坏情况，这里跟 gying 接口的 30 秒档保持一致偏保守。
+      timeout: SEARCH_TIMEOUT_MS,
+      headers: webToken ? { 'X-Web-Token': webToken } : undefined,
+    });
+
+  let response;
+  if (!token) {
+    const webToken = await fetchWebToken();
+    try {
+      response = await request(webToken);
+    } catch (err: any) {
+      const code = err?.response?.data?.code;
+      if (code !== 'WEB_TOKEN_REQUIRED') throw err;
+      // 凭证过期或服务重启后失效：清缓存并重试一次。
+      webTokenCache = null;
+      response = await request(await fetchWebToken(true));
+    }
+  } else {
+    response = await request();
+  }
   
   // 如果响应中包含data字段，则返回data
   if (response.data && response.data.data) {

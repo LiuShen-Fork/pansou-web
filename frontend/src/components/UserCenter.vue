@@ -62,9 +62,9 @@
             <div>
               <div class="stat-label">API 令牌</div>
               <div class="stat-value" style="font-size: 1rem">
-                <span class="badge" :class="tokenMeta ? 'badge-success' : ''">{{ tokenMeta ? '已生成' : '未生成' }}</span>
+                <span class="badge" :class="tokens.length ? 'badge-success' : ''">{{ tokens.length ? tokens.length + ' 个' : '未创建' }}</span>
               </div>
-              <div class="stat-meta">用于脚本或第三方客户端</div>
+              <div class="stat-meta">共享每日搜索额度</div>
             </div>
             <div class="stat-icon emerald"><AdminIcon name="key" :size="19" /></div>
           </div>
@@ -167,43 +167,91 @@
 
       <!-- API 令牌 -->
       <section v-else-if="active === 'token'" class="section-card">
-        <div class="section-head">
+        <div class="section-head token-head">
           <div>
             <div class="section-title"><AdminIcon name="key" :size="16" /> API 令牌</div>
-            <div class="section-desc">用于脚本或第三方客户端调用受保护的搜索 API</div>
+            <div class="section-desc">用于脚本或第三方客户端；每个令牌只完整显示一次，所有令牌共享账号额度</div>
           </div>
-          <span class="badge" :class="tokenMeta ? 'badge-success' : ''">{{ tokenMeta ? '已生成' : '未生成' }}</span>
-        </div>
-        <div class="section-body" style="max-width: 46rem">
-          <p class="api-hint">
-            请求头示例：<code class="mono">Authorization: Bearer ps_...</code><br />
-            接口：<code class="mono">GET /api/search?kw=关键词</code>
-          </p>
-          <div v-if="tokenMeta" class="token-box">
-            <div>
-              <div class="field-label">当前令牌</div>
-              <div class="mono">{{ tokenMeta.prefix }}••••••••</div>
-              <div class="hint">创建于 {{ shortTime(tokenMeta.created_at) }}<template v-if="tokenMeta.last_used_at"> · 最近使用 {{ shortTime(tokenMeta.last_used_at) }}</template></div>
-            </div>
-            <button class="btn btn-sm" type="button" @click="resetToken">
-              <AdminIcon name="refresh" :size="14" /> 重置
+          <div class="token-head-actions">
+            <span class="badge" :class="tokens.length ? 'badge-success' : ''">{{ tokens.length }} / {{ tokenMax }}</span>
+            <button class="btn btn-primary btn-sm" type="button" :disabled="tokens.length >= tokenMax" @click="openCreateToken">
+              <AdminIcon name="plus" :size="14" /> 添加令牌
             </button>
           </div>
-          <div v-else class="empty-state" style="padding: 1.2rem 0">
-            <AdminIcon name="key" :size="22" />
-            <strong>尚未生成 API 令牌</strong>
-            <span>生成后会完整显示一次，请立即保存</span>
-          </div>
-          <div v-if="newToken" class="new-token">
-            <div class="field-label">新令牌（仅显示一次）</div>
-            <div class="new-token-row">
-              <input class="input mono" :value="newToken" readonly @focus="($event.target as HTMLInputElement).select()" />
-              <button class="btn btn-sm" type="button" @click="copyToken"><AdminIcon name="copy" :size="14" /> 复制</button>
+        </div>
+
+        <div class="section-body token-body">
+          <div class="api-guide">
+            <div class="api-guide-head">
+              <div>
+                <strong>接口调用</strong>
+                <span>兼容上游 PanSou 搜索接口，可直接接入视频源、机器人等应用</span>
+              </div>
+              <span class="badge badge-primary">Bearer</span>
+            </div>
+            <div class="api-row">
+              <span class="api-label">接口</span>
+              <code class="mono">GET /api/search?kw=关键词</code>
+              <button class="api-copy" type="button" title="复制接口地址" @click="copyText('GET /api/search?kw=关键词')">
+                <AdminIcon name="copy" :size="13" />
+              </button>
+            </div>
+            <div class="api-row">
+              <span class="api-label">请求头</span>
+              <code class="mono">Authorization: Bearer &lt;你的令牌&gt;</code>
+              <button class="api-copy" type="button" title="复制请求头" @click="copyText('Authorization: Bearer <你的令牌>')">
+                <AdminIcon name="copy" :size="13" />
+              </button>
             </div>
           </div>
-          <button v-if="!tokenMeta" class="btn btn-primary" style="margin-top: 0.75rem" type="button" :disabled="resetting" @click="resetToken">
-            <AdminIcon name="plus" :size="15" /> {{ resetting ? '生成中…' : '生成 API 令牌' }}
-          </button>
+
+          <div class="token-quota">
+            <div>
+              <span>今日 API 调用</span>
+              <strong>{{ user?.api_search_count_today || 0 }}<template v-if="apiLimit"> / {{ apiLimit }}</template></strong>
+            </div>
+            <div>
+              <span>每日搜索总额度</span>
+              <strong>{{ user?.daily_search_limit || '跟随全站' }}</strong>
+            </div>
+            <p>所有令牌共享同一账号额度；API 独立额度由管理员设置。</p>
+          </div>
+
+          <div class="token-list-head">
+            <span>已创建的令牌</span>
+            <small v-if="tokens.length">共 {{ tokens.length }} 个</small>
+          </div>
+
+          <div v-if="tokens.length" class="token-list">
+            <div v-for="item in tokens" :key="item.id" class="token-row">
+              <div class="token-icon"><AdminIcon name="key" :size="16" /></div>
+              <div class="token-copy">
+                <div class="token-title">
+                  <strong>{{ item.name }}</strong>
+                  <span class="token-mask mono">{{ item.prefix }}••••••••</span>
+                </div>
+                <div class="token-times">
+                  <span><AdminIcon name="clock" :size="12" /> 创建 {{ shortTime(item.created_at) }}</span>
+                  <span v-if="item.last_used_at"><AdminIcon name="refresh" :size="12" /> 最近使用 {{ shortTime(item.last_used_at) }}</span>
+                  <span v-else class="token-unused">尚未使用</span>
+                </div>
+              </div>
+              <button class="token-delete" type="button" title="删除令牌" @click="removeToken(item)">
+                <AdminIcon name="trash" :size="14" />
+              </button>
+            </div>
+          </div>
+          <div v-else class="empty-state token-empty">
+            <div class="token-empty-icon"><AdminIcon name="key" :size="22" /></div>
+            <strong>还没有 API 令牌</strong>
+            <span>点击右上角「添加令牌」，创建后可在此查看创建与使用时间</span>
+            <button class="btn btn-primary btn-sm" type="button" style="margin-top: 0.6rem" @click="openCreateToken">
+              <AdminIcon name="plus" :size="14" /> 添加第一个令牌
+            </button>
+          </div>
+          <p v-if="tokens.length >= tokenMax" class="hint" style="text-align: center; margin-top: 0.8rem">
+            已达到 {{ tokenMax }} 个令牌上限，请先删除不再使用的令牌。
+          </p>
         </div>
       </section>
 
@@ -237,6 +285,68 @@
           <p v-else-if="!bindings.length" class="hint">管理员尚未开启 OAuth 登录/注册，或所有服务商都已绑定。</p>
         </div>
       </section>
+
+      <!-- 令牌创建 / 一次性展示弹窗 -->
+      <Teleport to="body">
+        <div v-if="tokenModal" class="modal-backdrop" @click.self="closeTokenModal">
+          <div class="modal token-modal" role="dialog" aria-modal="true">
+            <template v-if="tokenModal === 'create'">
+              <div class="modal-head">
+                <div>
+                  <h3>添加 API 令牌</h3>
+                  <p>给令牌起一个便于识别的名称，例如「视频源脚本」</p>
+                </div>
+                <button class="icon-btn" type="button" aria-label="关闭" @click="closeTokenModal">
+                  <AdminIcon name="close" :size="16" />
+                </button>
+              </div>
+              <div class="modal-body">
+                <div class="field">
+                  <label>令牌名称</label>
+                  <input v-model="newTokenName" class="input" maxlength="32" placeholder="例如：视频源脚本（可选）" @keyup.enter="generateToken" />
+                  <span class="hint">留空将使用「默认令牌」；名称不超过 32 个字符。</span>
+                </div>
+              </div>
+              <div class="modal-foot">
+                <button class="btn" type="button" @click="closeTokenModal">取消</button>
+                <button class="btn btn-primary" type="button" :disabled="creatingToken" @click="generateToken">
+                  <AdminIcon name="plus" :size="14" /> {{ creatingToken ? '创建中…' : '创建令牌' }}
+                </button>
+              </div>
+            </template>
+
+            <template v-else>
+              <div class="modal-head">
+                <div>
+                  <h3>令牌已创建</h3>
+                  <p>请立即复制保存，关闭后将无法再次查看完整令牌</p>
+                </div>
+                <span class="badge badge-warning">仅显示一次</span>
+              </div>
+              <div class="modal-body">
+                <div class="token-reveal">
+                  <div class="token-reveal-label">
+                    <span>{{ createdTokenName || '默认令牌' }}</span>
+                    <span class="token-reveal-warn">离开此弹窗后不可见</span>
+                  </div>
+                  <div class="token-reveal-box">
+                    <code class="mono">{{ createdTokenRaw }}</code>
+                    <button class="btn btn-sm" type="button" @click="copyToken">
+                      <AdminIcon name="copy" :size="14" /> 复制
+                    </button>
+                  </div>
+                </div>
+                <p class="hint token-reveal-hint">
+                  请求时在 Header 中携带 <code>Authorization: Bearer &lt;令牌&gt;</code>。令牌遵循账号的每日 API 额度。
+                </p>
+              </div>
+              <div class="modal-foot">
+                <button class="btn btn-primary" type="button" @click="closeTokenModal">我已保存，完成</button>
+              </div>
+            </template>
+          </div>
+        </div>
+      </Teleport>
     </div>
   </AdminShell>
 </template>
@@ -245,10 +355,11 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import {
   changePassword,
-  getAPIToken,
+  createAPIToken,
+  deleteAPIToken,
   getOAuthBindings,
+  listAPITokens,
   oauthStartUrl,
-  resetAPIToken,
   unbindOAuth,
   updateProfile,
   type APIToken,
@@ -257,33 +368,20 @@ import {
 import { authState, refreshMe } from '@/stores/auth';
 import AdminShell from './admin/AdminShell.vue';
 import AdminIcon from './admin/AdminIcon.vue';
+import { consoleNav, consolePages } from '@/console/config';
 import { toast } from '@/lib/toast';
 
 const emit = defineEmits<{ back: []; logout: []; admin: [] }>();
 
-const nav = [
-  { key: 'overview', label: '我的概览', icon: 'dashboard' },
-  { key: 'profile', label: '个人资料', icon: 'user' },
-  { key: 'security', label: '安全设置', icon: 'lock' },
-  { key: 'token', label: 'API 令牌', icon: 'key' },
-  { key: 'oauth', label: '第三方绑定', icon: 'external' },
-];
-
-const pages: Record<string, { title: string; subtitle: string }> = {
-  overview: { title: '我的概览', subtitle: '账号状态、搜索配额与快捷入口' },
-  profile: { title: '个人资料', subtitle: '用户名与邮箱设置' },
-  security: { title: '安全设置', subtitle: '修改登录密码' },
-  token: { title: 'API 令牌', subtitle: '个人访问令牌管理' },
-  oauth: { title: '第三方绑定', subtitle: 'OAuth2 登录方式' },
-};
-
+const nav = consoleNav.user;
 const active = ref('overview');
-const current = computed(() => pages[active.value] || pages.overview);
+const current = computed(() => consolePages.user[active.value] || consolePages.user.overview);
 const user = computed(() => authState.user);
 const limitText = computed(() => {
   const limit = user.value?.daily_search_limit || 0;
   return limit > 0 ? ` / ${limit}` : '（不限）';
 });
+const apiLimit = computed(() => user.value?.api_daily_search_limit || 0);
 
 const bindings = ref<OAuthAccount[]>([]);
 const bindableProviders = computed(() => {
@@ -293,11 +391,15 @@ const bindableProviders = computed(() => {
 
 const profile = reactive({ username: authState.user?.username || '', email: authState.user?.email || '' });
 const password = reactive({ current: '', next: '' });
-const tokenMeta = ref<APIToken | null>(null);
-const newToken = ref('');
+const tokens = ref<APIToken[]>([]);
+const tokenMax = ref(10);
+const tokenModal = ref<'create' | 'reveal' | null>(null);
+const newTokenName = ref('');
+const createdTokenRaw = ref('');
+const createdTokenName = ref('');
 const savingProfile = ref(false);
 const savingPassword = ref(false);
-const resetting = ref(false);
+const creatingToken = ref(false);
 
 function shortTime(value?: string) {
   return value ? new Date(value).toLocaleString() : '';
@@ -310,12 +412,14 @@ const onSwitchMode = (mode: 'admin' | 'user') => {
   if (mode === 'admin') emit('admin');
 };
 
-const loadToken = async () => {
+const loadTokens = async () => {
   if (!authState.config?.auth.allow_user_api_tokens) return;
   try {
-    tokenMeta.value = await getAPIToken();
+    const data = await listAPITokens();
+    tokens.value = data.items;
+    tokenMax.value = data.max;
   } catch {
-    tokenMeta.value = null;
+    tokens.value = [];
   }
 };
 
@@ -328,7 +432,7 @@ const loadBindings = async () => {
 };
 
 onMounted(async () => {
-  await Promise.all([loadToken(), loadBindings()]);
+  await Promise.all([loadTokens(), loadBindings()]);
   if (user.value) {
     profile.username = user.value.username;
     profile.email = user.value.email || '';
@@ -359,7 +463,7 @@ const savePassword = async () => {
     password.current = '';
     password.next = '';
     await refreshMe();
-    await Promise.all([loadToken(), loadBindings()]);
+    await Promise.all([loadTokens(), loadBindings()]);
     toast.success('密码已更新', '其他设备的会话已退出');
   } catch (err: any) {
     toast.error('修改密码失败', err.response?.data?.error || '');
@@ -368,28 +472,64 @@ const savePassword = async () => {
   }
 };
 
-const resetToken = async () => {
-  if (tokenMeta.value && !window.confirm('重置后旧令牌立即失效，确定继续？')) return;
-  resetting.value = true;
+const openCreateToken = () => {
+  if (tokens.value.length >= tokenMax.value) {
+    toast.error('已达到令牌上限', `每个账号最多创建 ${tokenMax.value} 个令牌`);
+    return;
+  }
+  newTokenName.value = '';
+  tokenModal.value = 'create';
+};
+
+const closeTokenModal = () => {
+  tokenModal.value = null;
+  createdTokenRaw.value = '';
+  createdTokenName.value = '';
+};
+
+const generateToken = async () => {
+  if (tokens.value.length >= tokenMax.value) return;
+  creatingToken.value = true;
   try {
-    const res = await resetAPIToken();
-    newToken.value = res.token;
-    await loadToken();
-    toast.success('API 令牌已生成', '请立即保存，离开页面后将无法再次查看完整令牌');
+    const res = await createAPIToken(newTokenName.value.trim());
+    createdTokenRaw.value = res.token;
+    createdTokenName.value = res.item.name;
+    newTokenName.value = '';
+    tokenModal.value = 'reveal';
+    await loadTokens();
   } catch (err: any) {
-    toast.error('生成失败', err.response?.data?.error || '');
+    toast.error('创建失败', err.response?.data?.error || '');
   } finally {
-    resetting.value = false;
+    creatingToken.value = false;
+  }
+};
+
+const removeToken = async (item: APIToken) => {
+  if (!window.confirm(`删除令牌「${item.name}」后，使用该令牌的脚本将立即失效，确定继续？`)) return;
+  try {
+    await deleteAPIToken(item.id);
+    await loadTokens();
+    toast.success('令牌已删除');
+  } catch (err: any) {
+    toast.error('删除失败', err.response?.data?.error || '');
+  }
+};
+
+const copyText = async (text: string) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.success('已复制到剪贴板');
+  } catch {
+    toast.error('复制失败，请手动选择内容');
   }
 };
 
 const copyToken = async () => {
-  try {
-    await navigator.clipboard.writeText(newToken.value);
-    toast.success('已复制到剪贴板');
-  } catch {
-    toast.error('复制失败，请手动选择令牌');
+  if (!createdTokenRaw.value) {
+    toast.error('令牌已隐藏', '完整令牌只在创建时显示一次');
+    return;
   }
+  await copyText(createdTokenRaw.value);
 };
 
 const removeBinding = async (providerId: number) => {
@@ -439,7 +579,7 @@ const removeBinding = async (providerId: number) => {
 .hero-meta { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 0.4rem; font-size: 0.7rem; color: hsl(var(--muted-foreground)); }
 .hero-meta span { display: inline-flex; align-items: center; gap: 0.3rem; }
 .hero-actions { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
-.user-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
+.user-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
 .quick-grid button {
   display: flex; align-items: center; gap: 0.45rem; padding: 0.65rem;
@@ -450,14 +590,75 @@ const removeBinding = async (providerId: number) => {
 .quick-grid button:hover { border-color: hsl(var(--primary) / 0.5); color: hsl(var(--primary)); background: hsl(var(--primary) / 0.06); }
 .api-hint { font-size: 0.72rem; line-height: 1.6; color: hsl(var(--muted-foreground)); margin-bottom: 0.75rem; }
 .api-hint code { background: hsl(var(--muted)); padding: 0.1rem 0.3rem; border-radius: 0.3rem; }
-.token-box {
-  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
-  padding: 0.7rem 0.8rem; border: 1px dashed hsl(var(--border)); border-radius: 0.65rem;
-  background: hsl(var(--muted) / 0.3);
+.token-head { align-items: center; }
+.token-head-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
+.token-body { width: 100%; max-width: 46rem; margin: 0 auto; }
+.api-guide {
+  padding: 0.9rem 1rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.8rem;
+  background:
+    radial-gradient(circle at 100% 0%, hsl(var(--primary) / 0.09), transparent 14rem),
+    hsl(var(--muted) / 0.22);
 }
-.new-token { margin-top: 0.75rem; padding: 0.7rem 0.8rem; border: 1px solid #a7f3d0; border-radius: 0.65rem; background: #ecfdf5; }
-.new-token-row { display: flex; gap: 0.4rem; margin-top: 0.35rem; }
-.new-token-row .input { flex: 1; }
+.api-guide-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.7rem; }
+.api-guide-head strong { display: block; font-size: 0.82rem; }
+.api-guide-head span { display: block; margin-top: 0.18rem; font-size: 0.7rem; color: hsl(var(--muted-foreground)); line-height: 1.5; }
+.api-row { display: flex; align-items: center; gap: 0.55rem; padding: 0.4rem 0; border-top: 1px dashed hsl(var(--border) / 0.8); }
+.api-row:first-of-type { border-top: 0; }
+.api-label { flex: 0 0 3.4rem; font-size: 0.68rem; color: hsl(var(--muted-foreground)); }
+.api-row code { flex: 1; min-width: 0; padding: 0.32rem 0.5rem; border-radius: 0.4rem; background: hsl(var(--background-light, 0 0% 100%) / 0.8); border: 1px solid hsl(var(--border) / 0.75); font-size: 0.7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.api-copy { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; flex: 0 0 1.75rem; border: 1px solid hsl(var(--border)); border-radius: 0.45rem; background: transparent; color: hsl(var(--muted-foreground)); cursor: pointer; }
+.api-copy:hover { color: hsl(var(--primary)); border-color: hsl(var(--primary) / 0.4); }
+.token-quota {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.65rem;
+  background: hsl(var(--muted) / 0.22);
+}
+.token-quota > div { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.token-quota span { font-size: 0.68rem; color: hsl(var(--muted-foreground)); }
+.token-quota strong { font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+.token-quota p { grid-column: 1 / -1; font-size: 0.64rem; color: hsl(var(--muted-foreground)); }
+.token-list-head { display: flex; align-items: center; justify-content: space-between; margin: 1rem 0 0.5rem; }
+.token-list-head span { font-size: 0.76rem; font-weight: 650; }
+.token-list-head small { font-size: 0.66rem; color: hsl(var(--muted-foreground)); }
+.token-list { display: flex; flex-direction: column; gap: 0.45rem; }
+.token-row {
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.65rem 0.75rem; border: 1px solid hsl(var(--border)); border-radius: 0.7rem;
+  background: hsl(var(--background-light, 0 0% 100%) / 0.7);
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.token-row:hover { border-color: hsl(var(--border-hover)); background: hsl(var(--muted) / 0.35); transform: translateY(-1px); }
+.token-icon {
+  display: grid; place-items: center; width: 2rem; height: 2rem; flex: 0 0 2rem;
+  border-radius: 0.55rem; background: hsl(var(--primary) / 0.1); color: hsl(var(--primary));
+}
+.token-copy { flex: 1; min-width: 0; }
+.token-title { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; }
+.token-title strong { font-size: 0.8rem; font-weight: 650; }
+.token-mask { font-size: 0.68rem; color: hsl(var(--muted-foreground)); letter-spacing: 0.02em; }
+.token-times { display: flex; align-items: center; flex-wrap: wrap; gap: 0.3rem 0.8rem; margin-top: 0.22rem; font-size: 0.66rem; color: hsl(var(--muted-foreground)); }
+.token-times span { display: inline-flex; align-items: center; gap: 0.22rem; }
+.token-unused { color: hsl(var(--muted-foreground) / 0.7); }
+.token-delete { display: grid; place-items: center; width: 1.9rem; height: 1.9rem; flex: 0 0 1.9rem; border: 1px solid transparent; border-radius: 0.5rem; background: transparent; color: hsl(var(--muted-foreground)); cursor: pointer; }
+.token-delete:hover { color: hsl(var(--destructive)); background: hsl(var(--destructive) / 0.08); border-color: hsl(var(--destructive) / 0.2); }
+.token-empty { padding: 2rem 1rem; }
+.token-empty-icon { display: grid; place-items: center; width: 3rem; height: 3rem; margin-bottom: 0.6rem; border-radius: 999px; background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+.token-empty strong { font-size: 0.85rem; }
+.token-empty span { margin-top: 0.2rem; font-size: 0.7rem; color: hsl(var(--muted-foreground)); }
+.token-modal { max-width: 30rem; width: 100%; }
+.token-reveal { padding: 0.85rem; border: 1px solid hsl(var(--success, 142 76% 36%) / 0.3); border-radius: 0.7rem; background: hsl(var(--success, 142 76% 36%) / 0.06); }
+.token-reveal-label { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; font-size: 0.72rem; font-weight: 650; }
+.token-reveal-warn { font-size: 0.64rem; font-weight: 500; color: hsl(var(--destructive)); }
+.token-reveal-box { display: flex; align-items: center; gap: 0.45rem; margin-top: 0.55rem; padding: 0.55rem 0.6rem; border: 1px solid hsl(var(--border)); border-radius: 0.55rem; background: hsl(var(--background-light, 0 0% 100%)); }
+.token-reveal-box code { flex: 1; min-width: 0; font-size: 0.72rem; word-break: break-all; }
+.token-reveal-hint { margin-top: 0.7rem; line-height: 1.6; }
 .binding-list { display: flex; flex-direction: column; gap: 0.5rem; }
 .binding-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0; border-bottom: 1px dashed hsl(var(--border)); }
 .binding-row:last-child { border-bottom: 0; }
@@ -476,5 +677,16 @@ const removeBinding = async (providerId: number) => {
   .user-hero { flex-direction: column; align-items: flex-start; }
   .hero-actions { width: 100%; }
   .hero-actions .btn { flex: 1; }
+}
+@media (max-width: 620px) {
+  .token-head { align-items: flex-start; flex-direction: column; }
+  .token-head-actions { width: 100%; justify-content: space-between; }
+  .api-row { flex-wrap: nowrap; }
+  .api-row code { flex: 1 1 auto; font-size: 0.64rem; }
+  .api-copy { flex: 0 0 1.65rem; width: 1.65rem; height: 1.65rem; }
+  .token-times { gap: 0.2rem 0.55rem; }
+  .token-quota { grid-template-columns: 1fr; }
+  .token-reveal-box { flex-direction: column; align-items: stretch; }
+  .token-reveal-box .btn { width: 100%; }
 }
 </style>
