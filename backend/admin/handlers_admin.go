@@ -40,6 +40,11 @@ func AdminGetSettings(c *gin.Context) {
 	for i := range providers {
 		providers[i].ClientSecret = ""
 	}
+	// site 已单独返回名称、Slogan 与图标，auth 中不再重复携带，
+	// 避免上传图标后设置页响应体翻倍。
+	auth := s
+	auth.SiteSlogan = ""
+	auth.SiteIcon = ""
 	c.JSON(http.StatusOK, gin.H{
 		"site": adminSiteSettings{
 			Name:         s.SiteName,
@@ -48,7 +53,7 @@ func AdminGetSettings(c *gin.Context) {
 			Icon:         s.SiteIcon,
 			Announcement: s.Announcement,
 		},
-		"auth":               s,
+		"auth":               auth,
 		"email":              e,
 		"email_password_set": LoadEmailSettings().Password != "",
 		"oauth_providers":    providers,
@@ -76,8 +81,9 @@ func AdminPutSettings(c *gin.Context) {
 	if s.SiteIcon == "" {
 		s.SiteIcon = DefaultSettings().SiteIcon
 	}
-	if len(s.SiteIcon) > 2048*1024 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "站点图标过大，请使用不超过 2MB 的图片或外链", "code": "BAD_SITE_ICON"})
+	// 前端限制原始图片 512KB，Base64 后约 683KB，这里留出余量（外链不受影响）。
+	if len(s.SiteIcon) > 1024*1024 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "站点图标过大，请使用不超过 512KB 的图片或外链", "code": "BAD_SITE_ICON"})
 		return
 	}
 	if !isSafeIconURL(s.SiteIcon) {

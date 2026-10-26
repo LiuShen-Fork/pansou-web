@@ -59,7 +59,7 @@
                     <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp,image/x-icon" hidden @change="onIconFile" />
                   </label>
                 </div>
-                <span class="hint">支持外链、站内路径或上传图片（≤ 2MB），会同步更新浏览器标签页图标。</span>
+                <span class="hint">支持外链、站内路径或上传图片（≤ 512KB），会同步更新浏览器标签页图标。</span>
               </div>
             </div>
             <div class="field" style="margin-top: 0.8rem">
@@ -277,8 +277,8 @@ const onIconFile = (event: Event) => {
   const file = input.files?.[0];
   input.value = '';
   if (!file) return;
-  if (file.size > 2 * 1024 * 1024) {
-    toast.error('图片过大', '请选择不超过 2MB 的图标');
+  if (file.size > 512 * 1024) {
+    toast.error('图片过大', '请选择不超过 512KB 的图标');
     return;
   }
   const reader = new FileReader();
