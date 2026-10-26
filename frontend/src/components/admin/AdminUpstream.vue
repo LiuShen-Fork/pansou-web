@@ -4,7 +4,7 @@
       <div class="section-head">
         <div>
           <div class="section-title"><AdminIcon name="upstream" :size="16" /> 同步设置</div>
-          <div class="section-desc">定时抓取上游 Dockerfile 的 CHANNELS 与 ENABLED_PLUGINS，默认每 24 小时一次</div>
+          <div class="section-desc">定时抓取上游 Dockerfile 的 CHANNELS 与 ENABLED_PLUGINS，频道与插件均热更新，默认每 24 小时一次</div>
         </div>
         <button class="btn btn-primary btn-sm" type="button" :disabled="running" @click="runNow">
           <AdminIcon name="refresh" :size="14" /> {{ running ? '同步中…' : '立即同步' }}
@@ -34,7 +34,7 @@
           <button class="btn" type="button" :disabled="saving" @click="save">
             <AdminIcon name="check" :size="14" /> {{ saving ? '保存中…' : '保存设置' }}
           </button>
-          <span class="section-desc">频道会热更新；插件列表写入数据目录，重启后生效。</span>
+          <span class="section-desc">频道与插件都会热更新；上游值同时写入数据目录，容器重启后保持一致。</span>
         </div>
       </div>
     </section>
@@ -76,7 +76,7 @@
 
     <div v-if="info?.status.restart_required" class="notice notice-warning">
       <AdminIcon name="alert" :size="16" />
-      <div>插件列表已变化，需要重启容器后生效；TG 频道已经热更新，无需重启。</div>
+      <div>插件列表已变化，当前运行环境不支持热更新，请重启容器后生效；TG 频道已经热更新。</div>
     </div>
     <div v-if="info?.status.last_error" class="notice notice-danger">
       <AdminIcon name="alert" :size="16" />
@@ -110,7 +110,7 @@
         <div class="section-head">
           <div>
             <div class="section-title">当前启用插件（{{ info?.enabled_plugins.length || 0 }}）</div>
-            <div class="section-desc">启动时注册的插件列表</div>
+            <div class="section-desc">当前运行中实际启用的插件</div>
           </div>
         </div>
         <div class="section-body">
@@ -213,7 +213,7 @@ onMounted(load);
 </script>
 
 <style scoped>
-.upstream-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
+.upstream-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .token-cloud { display: flex; flex-wrap: wrap; gap: 0.3rem; max-height: 12rem; overflow: auto; }
 .raw-card summary { padding: 0.85rem 1.1rem; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
 @media (max-width: 900px) { .upstream-grid { grid-template-columns: 1fr; } }

@@ -220,10 +220,15 @@ onMounted(load);
   display: grid;
   grid-template-columns: minmax(0, 1.65fr) minmax(17rem, 1fr);
   gap: 1rem;
-  align-items: start;
+  align-items: stretch;
 }
 .overview-grid.lower { grid-template-columns: minmax(17rem, 1fr) minmax(0, 1.65fr); }
-.overview-side { display: flex; flex-direction: column; gap: 1rem; }
+.overview-side { display: flex; flex-direction: column; gap: 1rem; height: 100%; }
+.overview-side .section-card:last-child { flex: 1; display: flex; flex-direction: column; }
+.overview-side .section-card:last-child .section-body { flex: 1; }
+.chart-card { display: flex; flex-direction: column; height: 100%; }
+.chart-card .chart-bars { flex: 1; min-height: 12rem; height: auto; }
+.chart-card .empty-state { flex: 1; justify-content: center; }
 
 .quick-actions {
   display: grid;
