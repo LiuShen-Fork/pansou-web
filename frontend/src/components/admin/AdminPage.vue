@@ -3,10 +3,11 @@
     :title="current.title"
     :subtitle="current.subtitle"
     :active="active"
+    mode="admin"
     :nav="nav"
     @select="active = $event"
     @back="$emit('back')"
-    @user-center="$emit('user-center')"
+    @switch-mode="onSwitchMode"
     @logout="$emit('logout')"
   >
     <AdminOverview v-if="active === 'overview'" @navigate="active = $event" />
@@ -30,7 +31,11 @@ import AdminOAuth from './AdminOAuth.vue';
 import AdminUpstream from './AdminUpstream.vue';
 import AdminSystem from './AdminSystem.vue';
 
-defineEmits<{ back: []; 'user-center': []; logout: [] }>();
+const emit = defineEmits<{ back: []; 'user-center': []; logout: [] }>();
+
+const onSwitchMode = (mode: 'admin' | 'user') => {
+  if (mode === 'user') emit('user-center');
+};
 
 const nav = [
   { key: 'overview', label: '运营概览', icon: 'dashboard' },

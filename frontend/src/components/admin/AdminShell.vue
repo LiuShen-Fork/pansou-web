@@ -9,26 +9,27 @@
         </div>
         <div class="brand-copy">
           <strong>{{ siteName }}</strong>
-          <span>{{ isAdminUser ? '管理控制台' : '用户控制台' }}</span>
+          <span>{{ mode === 'admin' ? '管理控制台' : '用户控制台' }}</span>
         </div>
         <button class="icon-button mobile-only" type="button" aria-label="关闭菜单" @click="open = false">
           <AdminIcon name="close" :size="18" />
         </button>
       </div>
 
-      <div class="console-switch">
-        <button type="button" @click="$emit('user-center')">
-          <AdminIcon name="user" :size="15" />
-          用户视图
-        </button>
-        <button v-if="isAdminUser" type="button" class="active">
+      <!-- 左上角控制台切换：只有管理员可见，普通用户不需要切换 -->
+      <div v-if="isAdminUser" class="console-switch" aria-label="切换控制台">
+        <button type="button" :class="{ active: mode === 'admin' }" @click="$emit('switch-mode', 'admin')">
           <AdminIcon name="shield" :size="15" />
-          管理视图
+          管理
+        </button>
+        <button type="button" :class="{ active: mode === 'user' }" @click="$emit('switch-mode', 'user')">
+          <AdminIcon name="user" :size="15" />
+          用户
         </button>
       </div>
 
       <nav class="console-nav">
-        <p class="nav-label">管理</p>
+        <p class="nav-label">{{ mode === 'admin' ? '管理' : '我的账户' }}</p>
         <button
           v-for="item in nav"
           :key="item.key"
@@ -92,10 +93,16 @@ defineProps<{
   title: string;
   subtitle?: string;
   active: string;
+  mode: 'admin' | 'user';
   nav: Array<{ key: string; label: string; icon: string; badge?: string | number }>;
 }>();
 
-defineEmits<{ select: [key: string]; back: []; 'user-center': []; logout: [] }>();
+defineEmits<{
+  select: [key: string];
+  'switch-mode': [mode: 'admin' | 'user'];
+  back: [];
+  logout: [];
+}>();
 
 const open = ref(false);
 const user = computed(() => authState.user);
