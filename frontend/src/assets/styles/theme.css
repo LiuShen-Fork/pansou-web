@@ -129,6 +129,13 @@ html.dark .github-float:hover {
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.62), 0 4px 10px rgba(0, 0, 0, 0.45);
 }
 
+html.dark .nav-header.nav-scrolled {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.34);
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-header.nav-scrolled::before { animation: none; }
+}
+
 /* 卡片 / 结果区域 */
 html.dark .results-container {
   background: hsl(var(--card));

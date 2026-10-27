@@ -48,6 +48,7 @@ const fourthSearchTimeout = ref<number | null>(null);
 const lastSearchParams = ref<SearchParams | null>(null);
 const showExportModal = ref(false);
 const navHeaderRef = ref<HTMLElement | null>(null);
+const navScrolled = ref(false);
 const mainContentRef = ref<HTMLElement | null>(null);
 const footerRef = ref<HTMLElement | null>(null);
 const searchResultsBlockRef = ref<HTMLElement | null>(null);
@@ -1319,6 +1320,27 @@ const handleForceRefresh = () => {
   }
 };
 
+// 顶栏滚动状态：页面或结果列表滚动后显示毛玻璃渐变背景。
+let navScrollFrame = 0;
+const syncNavBackground = () => {
+  const nestedScrolled = Array.from(
+    document.querySelectorAll<HTMLElement>('.result-list, .console-body, .main-content'),
+  ).some((el) => el.scrollTop > 8);
+  navScrolled.value =
+    window.scrollY > 8 ||
+    document.documentElement.scrollTop > 8 ||
+    document.body.scrollTop > 8 ||
+    (mainContentRef.value?.scrollTop || 0) > 8 ||
+    nestedScrolled;
+};
+const onAnyScroll = () => {
+  if (navScrollFrame) return;
+  navScrollFrame = window.requestAnimationFrame(() => {
+    navScrollFrame = 0;
+    syncNavBackground();
+  });
+};
+
 // 组件加载时初始化
 onMounted(async () => {
   // 首先初始化后端健康状态（只调用一次）
@@ -1339,6 +1361,10 @@ onMounted(async () => {
   window.addEventListener('storage', handleStorageChange);
   window.addEventListener('config:saved', handleConfigSaved);
   window.addEventListener('resize', syncMobileSearchLayout);
+
+  syncNavBackground();
+  window.addEventListener('scroll', onAnyScroll, { passive: true });
+  document.addEventListener('scroll', onAnyScroll, true);
 });
 
 onUnmounted(() => {
@@ -1348,6 +1374,9 @@ onUnmounted(() => {
   window.removeEventListener('storage', handleStorageChange);
   window.removeEventListener('config:saved', handleConfigSaved);
   window.removeEventListener('resize', syncMobileSearchLayout);
+  window.removeEventListener('scroll', onAnyScroll);
+  document.removeEventListener('scroll', onAnyScroll, true);
+  if (navScrollFrame) window.cancelAnimationFrame(navScrollFrame);
 });
 </script>
 
@@ -1371,7 +1400,12 @@ onUnmounted(() => {
     </div>
     
     <!-- 导航栏 -->
-    <nav v-if="currentView === 'search'" ref="navHeaderRef" class="nav-header">
+    <nav
+      v-if="currentView === 'search'"
+      ref="navHeaderRef"
+      class="nav-header"
+      :class="{ 'nav-scrolled': navScrolled }"
+    >
       <div class="container mx-auto px-4 nav-inner">
         <div class="brand-lockup cursor-pointer" @click="switchToSearch">
           <img :src="siteIcon" :alt="siteName" class="brand-icon" @error="onSiteIconError" />
@@ -1621,14 +1655,51 @@ onUnmounted(() => {
 }
 
 .nav-header {
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 50;
   background: transparent !important;
   border: 0 !important;
   box-shadow: none;
+  transition: box-shadow 0.35s ease;
+}
+.nav-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0;
+  border-bottom: 1px solid transparent;
+  background:
+    linear-gradient(
+      110deg,
+      hsl(var(--background-light, 0 0% 100%) / 0.94) 0%,
+      hsl(var(--primary) / 0.12) 45%,
+      hsl(var(--background-light, 0 0% 100%) / 0.9) 100%
+    );
+  background-size: 220% 100%;
+  backdrop-filter: blur(18px) saturate(1.16);
+  -webkit-backdrop-filter: blur(18px) saturate(1.16);
+  transition: opacity 0.38s ease, border-color 0.38s ease;
+  pointer-events: none;
+}
+.nav-header.nav-scrolled {
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+.nav-header.nav-scrolled::before {
+  opacity: 1;
+  border-bottom-color: hsl(var(--border) / 0.6);
+  animation: navSheen 12s ease-in-out infinite;
+}
+
+@keyframes navSheen {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 .nav-inner {
+  position: relative;
+  z-index: 1;
   min-height: 5rem;
   display: flex;
   align-items: center;
