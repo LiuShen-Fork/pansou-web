@@ -941,10 +941,12 @@ onUnmounted(() => {
 }
 
 .results-container {
-  background-color: #ffffffcc;
-  border-radius: 0.75rem;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid hsl(var(--border) / 0.7);
+  border-radius: 1rem;
+  background: hsl(var(--background-light, 0 0% 100%) / 0.62);
+  box-shadow: 0 16px 42px rgba(15, 23, 42, 0.07);
+  backdrop-filter: blur(18px) saturate(1.16);
+  -webkit-backdrop-filter: blur(18px) saturate(1.16);
   overflow: hidden;
 }
 
@@ -952,40 +954,39 @@ onUnmounted(() => {
   display: flex;
   overflow-x: auto;
   overflow-y: hidden;
-  border-bottom: 1px solid #e5e7eb;
-  background-color: #f9fafbcc;
-  padding: 0 1rem;
+  gap: 0.2rem;
+  padding: 0.45rem 0.75rem;
+  border-bottom: 1px solid hsl(var(--border) / 0.65);
+  background: hsl(var(--background-light, 0 0% 100%) / 0.45);
 }
 
 .tab-button {
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
   white-space: nowrap;
-  font-size: 0.875rem;
-  color: #4b5563;
+  font-size: 0.82rem;
+  color: hsl(var(--muted-foreground));
   background: transparent;
-  border: none;
   cursor: pointer;
   position: relative;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
 }
 
 .tab-button:hover {
-  color: #3b82f6;
+  color: hsl(var(--foreground));
+  background: hsl(var(--muted) / 0.6);
 }
 
 .tab-button.active {
-  color: #3b82f6;
-  font-weight: 500;
+  color: hsl(var(--primary-foreground));
+  background: hsl(var(--primary));
+  font-weight: 600;
+  box-shadow: 0 4px 12px hsl(var(--primary) / 0.22);
 }
 
 .tab-button.active::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background-color: #3b82f6;
+  content: none;
 }
 
 .tab-content {
@@ -1006,13 +1007,14 @@ onUnmounted(() => {
 
 .result-item {
   padding: 0.75rem;
-  border-bottom: 1px solid #f3f4f6;
-  transition: background-color 0.2s ease;
-  border-radius: 12px;
+  border-bottom: 1px solid hsl(var(--border) / 0.5);
+  border-radius: 0.7rem;
+  transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .result-item:hover {
-  background-color: #e2e2e2;
+  background: hsl(var(--muted) / 0.5);
+  transform: translateY(-1px);
 }
 
 .result-row {
@@ -1051,7 +1053,7 @@ onUnmounted(() => {
   width: 100%;
   font-size: 0.95rem;
   font-weight: 500;
-  color: #111827;
+  color: hsl(var(--foreground));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1148,13 +1150,13 @@ onUnmounted(() => {
 }
 
 .result-source {
-  font-size: 0.75rem;
-  color: #3b82f6;
-  font-weight: 500;
-  background-color: #eff6ff;
-  padding: 0.125rem 0.375rem;
-  border-radius: 0.25rem;
-  border: 1px solid #bfdbfe;
+  font-size: 0.72rem;
+  color: hsl(var(--primary));
+  font-weight: 550;
+  background-color: hsl(var(--primary) / 0.09);
+  padding: 0.12rem 0.38rem;
+  border-radius: 0.3rem;
+  border: 1px solid hsl(var(--primary) / 0.2);
 }
 
 .meta-separator {
@@ -1461,11 +1463,12 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.75rem;
-  background-color: #f0f9ff;
-  color: #3b82f6;
-  font-size: 0.875rem;
-  border-top: 1px solid #e5e7eb;
+  padding: 0.7rem;
+  background: hsl(var(--primary) / 0.07);
+  color: hsl(var(--primary));
+  font-size: 0.82rem;
+  border-top: 1px solid hsl(var(--border) / 0.6);
+  backdrop-filter: blur(12px);
 }
 
 @keyframes spin {

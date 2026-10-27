@@ -136,15 +136,31 @@ html.dark .nav-header.nav-scrolled {
   .nav-header.nav-scrolled::before { animation: none; }
 }
 
+/* 搜索结果统计条：与首页搜索框一致的半透明毛玻璃 */
+.app-shell .card.search-stats-card {
+  border: 1px solid hsl(var(--border) / 0.7) !important;
+  border-radius: 1rem !important;
+  background: hsl(var(--background-light, 0 0% 100%) / 0.62) !important;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.07) !important;
+  backdrop-filter: blur(18px) saturate(1.18) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.18) !important;
+}
+html.dark .app-shell .card.search-stats-card {
+  background: hsl(var(--background-light) / 0.56) !important;
+  border-color: hsl(var(--border) / 0.72) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.34) !important;
+}
+
 /* 卡片 / 结果区域 */
 html.dark .results-container {
-  background: hsl(var(--card));
-  border-color: hsl(var(--border));
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  background: hsl(var(--background-light) / 0.58);
+  border-color: hsl(var(--border) / 0.7);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(18px) saturate(1.16);
 }
 html.dark .tabs {
-  background: hsl(var(--muted) / 0.55);
-  border-bottom-color: hsl(var(--border));
+  background: hsl(var(--background-light) / 0.4);
+  border-bottom-color: hsl(var(--border) / 0.6);
 }
 html.dark .tab-button { color: hsl(var(--muted-foreground)); }
 html.dark .tab-button:hover,
@@ -256,7 +272,6 @@ html.dark .panlian-manager .add-card,
 html.dark .weibo-manager .user-card,
 html.dark .weibo-manager .add-card,
 html.dark .service-card,
-html.dark .login-dialog,
 html.dark .export-modal,
 html.dark .modal-content,
 html.dark .detail-dialog {

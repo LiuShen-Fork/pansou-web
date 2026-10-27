@@ -20,7 +20,7 @@ const diskTypeCount = computed(() => {
 </script>
 
 <template>
-  <div class="card">
+  <div class="card search-stats-card">
     <div class="stats-layout">
       <div class="stats-metrics">
         <!-- 搜索结果总数 -->
@@ -77,12 +77,13 @@ const diskTypeCount = computed(() => {
 </template>
 
 <style scoped>
+/* 毛玻璃外观在 theme.css 中统一处理，避免与历史 .app-shell .card 规则冲突 */
 .stats-layout {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem;
+  padding: 0.85rem 1rem;
 }
 
 .stats-metrics {
@@ -99,6 +100,14 @@ const diskTypeCount = computed(() => {
   gap: 0.5rem;
   min-width: 0;
   white-space: nowrap;
+  padding: 0.32rem 0.6rem;
+  border: 1px solid hsl(var(--border) / 0.55);
+  border-radius: 0.6rem;
+  background: hsl(var(--background-light, 0 0% 100%) / 0.4);
+}
+.stats-chip-primary {
+  background: hsl(var(--primary) / 0.08);
+  border-color: hsl(var(--primary) / 0.18);
 }
 
 .stats-label-mobile {
@@ -115,9 +124,10 @@ const diskTypeCount = computed(() => {
 
 .action-button {
   appearance: none;
-  border: 1px solid hsl(var(--border));
-  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border) / 0.8);
+  background: hsl(var(--background-light, 0 0% 100%) / 0.5);
   color: hsl(var(--foreground));
+  backdrop-filter: blur(10px);
   transition: all 0.2s ease;
   cursor: pointer;
   display: inline-flex;
@@ -185,6 +195,7 @@ const diskTypeCount = computed(() => {
     flex: 0 0 auto;
     min-width: 0;
     gap: 0.28rem;
+    padding: 0.2rem 0.4rem;
     overflow: hidden;
     font-size: 0.75rem;
   }
