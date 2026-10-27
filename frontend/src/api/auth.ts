@@ -335,6 +335,26 @@ export const adminTestEmail = async (to: string) => {
   await authApi.post('/admin/settings/email/test', { to });
 };
 
+export interface AdminOAuthProviderState {
+  provider: OAuthProvider | null;
+  redirect_uri: string;
+  secret_set: boolean;
+}
+
+export const adminGetOAuthProvider = async (): Promise<AdminOAuthProviderState> => {
+  const { data } = await authApi.get<AdminOAuthProviderState>('/admin/oauth-provider');
+  return {
+    provider: data.provider ?? null,
+    redirect_uri: data.redirect_uri || '',
+    secret_set: !!data.secret_set,
+  };
+};
+
+export const adminSaveOAuthProviderSingle = async (provider: OAuthProvider): Promise<OAuthProvider> => {
+  const { data } = await authApi.put<{ provider: OAuthProvider }>('/admin/oauth-provider', provider);
+  return data.provider;
+};
+
 export const adminListOAuthProviders = async (): Promise<OAuthProvider[]> => {
   const { data } = await authApi.get<{ items: OAuthProvider[] }>('/admin/oauth-providers');
   return data.items || [];

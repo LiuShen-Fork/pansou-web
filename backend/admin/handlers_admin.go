@@ -306,15 +306,64 @@ func AdminSearchLogs(c *gin.Context) {
 }
 
 func AdminListOAuthProviders(c *gin.Context) {
-	list, err := ListOAuthProviders(false)
+	// 旧接口保留给兼容调用，但只返回唯一服务商。
+	items := make([]OAuthProvider, 0, 1)
+	if p, err := GetPrimaryOAuthProvider(); err == nil {
+		p.ClientSecret = ""
+		items = append(items, *p)
+	}
+	c.JSON(http.StatusOK, gin.H{"items": items})
+}
+
+func oauthProviderMissing(p *OAuthProvider) string {
+	switch {
+	case strings.TrimSpace(p.ClientID) == "":
+		return "Client ID"
+	case strings.TrimSpace(p.ClientSecret) == "":
+		return "Client Secret"
+	case strings.TrimSpace(p.AuthURL) == "":
+		return "Auth URL"
+	case strings.TrimSpace(p.TokenURL) == "":
+		return "Token URL"
+	case strings.TrimSpace(p.UserInfoURL) == "":
+		return "UserInfo URL"
+	}
+	return ""
+}
+
+func AdminGetOAuthProvider(c *gin.Context) {
+	redirect := oauthRedirectURL(c)
+	p, err := GetPrimaryOAuthProvider()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusOK, gin.H{"provider": nil, "redirect_uri": redirect, "secret_set": false})
 		return
 	}
-	for i := range list {
-		list[i].ClientSecret = ""
+	secretSet := strings.TrimSpace(p.ClientSecret) != ""
+	p.ClientSecret = ""
+	c.JSON(http.StatusOK, gin.H{"provider": p, "redirect_uri": redirect, "secret_set": secretSet})
+}
+
+func savePrimaryOAuthProvider(c *gin.Context, p OAuthProvider) {
+	if strings.TrimSpace(p.Name) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请填写服务商显示名称", "code": "BAD_OAUTH_NAME"})
+		return
 	}
-	c.JSON(http.StatusOK, gin.H{"items": list})
+	if primary, err := GetPrimaryOAuthProvider(); err == nil && strings.TrimSpace(p.ClientSecret) == "" {
+		p.ClientSecret = primary.ClientSecret
+	}
+	if p.Enabled {
+		if missing := oauthProviderMissing(&p); missing != "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("启用 OAuth 服务商前请填写 %s", missing), "code": "OAUTH_INCOMPLETE"})
+			return
+		}
+	}
+	saved, err := UpsertPrimaryOAuthProvider(&p)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": "SAVE_FAILED"})
+		return
+	}
+	saved.ClientSecret = ""
+	c.JSON(http.StatusOK, gin.H{"provider": saved})
 }
 
 func AdminSaveOAuthProvider(c *gin.Context) {
@@ -323,47 +372,27 @@ func AdminSaveOAuthProvider(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "参数无效", "code": "BAD_REQUEST"})
 		return
 	}
-	if p.ID > 0 {
-		old, err := GetOAuthProviderByID(p.ID)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-		if strings.TrimSpace(p.ClientSecret) == "" {
-			p.ClientSecret = old.ClientSecret
-		}
-	}
-	if p.Enabled {
-		missing := ""
-		switch {
-		case strings.TrimSpace(p.ClientID) == "":
-			missing = "Client ID"
-		case strings.TrimSpace(p.ClientSecret) == "":
-			missing = "Client Secret"
-		case strings.TrimSpace(p.AuthURL) == "":
-			missing = "Auth URL"
-		case strings.TrimSpace(p.TokenURL) == "":
-			missing = "Token URL"
-		case strings.TrimSpace(p.UserInfoURL) == "":
-			missing = "UserInfo URL"
-		}
-		if missing != "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("启用 OAuth 服务商前请填写 %s", missing), "code": "OAUTH_INCOMPLETE"})
-			return
-		}
-	}
-	if err := SaveOAuthProvider(&p); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": "SAVE_FAILED"})
+	savePrimaryOAuthProvider(c, p)
+}
+
+func AdminPutOAuthProvider(c *gin.Context) {
+	var p OAuthProvider
+	if err := c.ShouldBindJSON(&p); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "参数无效", "code": "BAD_REQUEST"})
 		return
 	}
-	p.ClientSecret = ""
-	c.JSON(http.StatusOK, gin.H{"provider": p})
+	savePrimaryOAuthProvider(c, p)
 }
 
 func AdminDeleteOAuthProvider(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "服务商 ID 无效"})
+		return
+	}
+	// 唯一服务商只能停用，不能删除；这样不会意外把历史遗留的第二条暴露成新入口。
+	if primary, err := GetPrimaryOAuthProvider(); err == nil && primary.ID == id {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "唯一 OAuth2 服务商不能删除，请关闭启用开关", "code": "PRIMARY_OAUTH"})
 		return
 	}
 	if err := DeleteOAuthProvider(id); err != nil {

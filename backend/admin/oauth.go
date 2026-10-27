@@ -154,6 +154,11 @@ func OAuthStart(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error(), "code": "OAUTH_PROVIDER_NOT_FOUND"})
 		return
 	}
+	primary, err := GetPrimaryOAuthProvider()
+	if err != nil || primary.ID != p.ID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "该 OAuth 服务商已停用", "code": "OAUTH_PROVIDER_NOT_FOUND"})
+		return
+	}
 	cfg, err := buildOAuthConfig(c, p)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": "OAUTH_NOT_CONFIGURED"})

@@ -37,9 +37,9 @@ type profileRequest struct {
 func PublicConfig(c *gin.Context) {
 	s := LoadSettings()
 	e := LoadEmailSettings()
-	providers, _ := ListOAuthProviders(true)
-	list := make([]gin.H, 0, len(providers))
-	for _, p := range providers {
+	// 只提供一个 OAuth2 服务商入口，避免登录页出现多种第三方方式。
+	list := make([]gin.H, 0, 1)
+	if p, err := GetPrimaryOAuthProvider(); err == nil && p.Enabled {
 		list = append(list, gin.H{"slug": p.Slug, "name": p.Name})
 	}
 	c.JSON(http.StatusOK, gin.H{

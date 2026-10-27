@@ -12,15 +12,10 @@
         <button type="button" :class="{ active: mode === 'register' }" @click="switchMode('register')">注册</button>
       </div>
 
-      <div v-if="oauthProviders.length && (config?.auth.oauth_login_enabled || config?.auth.oauth_register_enabled)" class="oauth-row">
-        <button
-          v-for="provider in oauthProviders"
-          :key="provider.slug"
-          type="button"
-          class="oauth-button"
-          @click="startOAuth(provider.slug)"
-        >
-          使用 {{ provider.name }} {{ mode === 'register' ? '注册/登录' : '登录' }}
+      <div v-if="oauthProvider && (config?.auth.oauth_login_enabled || config?.auth.oauth_register_enabled)" class="oauth-row">
+        <button type="button" class="oauth-button" @click="startOAuth(oauthProvider.slug)">
+          <span class="oauth-avatar">{{ oauthProvider.name.slice(0, 1).toUpperCase() }}</span>
+          <span>使用 {{ oauthProvider.name }} {{ mode === 'register' ? '注册 / 登录' : '登录' }}</span>
         </button>
         <div class="divider"><span>或使用账号密码</span></div>
       </div>
@@ -100,7 +95,7 @@ const registerForm = reactive({ username: '', email: '', password: '', code: '' 
 
 const config = computed(() => authState.config);
 const siteName = computed(() => authState.config?.site.name || '清羽盘搜');
-const oauthProviders = computed(() => authState.config?.oauth_providers || []);
+const oauthProvider = computed(() => authState.config?.oauth_providers?.[0] || null);
 const canRegister = computed(() => !!authState.config?.auth.email_register_enabled);
 
 watch(
@@ -288,6 +283,10 @@ const handleRegister = async () => {
 
 .oauth-row { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1rem; }
 .oauth-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
   width: 100%;
   padding: 0.7rem 1rem;
   border: 1px solid hsl(var(--border));
@@ -296,8 +295,21 @@ const handleRegister = async () => {
   color: hsl(var(--foreground));
   font-weight: 550;
   cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
-.oauth-button:hover { border-color: hsl(var(--primary)); color: hsl(var(--primary)); }
+.oauth-button:hover { border-color: hsl(var(--primary)); color: hsl(var(--primary)); background: hsl(var(--primary) / 0.05); }
+.oauth-avatar {
+  display: grid;
+  place-items: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  flex: 0 0 1.55rem;
+  border-radius: 999px;
+  background: hsl(var(--primary) / 0.12);
+  color: hsl(var(--primary));
+  font-size: 0.68rem;
+  font-weight: 750;
+}
 .divider {
   display: flex;
   align-items: center;

@@ -155,6 +155,50 @@ func GetOAuthProviderBySlug(slug string) (*OAuthProvider, error) {
 	return p, err
 }
 
+// GetPrimaryOAuthProvider 返回唯一被管理的 OAuth2 服务商（ID 最小的一条）。
+// 历史版本可能留下多条记录，界面只展示和编辑这一条。
+func GetPrimaryOAuthProvider() (*OAuthProvider, error) {
+	row := DB.QueryRow(`SELECT id, slug, name, enabled, client_id, client_secret, auth_url, token_url, userinfo_url, scopes, created_at, updated_at
+	                    FROM oauth_providers ORDER BY id ASC LIMIT 1`)
+	p, err := scanProvider(row)
+	if isNoRows(err) {
+		return nil, sql.ErrNoRows
+	}
+	return p, err
+}
+
+// UpsertPrimaryOAuthProvider 新建或更新唯一的 OAuth2 服务商。
+// 忽略调用方传入的 ID 与 Slug，从根源上保证管理端只有一个入口。
+func UpsertPrimaryOAuthProvider(p *OAuthProvider) (*OAuthProvider, error) {
+	primary, err := GetPrimaryOAuthProvider()
+	if err == nil {
+		p.ID = primary.ID
+		p.Slug = primary.Slug
+		if strings.TrimSpace(p.ClientSecret) == "" {
+			p.ClientSecret = primary.ClientSecret
+		}
+		if strings.TrimSpace(p.Name) == "" {
+			p.Name = primary.Name
+		}
+	} else if !isNoRows(err) {
+		return nil, err
+	} else {
+		p.ID = 0
+		p.Slug = "oauth"
+	}
+
+	for attempt := 0; attempt < 3; attempt++ {
+		if err := SaveOAuthProvider(p); err == nil {
+			return GetOAuthProviderByID(p.ID)
+		} else if !strings.Contains(err.Error(), "已存在") {
+			return nil, err
+		}
+		// 极端情况下表中已有同名 slug 的历史记录，生成一个可读且唯一的标识。
+		p.Slug = "oauth-" + randomHex(3)
+	}
+	return nil, fmt.Errorf("保存 OAuth 服务商失败：标识冲突")
+}
+
 func GetOAuthProviderByID(id int64) (*OAuthProvider, error) {
 	row := DB.QueryRow(`SELECT id, slug, name, enabled, client_id, client_secret, auth_url, token_url, userinfo_url, scopes, created_at, updated_at
 	                    FROM oauth_providers WHERE id = ?`, id)
