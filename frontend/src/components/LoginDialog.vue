@@ -99,7 +99,7 @@ const loginForm = reactive({ account: '', password: '' });
 const registerForm = reactive({ username: '', email: '', password: '', code: '' });
 
 const config = computed(() => authState.config);
-const siteName = computed(() => authState.config?.site.name || 'Qingyu PanSou');
+const siteName = computed(() => authState.config?.site.name || '清羽盘搜');
 const oauthProviders = computed(() => authState.config?.oauth_providers || []);
 const canRegister = computed(() => !!authState.config?.auth.email_register_enabled);
 

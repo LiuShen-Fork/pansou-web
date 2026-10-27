@@ -40,7 +40,7 @@
             <div class="form-grid">
               <div class="field">
                 <label>站点名称</label>
-                <input v-model="site.name" class="input" placeholder="Qingyu PanSou" maxlength="40" />
+                <input v-model="site.name" class="input" placeholder="清羽盘搜" maxlength="40" />
               </div>
               <div class="field">
                 <label>站点 Slogan</label>

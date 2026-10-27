@@ -72,7 +72,8 @@ func LoadSettings() Settings {
 	if s.AnonymousWebSearchLimit <= 0 {
 		s.AnonymousWebSearchLimit = 20
 	}
-	if s.SiteName == "" {
+	// 兼容旧默认值：仍为英文默认名时自动迁移到中文默认名。
+	if s.SiteName == "" || s.SiteName == "Qingyu PanSou" {
 		s.SiteName = DefaultSettings().SiteName
 	}
 	if strings.TrimSpace(s.SiteSlogan) == "" {

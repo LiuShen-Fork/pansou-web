@@ -119,11 +119,6 @@ html.dark .footer-links a:hover,
 html.dark .footer-legal a:hover { color: hsl(var(--foreground)); }
 html.dark .footer-legal { border-top-color: hsl(var(--border)); }
 html.dark .footer-brand img { background: #fff; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3); }
-html.dark .github-float {
-  background: #f8fafc;
-  color: #0f172a;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
-}
 
 /* 卡片 / 结果区域 */
 html.dark .results-container {

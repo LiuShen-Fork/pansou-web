@@ -1,4 +1,4 @@
-# Qingyu PanSou
+# 清羽盘搜
 
 🚀 PanSou 前后端同仓维护版：Vue 3 前端 + Go 后端 + 账户体系 + 管理后台。
 

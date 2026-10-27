@@ -89,7 +89,7 @@ const isAuthenticated = ref(false);
 const currentUsername = ref('');
 const isAdminUser = ref(false);
 const currentView = ref<'search' | 'user' | 'admin'>('search');
-const siteName = computed(() => authState.config?.site.name || 'Qingyu PanSou');
+const siteName = computed(() => authState.config?.site.name || '清羽盘搜');
 const siteSlogan = computed(
   () => authState.config?.site.slogan || authState.config?.site.description || '清羽飞扬自建网盘搜索，众多资源，一键直达',
 );
@@ -1529,7 +1529,8 @@ onUnmounted(() => {
       title="项目 GitHub"
     >
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 .5C5.73.5.75 5.48.75 11.75c0 4.98 3.23 9.2 7.71 10.69.56.1.77-.24.77-.54v-2.1c-3.14.68-3.8-1.33-3.8-1.33-.51-1.3-1.25-1.65-1.25-1.65-1.02-.7.08-.68.08-.68 1.13.08 1.73 1.16 1.73 1.16 1 1.72 2.63 1.22 3.27.93.1-.72.39-1.22.71-1.5-2.51-.29-5.15-1.26-5.15-5.6 0-1.24.44-2.25 1.16-3.04-.12-.29-.5-1.44.11-3 0 0 .95-.3 3.1 1.16a10.8 10.8 0 0 1 5.64 0c2.15-1.46 3.1-1.16 3.1-1.16.61 1.56.23 2.71.11 3 .72.79 1.16 1.8 1.16 3.04 0 4.35-2.65 5.3-5.17 5.58.4.35.76 1.04.76 2.1v3.12c0 .3.2.65.78.54a11.25 11.25 0 0 0 7.7-10.69C23.25 5.48 18.27.5 12 .5Z" />
+        <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+        <path d="M9 18c-4.51 2-5-2-7-2" />
       </svg>
     </a>
 
@@ -1911,16 +1912,26 @@ onUnmounted(() => {
   place-items: center;
   width: 3rem;
   height: 3rem;
-  border-radius: 999px;
-  background: #0f172a;
-  color: #fff;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.28), 0 2px 6px rgba(15, 23, 42, 0.2);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  border: 1px solid hsl(var(--primary) / 0.38);
+  border-radius: 0.9rem;
+  background: linear-gradient(145deg, hsl(var(--primary)), hsl(var(--accent)));
+  color: hsl(var(--primary-foreground));
+  box-shadow: 0 10px 24px hsl(var(--primary) / 0.3), inset 0 1px 0 hsl(0 0% 100% / 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
-.github-float svg { width: 1.35rem; height: 1.35rem; fill: currentColor; }
+.github-float svg {
+  width: 1.45rem;
+  height: 1.45rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .github-float:hover {
   transform: translateY(-3px) scale(1.03);
-  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.34), 0 4px 10px rgba(15, 23, 42, 0.22);
+  filter: brightness(1.06);
+  box-shadow: 0 16px 34px hsl(var(--primary) / 0.38), inset 0 1px 0 hsl(0 0% 100% / 0.24);
 }
 .github-float:focus-visible {
   outline: 2px solid hsl(var(--primary));

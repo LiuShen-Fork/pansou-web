@@ -8,7 +8,7 @@ import { Button, Input, Icons } from '@/components/ui';
 import FilterIcon from '@/components/icons/FilterIcon.vue';
 
 const keyword = ref('');
-const siteName = computed(() => authState.config?.site.name || 'Qingyu PanSou');
+const siteName = computed(() => authState.config?.site.name || '清羽盘搜');
 const siteSlogan = computed(
   () => authState.config?.site.slogan || authState.config?.site.description || '清羽飞扬自建网盘搜索，众多资源，一键直达',
 );

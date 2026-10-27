@@ -95,7 +95,7 @@ type Settings struct {
 
 func DefaultSettings() Settings {
 	return Settings{
-		SiteName:                  "Qingyu PanSou",
+		SiteName:                  "清羽盘搜",
 		SiteDescription:           "网盘资源搜索",
 		SiteSlogan:                "清羽飞扬自建网盘搜索，众多资源，一键直达",
 		SiteIcon:                  "/favicon.ico",
@@ -126,7 +126,7 @@ type EmailSettings struct {
 }
 
 func DefaultEmailSettings() EmailSettings {
-	return EmailSettings{Port: 587, UseTLS: true, FromName: "Qingyu PanSou"}
+	return EmailSettings{Port: 587, UseTLS: true, FromName: "清羽盘搜"}
 }
 
 type OAuthProvider struct {

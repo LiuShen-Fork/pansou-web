@@ -109,7 +109,7 @@ defineEmits<{
 const open = ref(false);
 const user = computed(() => authState.user);
 const isAdminUser = computed(() => isAdmin.value);
-const siteName = computed(() => authState.config?.site.name || 'Qingyu PanSou');
+const siteName = computed(() => authState.config?.site.name || '清羽盘搜');
 const siteIcon = computed(() => authState.config?.site.icon || '/favicon.ico');
 const initial = computed(() => (user.value?.username || '?').slice(0, 1).toUpperCase());
 
