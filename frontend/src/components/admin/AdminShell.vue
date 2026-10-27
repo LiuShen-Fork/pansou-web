@@ -1,5 +1,5 @@
 <template>
-  <div class="console">
+  <div ref="root" class="console">
     <div v-if="open" class="console-backdrop" @click="open = false" />
 
     <aside class="console-sidebar" :class="{ open }">
@@ -64,7 +64,7 @@
     </aside>
 
     <div class="console-main">
-      <header class="console-topbar">
+      <header ref="topbarRef" class="console-topbar">
         <button class="icon-button mobile-only" type="button" aria-label="打开菜单" @click="open = true">
           <AdminIcon name="menu" :size="19" />
         </button>
@@ -86,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { authState, isAdmin } from '@/stores/auth';
 import AdminIcon from './AdminIcon.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
@@ -107,6 +107,8 @@ defineEmits<{
 }>();
 
 const open = ref(false);
+const root = ref<HTMLElement | null>(null);
+const topbarRef = ref<HTMLElement | null>(null);
 const user = computed(() => authState.user);
 const isAdminUser = computed(() => isAdmin.value);
 const siteName = computed(() => authState.config?.site.name || '清羽盘搜');
@@ -117,6 +119,28 @@ function onIconError(event: Event) {
   const img = event.target as HTMLImageElement;
   if (!img.src.endsWith('/favicon.ico')) img.src = '/favicon.ico';
 }
+
+// 把顶栏真实高度暴露给页面内需要 sticky 的元素（例如设置页保存条），
+// 避免写死 top 值后在不同标题/断点下被顶栏遮住。
+const syncTopbarHeight = () => {
+  if (!root.value || !topbarRef.value) return;
+  root.value.style.setProperty('--console-topbar-h', `${topbarRef.value.offsetHeight}px`);
+};
+let topbarObserver: ResizeObserver | null = null;
+
+onMounted(() => {
+  syncTopbarHeight();
+  if (typeof ResizeObserver !== 'undefined' && topbarRef.value) {
+    topbarObserver = new ResizeObserver(syncTopbarHeight);
+    topbarObserver.observe(topbarRef.value);
+  }
+  window.addEventListener('resize', syncTopbarHeight);
+});
+
+onBeforeUnmount(() => {
+  topbarObserver?.disconnect();
+  window.removeEventListener('resize', syncTopbarHeight);
+});
 </script>
 
 <style scoped>
