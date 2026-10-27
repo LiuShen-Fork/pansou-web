@@ -350,7 +350,7 @@ onMounted(load);
   background: hsl(var(--background-light, 0 0% 100%) / 0.92);
   box-shadow: var(--console-shadow);
   position: sticky;
-  top: var(--console-topbar-h, 6.2rem);
+  top: calc(var(--console-topbar-h, 6.2rem) + 0.65rem);
   z-index: 20;
 }
 .settings-bar-copy strong { display: block; font-size: 0.82rem; }
