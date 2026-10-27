@@ -165,7 +165,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { oauthStartUrl } from '@/api/auth';
 import { authState, login, register, sendCode } from '@/stores/auth';
 
@@ -194,6 +194,31 @@ const siteIcon = computed(() => authState.config?.site.icon || '/favicon.ico');
 const oauthProvider = computed(() => authState.config?.oauth_providers?.[0] || null);
 const canRegister = computed(() => !!authState.config?.auth.email_register_enabled);
 
+// 弹窗打开时锁定页面滚动，避免背景跟着滚轮移动或滚动条在遮罩旁闪烁。
+let bodyOverflow = '';
+let bodyPaddingRight = '';
+let scrollLocked = false;
+
+const lockBodyScroll = () => {
+  if (scrollLocked) return;
+  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+  bodyOverflow = document.body.style.overflow;
+  bodyPaddingRight = document.body.style.paddingRight;
+  if (scrollbarWidth > 0) {
+    const currentPadding = parseFloat(window.getComputedStyle(document.body).paddingRight) || 0;
+    document.body.style.paddingRight = `${currentPadding + scrollbarWidth}px`;
+  }
+  document.body.style.overflow = 'hidden';
+  scrollLocked = true;
+};
+
+const unlockBodyScroll = () => {
+  if (!scrollLocked) return;
+  document.body.style.overflow = bodyOverflow;
+  document.body.style.paddingRight = bodyPaddingRight;
+  scrollLocked = false;
+};
+
 watch(
   () => props.visible,
   (value) => {
@@ -207,13 +232,19 @@ watch(
       registerForm.password = '';
       registerForm.code = '';
       if (mode.value === 'register' && !canRegister.value) mode.value = 'login';
-    } else if (timer) {
-      window.clearInterval(timer);
-      timer = null;
-      countdown.value = 0;
+      lockBodyScroll();
+    } else {
+      unlockBodyScroll();
+      if (timer) {
+        window.clearInterval(timer);
+        timer = null;
+        countdown.value = 0;
+      }
     }
   }
 );
+
+onBeforeUnmount(unlockBodyScroll);
 
 watch(canRegister, (value) => {
   if (!value && mode.value === 'register') mode.value = 'login';
@@ -314,9 +345,11 @@ const handleRegister = async () => {
   align-items: center;
   justify-content: center;
   padding: 1rem;
+  overflow: hidden;
+  overscroll-behavior: contain;
   background: rgba(15, 23, 42, 0.48);
   backdrop-filter: blur(8px);
-  animation: fadeIn 0.2s ease-out;
+  animation: fadeIn 0.18s ease-out;
 }
 
 @keyframes fadeIn {
@@ -329,18 +362,33 @@ const handleRegister = async () => {
   width: 100%;
   max-width: 430px;
   max-height: 92vh;
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border-hover)) transparent;
   padding: 1.6rem 1.7rem 1.35rem;
   border: 1px solid hsl(var(--border));
   border-radius: 1.1rem;
   background: hsl(var(--background-light, 0 0% 100%));
   box-shadow: 0 30px 80px rgba(15, 23, 42, 0.3);
-  animation: slideUp 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: dialogIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(16px) scale(0.985); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+.login-dialog::-webkit-scrollbar {
+  width: 6px;
+}
+.login-dialog::-webkit-scrollbar-track {
+  background: transparent;
+}
+.login-dialog::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: hsl(var(--border-hover));
+}
+
+@keyframes dialogIn {
+  from { transform: scale(0.985); }
+  to { transform: scale(1); }
 }
 
 .dialog-accent {
