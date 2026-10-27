@@ -88,7 +88,6 @@ const currentPage = ref<'search' | 'status' | 'docs' | 'accounts' | 'qqpd' | 'gy
 const showLogin = ref(false);
 const isAuthenticated = ref(false);
 const currentUsername = ref('');
-const isAdminUser = ref(false);
 const currentView = ref<'search' | 'user' | 'admin'>('search');
 const siteName = computed(() => authState.config?.site.name || '清羽盘搜');
 const siteSlogan = computed(
@@ -1028,7 +1027,6 @@ const resetToInitial = () => {
 // 同步认证状态到模板
 const syncAuthState = () => {
   isAuthenticated.value = isLoggedIn.value;
-  isAdminUser.value = isAdmin.value;
   currentUsername.value = authState.user?.username || '';
 };
 
@@ -1419,28 +1417,11 @@ onUnmounted(() => {
           <ThemeToggle />
           <template v-if="isAuthenticated">
             <button
-              v-if="currentView !== 'user'"
               @click="goUser"
               class="nav-button"
-              title="用户中心"
+              title="控制台"
             >
-              <span class="nav-text">用户中心</span>
-            </button>
-            <button
-              v-if="isAdminUser && currentView !== 'admin'"
-              @click="goAdmin"
-              class="nav-button"
-              title="管理后台"
-            >
-              <span class="nav-text">管理后台</span>
-            </button>
-            <button
-              v-if="currentView !== 'search'"
-              @click="goSearch"
-              class="nav-button"
-              title="返回搜索"
-            >
-              <span class="nav-text">返回搜索</span>
+              <span class="nav-text">控制台</span>
             </button>
             <button
               @click="handleLogout"
