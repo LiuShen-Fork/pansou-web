@@ -1893,8 +1893,8 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 0.5rem 1rem;
   flex-wrap: wrap;
-  /* 给左下角固定 GitHub 按钮留出空间，避免遮挡备案信息 */
-  padding: 0.8rem 0 0 3.8rem;
+  /* 给右下角固定 GitHub 按钮留出空间，避免遮挡版权信息 */
+  padding: 0.8rem 4.5rem 0 0;
   border-top: 1px dashed rgba(199, 210, 254, 0.55);
   color: rgba(79, 70, 229, 0.52);
   font-size: 0.7rem;
@@ -1902,26 +1902,26 @@ onUnmounted(() => {
 .footer-legal a { color: inherit; text-decoration: none; }
 .footer-legal a:hover { color: rgba(49, 46, 129, 0.9); }
 
-/* 左下角 GitHub 悬浮按钮 */
+/* 右下角 GitHub 悬浮按钮：浅色白底黑图标，深色黑底白图标 */
 .github-float {
   position: fixed;
-  left: 1.15rem;
+  right: 1.15rem;
   bottom: calc(1.15rem + env(safe-area-inset-bottom));
   z-index: 80;
   display: grid;
   place-items: center;
   width: 3rem;
   height: 3rem;
-  border: 1px solid hsl(var(--primary) / 0.38);
-  border-radius: 0.9rem;
-  background: linear-gradient(145deg, hsl(var(--primary)), hsl(var(--accent)));
-  color: hsl(var(--primary-foreground));
-  box-shadow: 0 10px 24px hsl(var(--primary) / 0.3), inset 0 1px 0 hsl(0 0% 100% / 0.2);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 999px;
+  background: #fff;
+  color: #0f172a;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16), 0 2px 6px rgba(15, 23, 42, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 .github-float svg {
-  width: 1.45rem;
-  height: 1.45rem;
+  width: 1.4rem;
+  height: 1.4rem;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
@@ -1930,8 +1930,7 @@ onUnmounted(() => {
 }
 .github-float:hover {
   transform: translateY(-3px) scale(1.03);
-  filter: brightness(1.06);
-  box-shadow: 0 16px 34px hsl(var(--primary) / 0.38), inset 0 1px 0 hsl(0 0% 100% / 0.24);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.22), 0 4px 10px rgba(15, 23, 42, 0.1);
 }
 .github-float:focus-visible {
   outline: 2px solid hsl(var(--primary));
@@ -2029,9 +2028,9 @@ onUnmounted(() => {
   }
   .footer-brand span { max-width: 100%; white-space: normal; line-height: 1.4; }
   .footer-links { justify-content: flex-start; gap: 0.8rem; }
-  .footer-legal { flex-direction: column; align-items: flex-start; gap: 0.3rem; padding: 0.65rem 0 0 3.3rem; font-size: 0.66rem; }
+  .footer-legal { flex-direction: column; align-items: flex-start; gap: 0.3rem; padding: 0.65rem 4.2rem 0 0; font-size: 0.66rem; }
   .github-float {
-    left: 0.8rem;
+    right: 0.8rem;
     bottom: calc(0.8rem + env(safe-area-inset-bottom));
     width: 2.7rem;
     height: 2.7rem;

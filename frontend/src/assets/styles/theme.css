@@ -119,6 +119,15 @@ html.dark .footer-links a:hover,
 html.dark .footer-legal a:hover { color: hsl(var(--foreground)); }
 html.dark .footer-legal { border-top-color: hsl(var(--border)); }
 html.dark .footer-brand img { background: #fff; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3); }
+html.dark .github-float {
+  background: #171b26;
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+html.dark .github-float:hover {
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.62), 0 4px 10px rgba(0, 0, 0, 0.45);
+}
 
 /* 卡片 / 结果区域 */
 html.dark .results-container {
