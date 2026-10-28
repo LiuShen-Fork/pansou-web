@@ -25,14 +25,14 @@ services:
       # - ENABLED_PLUGINS=pansearch,qqpd,weibo
       # - CHANNELS=tgsearchers7,Quark_Movies
 
-      # 代理配置（可选）
+      # 代理、缓存、并发、网页搜索签名与上游同步地址都可以在
+      # 「管理后台 → 运行参数 / 上游自动同步」中配置，无需写在这里。
+      # 下面仅作为首次启动或后台未保存记录时的默认值：
       # - PROXY=socks5://xxx.xxx.xxx.xxx:7897
-
-      # 性能配置（镜像已包含默认值）
       # - CACHE_ENABLED=true
       # - CACHE_TTL=60
-      # - MAX_CONCURRENCY=200
-      # - MAX_PAGES=30
+      # - CONCURRENCY=200
+      # - OUTBOUND_MAX_CONCURRENCY=128
 
       # 健康检查（容器内部监控）
       - HEALTH_CHECK_INTERVAL=30

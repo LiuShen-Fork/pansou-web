@@ -81,7 +81,14 @@ curl -H "Authorization: Bearer ps_xxxxxxxx" \
      "http://localhost/api/search?kw=仙逆"
 ```
 
-`/api/search` 的请求参数与响应结构保持与上游 PanSou 一致，可直接接入视频源、机器人等应用。
+`/api/search` 的请求参数与响应结构保持与上游 PanSou 一致，可直接接入视频源、机器人等应用：
+
+- GET 查询参数：`kw`、`channels`、`conc`、`refresh`、`res`、`src`、`plugins`、`cloud_types`、`ext`、`filter`
+- POST JSON 字段：`kw`、`channels`、`conc`、`refresh`、`res`、`src`、`plugins`、`cloud_types`、`ext`、`filter`
+- 成功响应：`{"code":0,"message":"success","data":{"total":…,"results":[…],"merged_by_type":{…}}}`
+- 令牌可放在 `Authorization: Bearer ps_…` 或 `X-API-Token: ps_…`
+
+与上游的差异只有访问控制：默认 `API 必须登录`，未携带有效令牌会返回 `401`；超出每日额度返回 `429`（`code` 为 `API_DAILY_LIMIT_REACHED` 等）。`/api/check/links` 同样支持这套令牌。
 
 网页端匿名搜索走 `/api/web/search`。它不会作为公开 API 开放：页面会先向
 `/api/web/token` 换取与 IP、User-Agent 绑定的短期凭证，搜索时通过
@@ -152,21 +159,38 @@ npm run dev
 bash scripts/check.sh
 ```
 
-### 关键环境变量
+### 关键环境变量（可选）
+
+代理、缓存、并发、网页搜索签名与上游同步地址都已经可以在「管理后台 → 运行参数 / 上游自动同步」中维护，**正常部署不再需要写这些环境变量**。环境变量只在首次启动或后台没有保存记录时作为默认值。
 
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
-| `PORT` | `8888` | 后端监听端口 |
+| `PORT` | `8888` | 后端监听端口（容器内） |
 | `ADMIN_DB_PATH` | `data/pansou-admin.db` | 账户数据库路径；镜像内为 `/app/data/pansou-admin.db` |
-| `UPSTREAM_DEFAULTS_OUTPUT` | `/app/data/upstream-defaults.env`（容器内） | 运行期同步写出的默认值文件 |
-| `UPSTREAM_DOCKERFILE_URL` | 无 | 自定义上游 Dockerfile 镜像地址；不设置时依次尝试 GitHub raw 与 jsDelivr |
-| `CHANNELS` | 上游快照 | 显式覆盖 TG 频道列表，逗号分隔 |
-| `ENABLED_PLUGINS` | 上游快照 | 显式覆盖启用插件，逗号分隔 |
-| `PROXY` | 无 | 访问 TG/外站使用的代理 |
-| `WEB_TOKEN_SECRET` | 随机生成 | 网页搜索凭证签名密钥；多副本部署时必须设置为相同的值 |
-| `CACHE_ENABLED` / `CACHE_TTL` | `true` / `60` | 缓存开关与分钟数 |
+| `CHANNELS` | 上游快照 | 显式覆盖 TG 频道列表；设置后会阻止重启时加载自动同步结果，一般不要设置 |
+| `ENABLED_PLUGINS` | 上游快照 | 显式覆盖启用插件，同上 |
+| `PROXY` / `NO_PROXY` | 无 | 后台「运行参数」未保存代理时使用的默认值 |
+| `WEB_TOKEN_SECRET` | 随机生成 | 后台未保存签名密钥时使用；多副本部署应统一 |
+| `CACHE_ENABLED` / `CACHE_TTL` | `true` / `60` | 后台未保存缓存设置时使用 |
+| `CONCURRENCY` / `OUTBOUND_MAX_CONCURRENCY` | 自动 / `128` | 后台未保存并发设置时使用 |
 
-完整的上游运行参数（并发、超时、插件配置等）仍与 [pansou](https://github.com/fish2018/pansou) 一致。
+### 运行参数（管理后台）
+
+「管理后台 → 运行参数」中的值写入 `pansou-admin.db`，优先级高于环境变量：
+
+| 参数 | 生效方式 |
+| --- | --- |
+| 出站代理（http / https / socks5） | 重启容器 |
+| 缓存开关 | 重启容器 |
+| 缓存 TTL | 立即生效（只影响新写入） |
+| 默认搜索并发 | 立即生效；填 0 表示自动计算 |
+| 出口并发上限 | 重启容器 |
+| 网页搜索签名密钥 | 立即生效，现有网页凭证失效 |
+| 上游 Dockerfile 地址 / 默认值输出路径 | 下次同步时生效 |
+
+上游 Dockerfile 地址与默认值输出路径在「上游自动同步」页面维护。输出路径必须是容器内可写的绝对路径；`start.sh` 只会在重启时自动加载默认位置 `/app/data/upstream-defaults.env`，非默认路径需要自行确保启动时可读取。
+
+完整的上游运行参数（超时、插件配置等）仍与 [pansou](https://github.com/fish2018/pansou) 一致。
 
 ## 上游自动更新（重点）
 
