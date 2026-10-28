@@ -29,6 +29,16 @@
             <label>分支 / Tag</label>
             <input v-model="form.ref" class="input" placeholder="main" />
           </div>
+          <div class="field">
+            <label>Dockerfile 地址（可选）</label>
+            <input v-model="form.dockerfile_url" class="input" placeholder="留空则使用仓库 raw / jsDelivr" spellcheck="false" />
+            <span class="hint">填写后不再按仓库/分支拼接；适合使用自建镜像源</span>
+          </div>
+          <div class="field">
+            <label>默认值输出路径（可选）</label>
+            <input v-model="form.defaults_output" class="input" placeholder="/app/data/upstream-defaults.env" spellcheck="false" />
+            <span class="hint">必须是绝对路径；容器重启时只会自动加载默认位置，修改前请确认启动脚本能读到</span>
+          </div>
         </div>
         <div class="toolbar" style="margin-top: 0.9rem">
           <button class="btn" type="button" :disabled="saving" @click="save">
@@ -153,7 +163,14 @@ import AdminIcon from './AdminIcon.vue';
 import { toast } from '@/lib/toast';
 
 const info = ref<UpstreamSyncInfo | null>(null);
-const form = reactive({ enabled: true, interval_hours: 24, repo: 'fish2018/pansou', ref: 'main' });
+const form = reactive({
+  enabled: true,
+  interval_hours: 24,
+  repo: 'fish2018/pansou',
+  ref: 'main',
+  dockerfile_url: '',
+  defaults_output: '',
+});
 const saving = ref(false);
 const running = ref(false);
 

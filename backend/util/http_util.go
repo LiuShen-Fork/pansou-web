@@ -18,10 +18,7 @@ var httpClient *http.Client
 
 // InitHTTPClient 初始化HTTP客户端
 func InitHTTPClient() {
-	proxyURL := ""
-	if config.AppConfig != nil {
-		proxyURL = config.AppConfig.ProxyURL
-	}
+	proxyURL := config.GetProxyURL()
 
 	client, err := NewHTTPClient(proxyURL)
 	if err != nil {
@@ -74,7 +71,7 @@ func TuneDefaultTransport() {
 
 	rawProxyURL := ""
 	if config.AppConfig != nil {
-		rawProxyURL = config.AppConfig.ProxyURL
+		rawProxyURL = config.GetProxyURL()
 	}
 	if err := applyProxyFunc(transport, rawProxyURL); err != nil {
 		fmt.Printf("[HTTP] 代理解析失败，插件路径退回标准环境变量代理: %v\n", err)
@@ -195,6 +192,15 @@ func BuildProxyFunc(rawProxyURL string, noProxy string) (func(*url.URL) (*url.UR
 	return cfg.ProxyFunc(), nil
 }
 
+// ValidateProxyURL 供管理后台校验代理地址；空字符串表示不使用代理。
+func ValidateProxyURL(raw string) error {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	_, err := normalizeProxyURL(raw)
+	return err
+}
+
 // normalizeProxyURL 校验并归一化代理地址。
 // socks5h 归一化为 socks5：Transport 原生支持 socks5，两者都本地解析域名。
 func normalizeProxyURL(raw string) (string, error) {
@@ -227,7 +233,7 @@ func normalizeProxyURL(raw string) (string, error) {
 func ProxyFuncForTransport() func(*http.Request) (*url.URL, error) {
 	rawProxyURL := ""
 	if config.AppConfig != nil {
-		rawProxyURL = config.AppConfig.ProxyURL
+		rawProxyURL = config.GetProxyURL()
 	}
 	proxyFunc, err := BuildProxyFunc(rawProxyURL, configuredNoProxy())
 	if err != nil {

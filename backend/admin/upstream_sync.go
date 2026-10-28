@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"pansou/util"
 	"pansou/util/json"
 	"path/filepath"
 	"regexp"
@@ -55,6 +56,10 @@ type UpstreamSyncSettings struct {
 	IntervalHours int    `json:"interval_hours"`
 	Repo          string `json:"repo"`
 	Ref           string `json:"ref"`
+	// DockerfileURL 为空时按仓库/分支拼接 GitHub raw 与 jsDelivr 地址。
+	DockerfileURL string `json:"dockerfile_url"`
+	// DefaultsOutput 为空时写入 /app/data/upstream-defaults.env（或本地 data 目录）。
+	DefaultsOutput string `json:"defaults_output"`
 }
 
 func DefaultUpstreamSyncSettings() UpstreamSyncSettings {
@@ -80,6 +85,8 @@ func LoadUpstreamSyncSettings() UpstreamSyncSettings {
 	if s.Ref == "" {
 		s.Ref = "main"
 	}
+	s.DockerfileURL = strings.TrimSpace(s.DockerfileURL)
+	s.DefaultsOutput = strings.TrimSpace(s.DefaultsOutput)
 	return s
 }
 
@@ -154,9 +161,12 @@ func splitSafe(raw string) []string {
 	return out
 }
 
-func upstreamDockerfileURLs(repo, ref string) []string {
-	if override := strings.TrimSpace(os.Getenv("UPSTREAM_DOCKERFILE_URL")); override != "" {
-		return []string{override}
+func upstreamDockerfileURLs(repo, ref, override string) []string {
+	if url := strings.TrimSpace(override); url != "" {
+		return []string{url}
+	}
+	if env := strings.TrimSpace(os.Getenv("UPSTREAM_DOCKERFILE_URL")); env != "" {
+		return []string{env}
 	}
 	// raw 优先；国内网络经常连不上 raw.githubusercontent.com，回退到 jsDelivr。
 	return []string{
@@ -167,20 +177,15 @@ func upstreamDockerfileURLs(repo, ref string) []string {
 
 func upstreamHTTPClient(timeout time.Duration) *http.Client {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	// 标准 HTTPS_PROXY 已由 DefaultTransport 处理；这里额外兼容项目常用的 PROXY
-	// 变量（仅 http/https 形式，socks5 交给部署层的全局代理）。
-	if proxy := strings.TrimSpace(os.Getenv("PROXY")); strings.HasPrefix(proxy, "http://") || strings.HasPrefix(proxy, "https://") {
-		if u, err := url.Parse(proxy); err == nil {
-			transport.Proxy = http.ProxyURL(u)
-		}
-	}
+	// 与管理后台/环境变量中的代理保持一致，支持 http(s) 与 socks5。
+	transport.Proxy = util.ProxyFuncForTransport()
 	return &http.Client{Timeout: timeout, Transport: transport}
 }
 
-func fetchUpstreamDockerfile(ctx context.Context, repo, ref string) (string, error) {
+func fetchUpstreamDockerfile(ctx context.Context, repo, ref, override string) (string, error) {
 	client := upstreamHTTPClient(25 * time.Second)
 	var errs []string
-	for _, endpoint := range upstreamDockerfileURLs(repo, ref) {
+	for _, endpoint := range upstreamDockerfileURLs(repo, ref, override) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 		if err != nil {
 			errs = append(errs, err.Error())
@@ -215,7 +220,7 @@ func fetchUpstreamRevision(ctx context.Context, repo, ref string) string {
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("User-Agent", "pansou-web-upstream-sync")
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := upstreamHTTPClient(10 * time.Second)
 	resp, err := client.Do(req)
 	if err != nil {
 		return ""
@@ -233,7 +238,10 @@ func fetchUpstreamRevision(ctx context.Context, repo, ref string) string {
 	return data.SHA
 }
 
-func upstreamDefaultsOutputPath() string {
+func upstreamDefaultsOutputPath(override string) string {
+	if v := strings.TrimSpace(override); v != "" {
+		return v
+	}
 	if v := strings.TrimSpace(os.Getenv("UPSTREAM_DEFAULTS_OUTPUT")); v != "" {
 		return v
 	}
@@ -244,7 +252,7 @@ func upstreamDefaultsOutputPath() string {
 }
 
 func writeUpstreamDefaultsFile(settings UpstreamSyncSettings, revision string, channels, plugins []string) error {
-	path := upstreamDefaultsOutputPath()
+	path := upstreamDefaultsOutputPath(settings.DefaultsOutput)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
@@ -311,7 +319,7 @@ func RunUpstreamSync(force bool) (UpstreamSyncStatus, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 35*time.Second)
 	defer cancel()
-	dockerfile, err := fetchUpstreamDockerfile(ctx, settings.Repo, settings.Ref)
+	dockerfile, err := fetchUpstreamDockerfile(ctx, settings.Repo, settings.Ref, settings.DockerfileURL)
 	if err != nil {
 		st.LastError = err.Error()
 		saveUpstreamSyncStatus(st)
@@ -404,7 +412,7 @@ func AdminGetUpstreamSync(c *gin.Context) {
 		"next_check_at":     next,
 		"channels":          config.GetDefaultChannels(),
 		"enabled_plugins":   enabledPluginsSnapshot(),
-		"defaults_env_path": upstreamDefaultsOutputPath(),
+		"defaults_env_path": upstreamDefaultsOutputPath(settings.DefaultsOutput),
 	})
 }
 
@@ -417,6 +425,23 @@ func AdminPutUpstreamSync(c *gin.Context) {
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "参数无效", "code": "BAD_REQUEST"})
 		return
+	}
+	body.Repo = strings.TrimSpace(body.Repo)
+	body.Ref = strings.TrimSpace(body.Ref)
+	body.DockerfileURL = strings.TrimSpace(body.DockerfileURL)
+	body.DefaultsOutput = strings.TrimSpace(body.DefaultsOutput)
+	if body.DockerfileURL != "" {
+		u, err := url.Parse(body.DockerfileURL)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Dockerfile 地址必须是 http(s) URL", "code": "BAD_DOCKERFILE_URL"})
+			return
+		}
+	}
+	if body.DefaultsOutput != "" {
+		if len(body.DefaultsOutput) > 512 || strings.ContainsRune(body.DefaultsOutput, 0) || !filepath.IsAbs(body.DefaultsOutput) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "默认值输出路径必须是不超过 512 字符的绝对路径", "code": "BAD_DEFAULTS_OUTPUT"})
+			return
+		}
 	}
 	if body.IntervalHours < 1 || body.IntervalHours > 720 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "同步间隔需在 1-720 小时之间", "code": "BAD_INTERVAL"})

@@ -241,6 +241,8 @@ export interface UpstreamSyncSettings {
   interval_hours: number;
   repo: string;
   ref: string;
+  dockerfile_url: string;
+  defaults_output: string;
 }
 
 export interface UpstreamSyncStatus {
@@ -333,6 +335,46 @@ export const adminSaveSettings = async (payload: AdminSettingsPayload) => {
 
 export const adminTestEmail = async (to: string) => {
   await authApi.post('/admin/settings/email/test', { to });
+};
+
+export interface RuntimeSettings {
+  proxy_url: string;
+  cache_enabled: boolean;
+  cache_ttl_minutes: number;
+  default_concurrency: number;
+  outbound_max_concurrency: number;
+}
+
+export interface RuntimeEffectiveSettings {
+  proxy_url: string;
+  cache_enabled: boolean;
+  cache_ttl_minutes: number;
+  default_concurrency: number;
+  default_concurrency_auto: boolean;
+  outbound_max_concurrency: number;
+}
+
+export interface RuntimeSettingsInfo {
+  settings: RuntimeSettings;
+  web_token_secret_set: boolean;
+  effective: RuntimeEffectiveSettings;
+}
+
+export interface RuntimeSavePayload extends RuntimeSettings {
+  web_token_secret?: string;
+  clear_web_token_secret?: boolean;
+}
+
+export const adminGetRuntime = async (): Promise<RuntimeSettingsInfo> => {
+  const { data } = await authApi.get<RuntimeSettingsInfo>('/admin/runtime');
+  return data;
+};
+
+export const adminSaveRuntime = async (
+  payload: RuntimeSavePayload,
+): Promise<RuntimeSettingsInfo & { restart_required: string[] }> => {
+  const { data } = await authApi.put('/admin/runtime', payload);
+  return data;
 };
 
 export interface AdminOAuthProviderState {

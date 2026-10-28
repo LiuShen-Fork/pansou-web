@@ -20,6 +20,7 @@ export const consoleNav: Record<ConsoleMode, ConsoleNavItem[]> = {
     { key: 'settings', label: '认证与站点', icon: 'settings' },
     { key: 'oauth', label: 'OAuth2 登录', icon: 'key' },
     { key: 'upstream', label: '上游自动同步', icon: 'upstream' },
+    { key: 'runtime', label: '运行参数', icon: 'tune' },
     { key: 'system', label: '系统状态', icon: 'system' },
   ],
   user: [
@@ -39,6 +40,7 @@ export const consolePages: Record<ConsoleMode, Record<string, ConsolePageMeta>> 
     settings: { title: '认证与站点', subtitle: '登录方式、注册策略、API 权限与 SMTP' },
     oauth: { title: 'OAuth2 登录', subtitle: '配置唯一的第三方账号登录入口' },
     upstream: { title: '上游自动同步', subtitle: '定时刷新 TG 频道与插件默认值' },
+    runtime: { title: '运行参数', subtitle: '代理、缓存、并发与网页搜索签名密钥' },
     system: { title: '系统状态', subtitle: '插件、频道、TG 可达性与存活观测' },
   },
   user: {

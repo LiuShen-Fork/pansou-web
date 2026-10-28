@@ -31,6 +31,7 @@ import (
 	"pansou/config"
 	"pansou/model"
 	"pansou/plugin"
+	"pansou/util"
 	"pansou/util/json"
 
 	"github.com/gin-gonic/gin"
@@ -1655,7 +1656,8 @@ func (p *GyingPlugin) applyProxyToScraper(scraper *cloudscraper.Scraper) error {
 	if scraper == nil {
 		return fmt.Errorf("scraper 实例为空")
 	}
-	if config.AppConfig == nil || strings.TrimSpace(config.AppConfig.ProxyURL) == "" {
+	rawProxy := strings.TrimSpace(config.GetProxyURL())
+	if rawProxy == "" {
 		return nil
 	}
 
@@ -1684,7 +1686,7 @@ func (p *GyingPlugin) applyProxyToScraper(scraper *cloudscraper.Scraper) error {
 		return fmt.Errorf("底层 transport 无效")
 	}
 
-	proxyURL, err := url.Parse(config.AppConfig.ProxyURL)
+	proxyURL, err := url.Parse(rawProxy)
 	if err != nil {
 		return fmt.Errorf("解析代理地址失败: %w", err)
 	}
@@ -1703,7 +1705,7 @@ func (p *GyingPlugin) applyProxyToScraper(scraper *cloudscraper.Scraper) error {
 	}
 
 	if DebugLog {
-		fmt.Printf("[Gying] 已应用代理到scraper: %s\n", config.AppConfig.ProxyURL)
+		fmt.Printf("[Gying] 已应用代理到scraper: %s\n", util.MaskProxyURL(rawProxy))
 	}
 
 	return nil

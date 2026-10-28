@@ -42,6 +42,9 @@ func RegisterRoutes(r *gin.Engine) {
 		admin.PUT("/settings", AdminPutSettings)
 		admin.POST("/settings/email/test", AdminTestEmail)
 
+		admin.GET("/runtime", AdminGetRuntime)
+		admin.PUT("/runtime", AdminPutRuntime)
+
 		admin.GET("/users", AdminListUsers)
 		admin.POST("/users", AdminCreateUser)
 		admin.PATCH("/users/:id", AdminUpdateUser)

@@ -151,6 +151,10 @@ func initApp() {
 	// 初始化配置
 	config.Init()
 
+	// 应用管理后台保存的运行参数（优先于环境变量）。
+	// 必须早于 HTTP 客户端、缓存与搜索服务初始化。
+	admin.ApplyRuntimeSettings()
+
 	// 初始化HTTP客户端
 	util.InitHTTPClient()
 
@@ -294,16 +298,16 @@ func printServiceInfo(port string, pluginManager *plugin.PluginManager) {
 
 	// 输出代理信息
 	hasProxy := false
-	if config.AppConfig.ProxyURL != "" {
+	if proxyURL := config.GetProxyURL(); proxyURL != "" {
 		proxyType := "代理"
-		if strings.HasPrefix(config.AppConfig.ProxyURL, "socks5://") {
+		if strings.HasPrefix(proxyURL, "socks5://") {
 			proxyType = "SOCKS5代理"
-		} else if strings.HasPrefix(config.AppConfig.ProxyURL, "http://") {
+		} else if strings.HasPrefix(proxyURL, "http://") {
 			proxyType = "HTTP代理"
-		} else if strings.HasPrefix(config.AppConfig.ProxyURL, "https://") {
+		} else if strings.HasPrefix(proxyURL, "https://") {
 			proxyType = "HTTPS代理"
 		}
-		fmt.Printf("使用%s (PROXY): %s\n", proxyType, util.MaskProxyURL(config.AppConfig.ProxyURL))
+		fmt.Printf("使用%s: %s\n", proxyType, util.MaskProxyURL(proxyURL))
 		hasProxy = true
 	}
 	if config.AppConfig.HTTPProxyURL != "" {
@@ -319,8 +323,10 @@ func printServiceInfo(port string, pluginManager *plugin.PluginManager) {
 	}
 
 	// 输出并发信息
-	if os.Getenv("CONCURRENCY") != "" {
-		fmt.Printf("默认并发数: %d (由环境变量CONCURRENCY指定)\n", config.AppConfig.DefaultConcurrency)
+	if config.DefaultConcurrencyOverridden() {
+		fmt.Printf("默认并发数: %d (由管理后台指定)\n", config.GetDefaultConcurrency())
+	} else if os.Getenv("CONCURRENCY") != "" {
+		fmt.Printf("默认并发数: %d (由环境变量CONCURRENCY指定)\n", config.GetDefaultConcurrency())
 	} else {
 		channelCount := len(config.GetDefaultChannels())
 		pluginCount := 0
@@ -329,7 +335,7 @@ func printServiceInfo(port string, pluginManager *plugin.PluginManager) {
 			pluginCount = len(pluginManager.GetPlugins())
 		}
 		fmt.Printf("默认并发数: %d (= 频道数%d + 插件数%d + 10)\n",
-			config.AppConfig.DefaultConcurrency, channelCount, pluginCount)
+			config.GetDefaultConcurrency(), channelCount, pluginCount)
 	}
 
 	// 输出缓存信息
@@ -337,7 +343,7 @@ func printServiceInfo(port string, pluginManager *plugin.PluginManager) {
 		fmt.Printf("缓存已启用: 路径=%s, 最大大小=%dMB, TTL=%d分钟\n",
 			config.AppConfig.CachePath,
 			config.AppConfig.CacheMaxSizeMB,
-			config.AppConfig.CacheTTLMinutes)
+			config.GetCacheTTLMinutes())
 	} else {
 		fmt.Println("缓存已禁用")
 	}

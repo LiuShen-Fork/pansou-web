@@ -273,7 +273,7 @@ func writeSearchCacheByCompleteness(outcome *batchSearchOutcome, cacheKey string
 		return
 	}
 
-	fullTTL := time.Duration(config.AppConfig.CacheTTLMinutes) * time.Minute
+	fullTTL := time.Duration(config.GetCacheTTLMinutes()) * time.Minute
 	partialTTL := time.Duration(config.AppConfig.CachePartialTTLMinutes) * time.Minute
 	ttl, write := outcome.cacheTTL(fullTTL, partialTTL)
 	if !write {
@@ -539,7 +539,7 @@ func (s *SearchService) Search(keyword string, channels []string, concurrency in
 
 	// 如果未指定并发数，使用配置中的默认值
 	if concurrency <= 0 {
-		concurrency = config.AppConfig.DefaultConcurrency
+		concurrency = config.GetDefaultConcurrency()
 	}
 
 	// 并行获取TG搜索和插件搜索结果
@@ -1501,7 +1501,7 @@ func (s *SearchService) backfillTGChannels(cacheKey, keyword string, missing []s
 	// 原先这里是 Set 整块覆盖，合并的只是"本请求的快照 + 补齐结果"。但补齐发生在首轮写入之后
 	// 很久，这期间任何一次重复搜索都可能已经把结果并进同一个键——覆盖会把它们吞掉。
 	// 实测（受控场景）覆盖写只剩 13 条、丢掉 74% 的并发结果。
-	ttl := time.Duration(config.AppConfig.CacheTTLMinutes) * time.Minute
+	ttl := time.Duration(config.GetCacheTTLMinutes()) * time.Minute
 	written := writeFinalMainCache(enhancedTwoLevelCache, cacheKey, merged, ttl)
 	fmt.Printf("[searchTG] %s：后台补齐 %d/%d 个超时频道，缓存已更新为完整结果（本次 %d 条 -> 合并后 %d 条）\n",
 		keyword, added, len(missing), len(merged), written)
@@ -1612,16 +1612,13 @@ func (s *SearchService) searchPlugins(keyword string, plugins []string, forceRef
 	// 控制并发数
 	if concurrency <= 0 {
 		// 使用配置中的默认值
-		concurrency = config.AppConfig.DefaultConcurrency
+		concurrency = config.GetDefaultConcurrency()
 	}
 
 	// 扇出并行度与调用方的 conc 解耦：调用方给得少时补足到任务数（否则 71 个插件会被
 	// 一个偏小的客户端参数压成多波，实测 conc=10 时 70/71 个任务在截止前根本没轮到），
 	// 给得多时以出口总闸收口，防止并发无上限地压向同一个出口。
-	outboundLimit := defaultOutboundMaxConcurrency
-	if config.AppConfig != nil && config.AppConfig.OutboundMaxConcurrency > 0 {
-		outboundLimit = config.AppConfig.OutboundMaxConcurrency
-	}
+	outboundLimit := config.GetOutboundMaxConcurrency()
 	// 出口上限不再取固定值，而由持续累积观测的控制器给出：未观察到排队与丢弃就逐步放宽，
 	// 观察到就退回安全水位。部署方的 OUTBOUND_MAX_CONCURRENCY 是天花板，不是工作点。
 	adaptive := sharedAdaptiveConcurrency(len(availablePlugins), outboundLimit)
@@ -1843,7 +1840,7 @@ func (s *SearchService) backfillPlugins(cacheKey, keyword string, missing []stri
 
 	// 同频道路径：先合并再写，并按键互斥。原先是 SetBothLevels 整块覆盖，
 	// 会把补齐期间其它请求并进来的结果吞掉（见 searchTG 补齐处的实测说明）。
-	ttl := time.Duration(config.AppConfig.CacheTTLMinutes) * time.Minute
+	ttl := time.Duration(config.GetCacheTTLMinutes()) * time.Minute
 	written := writeFinalMainCache(enhancedTwoLevelCache, cacheKey, merged, ttl)
 	fmt.Printf("[searchPlugins] %s：后台补齐 %d/%d 个超时插件，缓存已更新（本次 %d 条 -> 合并后 %d 条）\n",
 		keyword, added, len(missing), len(merged), written)

@@ -117,7 +117,7 @@ func (c *EnhancedTwoLevelCache) Get(key string) ([]byte, bool, error) {
 		// 按其自身 TTL 落盘的条目在内存里活满完整 TTL（默认 60 分钟），
 		// service 侧读缓存又不校验新鲜度（search_service.go 注释明写"不检查新鲜度"），
 		// 落盘时的 TTL 因此会被整个绕过。
-		ttl := time.Duration(config.AppConfig.CacheTTLMinutes) * time.Minute
+		ttl := time.Duration(config.GetCacheTTLMinutes()) * time.Minute
 		if expiry, ok := c.disk.GetExpiry(key); ok {
 			remaining := time.Until(expiry)
 			if remaining <= 0 {

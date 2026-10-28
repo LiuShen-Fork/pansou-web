@@ -467,7 +467,7 @@ func (p *PanSearchAsyncPlugin) getBaseURL(client *http.Client) (string, error) {
 func (p *PanSearchAsyncPlugin) requestClient(fallback *http.Client) *http.Client {
 	proxyURL := ""
 	if config.AppConfig != nil {
-		proxyURL = panSearchFirstNonEmpty(config.AppConfig.ProxyURL, config.AppConfig.HTTPSProxyURL, config.AppConfig.HTTPProxyURL)
+		proxyURL = panSearchFirstNonEmpty(config.GetProxyURL(), config.AppConfig.HTTPSProxyURL, config.AppConfig.HTTPProxyURL)
 	}
 	if proxyURL != "" {
 		client, err := util.NewHTTPClient(proxyURL)

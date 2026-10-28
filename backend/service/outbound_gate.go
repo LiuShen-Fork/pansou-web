@@ -34,10 +34,7 @@ const defaultOutboundMaxConcurrency = 128
 
 func ensureOutboundGate() chan struct{} {
 	outboundGateOnce.Do(func() {
-		limit := defaultOutboundMaxConcurrency
-		if config.AppConfig != nil && config.AppConfig.OutboundMaxConcurrency > 0 {
-			limit = config.AppConfig.OutboundMaxConcurrency
-		}
+		limit := config.GetOutboundMaxConcurrency()
 		outboundGate = make(chan struct{}, limit)
 	})
 	return outboundGate

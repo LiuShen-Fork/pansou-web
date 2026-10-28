@@ -281,9 +281,12 @@ func UpdateDefaultConcurrency(pluginCount int) {
 		return
 	}
 
-	// 只有当未通过环境变量指定并发数时才进行调整
-	concurrencyEnv := os.Getenv("CONCURRENCY")
-	if concurrencyEnv != "" {
+	// 后台显式指定并发数时不再自动计算。
+	if DefaultConcurrencyOverridden() {
+		return
+	}
+	// 后台接管后忽略环境变量；否则只有未通过环境变量指定并发数时才进行调整。
+	if !DefaultConcurrencyAdminManaged() && os.Getenv("CONCURRENCY") != "" {
 		return
 	}
 

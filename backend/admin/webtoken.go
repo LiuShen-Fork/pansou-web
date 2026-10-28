@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -29,17 +30,64 @@ type webTokenPayload struct {
 	UAHash    string `json:"ua"`
 }
 
-var webTokenSecret = func() []byte {
-	if value := strings.TrimSpace(os.Getenv("WEB_TOKEN_SECRET")); len(value) >= 16 {
-		return []byte(value)
+var (
+	webTokenSecretMu       sync.RWMutex
+	webTokenSecret         []byte
+	webTokenSecretExplicit bool
+)
+
+func initWebTokenSecret() {
+	value := strings.TrimSpace(os.Getenv("WEB_TOKEN_SECRET"))
+	if len(value) >= 16 {
+		webTokenSecret = []byte(value)
+		webTokenSecretExplicit = true
+		return
 	}
+	webTokenSecret = randomWebTokenSecret()
+}
+
+func randomWebTokenSecret() []byte {
 	buf := make([]byte, 32)
 	if _, err := rand.Read(buf); err != nil {
 		// crypto/rand 失败极罕见；退化为进程级种子，重启即失效。
 		return []byte(Now() + "-pansou-web-token")
 	}
 	return buf
-}()
+}
+
+func init() {
+	initWebTokenSecret()
+}
+
+// SetWebTokenSecret 由管理后台设置网页搜索凭证签名密钥。
+// 空字符串或长度不足 16 时恢复为进程级随机密钥（现有凭证立即失效）。
+func SetWebTokenSecret(value string) {
+	value = strings.TrimSpace(value)
+	webTokenSecretMu.Lock()
+	defer webTokenSecretMu.Unlock()
+	if len(value) >= 16 {
+		webTokenSecret = []byte(value)
+		webTokenSecretExplicit = true
+		return
+	}
+	webTokenSecret = randomWebTokenSecret()
+	webTokenSecretExplicit = false
+}
+
+// WebTokenSecretConfigured 返回当前是否使用显式配置的密钥（环境变量或后台）。
+func WebTokenSecretConfigured() bool {
+	webTokenSecretMu.RLock()
+	defer webTokenSecretMu.RUnlock()
+	return webTokenSecretExplicit
+}
+
+func currentWebTokenSecret() []byte {
+	webTokenSecretMu.RLock()
+	defer webTokenSecretMu.RUnlock()
+	out := make([]byte, len(webTokenSecret))
+	copy(out, webTokenSecret)
+	return out
+}
 
 func hashBinding(value string) string {
 	sum := sha256.Sum256([]byte(value))
@@ -47,7 +95,7 @@ func hashBinding(value string) string {
 }
 
 func signWebPayload(payload []byte) []byte {
-	mac := hmac.New(sha256.New, webTokenSecret)
+	mac := hmac.New(sha256.New, currentWebTokenSecret())
 	mac.Write(payload)
 	return mac.Sum(nil)
 }

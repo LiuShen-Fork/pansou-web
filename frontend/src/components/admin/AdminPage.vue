@@ -16,6 +16,7 @@
     <AdminSettings v-else-if="active === 'settings'" />
     <AdminOAuth v-else-if="active === 'oauth'" />
     <AdminUpstream v-else-if="active === 'upstream'" />
+    <AdminRuntime v-else-if="active === 'runtime'" />
     <AdminSystem v-else-if="active === 'system'" />
   </AdminShell>
 </template>
@@ -29,6 +30,7 @@ import AdminLogs from './AdminLogs.vue';
 import AdminSettings from './AdminSettings.vue';
 import AdminOAuth from './AdminOAuth.vue';
 import AdminUpstream from './AdminUpstream.vue';
+import AdminRuntime from './AdminRuntime.vue';
 import AdminSystem from './AdminSystem.vue';
 import { consoleNav, consolePages } from '@/console/config';
 

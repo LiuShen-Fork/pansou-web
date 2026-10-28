@@ -59,6 +59,12 @@ const icons: Record<string, Shape[]> = {
   system: [
     { d: 'M3 12h4l3 8 4-16 3 8h4' },
   ],
+  tune: [
+    { d: 'M4 6h7M15 6h5M4 12h2M10 12h10M4 18h9M17 18h3' },
+    { type: 'circle', cx: 13, cy: 6, r: 2 },
+    { type: 'circle', cx: 8, cy: 12, r: 2 },
+    { type: 'circle', cx: 15, cy: 18, r: 2 },
+  ],
   search: [
     { type: 'circle', cx: 11, cy: 11, r: 7 },
     { d: 'M21 21l-4.35-4.35' },
