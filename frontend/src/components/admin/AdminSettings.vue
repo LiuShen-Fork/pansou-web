@@ -102,8 +102,9 @@
         <div class="section-head">
           <div>
             <div class="section-title"><AdminIcon name="shield" :size="16" /> 搜索与 API 权限</div>
-            <div class="section-desc">控制 API 是否必须登录，以及网页端匿名搜索的开关与限流</div>
+            <div class="section-desc">匿名、登录用户、网页与 API 的配额分开控制；用户级设置会覆盖这里的默认值</div>
           </div>
+          <span class="badge badge-success">配额已拆分</span>
         </div>
         <div class="section-body">
           <div class="switch-row">
@@ -118,31 +119,101 @@
             <div><strong>允许用户生成 API 令牌</strong><small>用户在用户中心生成 <code>ps_...</code> 令牌，用于脚本或第三方客户端。</small></div>
             <label class="switch"><input v-model="auth.allow_user_api_tokens" type="checkbox" /><span /></label>
           </div>
-          <div class="form-grid" style="margin-top: 0.9rem">
+
+          <div class="quota-grid">
+            <div class="quota-group">
+              <div class="quota-group-head">
+                <div>
+                  <strong>匿名用户（未登录）</strong>
+                  <span>按客户端 IP 统计；触发后前端会提示登录</span>
+                </div>
+                <span class="badge">IP 维度</span>
+              </div>
+              <div class="form-grid">
+                <div class="field">
+                  <label>单 IP 每日额度</label>
+                  <input v-model.number="auth.anonymous_daily_limit" class="input" type="number" min="1" />
+                  <span class="hint">默认 20 次/天</span>
+                </div>
+                <div class="field">
+                  <label>每分钟限频</label>
+                  <input v-model.number="auth.anonymous_rate_limit" class="input" type="number" min="1" />
+                  <span class="hint">默认 4 次/分钟</span>
+                </div>
+                <div class="field">
+                  <label>全站每日匿名总额度</label>
+                  <input v-model.number="auth.anonymous_global_daily_limit" class="input" type="number" min="1" />
+                  <span class="hint">默认 200 次/天，用完只影响匿名访问</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="quota-group">
+              <div class="quota-group-head">
+                <div>
+                  <strong>登录用户默认额度</strong>
+                  <span>网页与 API 独立计算；用户管理里可逐个覆盖</span>
+                </div>
+                <span class="badge badge-primary">用户维度</span>
+              </div>
+              <div class="form-grid">
+                <div class="field">
+                  <label>网页搜索每日额度</label>
+                  <input v-model.number="auth.default_web_daily_limit" class="input" type="number" min="1" />
+                  <span class="hint">默认 100 次/天</span>
+                </div>
+                <div class="field">
+                  <label>网页搜索每分钟限频</label>
+                  <input v-model.number="auth.default_web_rate_limit" class="input" type="number" min="1" />
+                  <span class="hint">默认 10 次/分钟</span>
+                </div>
+                <div class="field">
+                  <label>API 每日额度</label>
+                  <input v-model.number="auth.default_api_daily_limit" class="input" type="number" min="1" />
+                  <span class="hint">默认 100 次/天，仅统计 /api/search</span>
+                </div>
+                <div class="field">
+                  <label>API 每分钟限频</label>
+                  <input v-model.number="auth.default_api_rate_limit" class="input" type="number" min="1" />
+                  <span class="hint">默认 10 次/分钟</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="field" style="margin-top: 0.9rem; max-width: 20rem">
+            <label>会话有效期（小时）</label>
+            <input v-model.number="auth.session_ttl_hours" class="input" type="number" min="1" max="8760" />
+          </div>
+        </div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-head">
+          <div>
+            <div class="section-title"><AdminIcon name="pin" :size="16" /> IP 归属地</div>
+            <div class="section-desc">可选功能：使用 MaxMind MMDB 文件把搜索与审计日志中的 IP 解析为国家 / 地区 / 城市</div>
+          </div>
+          <span class="badge" :class="auth.ip_geo_enabled ? 'badge-success' : ''">{{ auth.ip_geo_enabled ? '已启用' : '未启用' }}</span>
+        </div>
+        <div class="section-body">
+          <div class="switch-row">
+            <div><strong>启用 IP 归属地</strong><small>启用后必须配置 IPv4 数据库；查询失败只记录空归属地，不影响搜索。</small></div>
+            <label class="switch"><input v-model="auth.ip_geo_enabled" type="checkbox" /><span /></label>
+          </div>
+          <div class="form-grid" style="margin-top: 0.8rem">
             <div class="field">
-              <label>默认每日搜索上限</label>
-              <input v-model.number="auth.default_daily_search_limit" class="input" type="number" min="0" />
-              <span class="hint">0 表示不限制；用户级设置优先于全局</span>
+              <label>IPv4 数据库路径（必填）</label>
+              <input v-model.trim="auth.ip_geo_ipv4_path" class="input" placeholder="/app/data/geoip/GeoLite2-City.mmdb" spellcheck="false" />
             </div>
             <div class="field">
-              <label>匿名搜索限流（次/分钟）</label>
-              <input v-model.number="auth.anonymous_web_search_limit" class="input" type="number" min="1" />
-              <span class="hint">按 IP 统计，仅作用于未登录访问</span>
+              <label>IPv6 数据库路径（可选）</label>
+              <input v-model.trim="auth.ip_geo_ipv6_path" class="input" placeholder="留空则复用 IPv4 数据库" spellcheck="false" />
             </div>
-            <div class="field">
-              <label>单 IP 每日匿名额度</label>
-              <input v-model.number="auth.anonymous_daily_limit" class="input" type="number" min="0" />
-              <span class="hint">0 表示不限制；达到后该 IP 需登录才能继续搜索</span>
-            </div>
-            <div class="field">
-              <label>全站每日匿名额度</label>
-              <input v-model.number="auth.anonymous_global_daily_limit" class="input" type="number" min="0" />
-              <span class="hint">0 表示不限制；用于控制外部直接访问的总体消耗</span>
-            </div>
-            <div class="field">
-              <label>会话有效期（小时）</label>
-              <input v-model.number="auth.session_ttl_hours" class="input" type="number" min="1" max="8760" />
-            </div>
+          </div>
+          <span class="hint">把 MMDB 文件挂载到容器内（例如 <code>./geoip:/app/data/geoip:ro</code>）后填写容器内路径。开启时后端会立即校验文件是否可读。</span>
+          <div v-if="geoStatus" class="geo-status">
+            当前：IPv4 {{ geoStatus.ipv4_loaded ? '已加载' : '未加载' }} · IPv6 {{ geoStatus.ipv6_loaded ? '已加载' : '未加载' }}
           </div>
         </div>
       </section>
@@ -209,6 +280,7 @@ import {
   adminTestEmail,
   type AuthSettings,
   type EmailSettings,
+  type GeoIPStatus,
 } from '@/api/auth';
 import { loadPublicConfig } from '@/stores/auth';
 import AdminIcon from './AdminIcon.vue';
@@ -227,10 +299,17 @@ const auth = reactive<AuthSettings>({
   api_require_login: true,
   web_search_enabled: true,
   allow_user_api_tokens: true,
-  default_daily_search_limit: 0,
-  anonymous_web_search_limit: 20,
-  anonymous_daily_limit: 0,
-  anonymous_global_daily_limit: 0,
+  default_web_daily_limit: 100,
+  default_web_rate_limit: 10,
+  default_api_daily_limit: 100,
+  default_api_rate_limit: 10,
+  anonymous_rate_limit: 4,
+  anonymous_daily_limit: 20,
+  anonymous_global_daily_limit: 200,
+  ip_geo_enabled: false,
+  ip_geo_ipv4_path: '',
+  ip_geo_ipv6_path: '',
+  quota_defaults_version: 1,
   session_ttl_hours: 168,
   site_slogan: '',
   site_icon: '/favicon.ico',
@@ -246,6 +325,7 @@ const email = reactive<EmailSettings>({
   use_tls: true,
 });
 const passwordSet = ref(false);
+const geoStatus = ref<GeoIPStatus | null>(null);
 const loading = ref(true);
 const saving = ref(false);
 const testing = ref(false);
@@ -265,6 +345,7 @@ const load = async () => {
     Object.assign(email, data.email);
     email.password = '';
     passwordSet.value = !!data.email_password_set;
+    geoStatus.value = data.geo_status || null;
   } catch (err: any) {
     toast.error('读取设置失败', err.response?.data?.error || '');
   } finally {
@@ -356,6 +437,25 @@ onMounted(load);
 .settings-bar-copy strong { display: block; font-size: 0.82rem; }
 .settings-bar-copy span { display: block; margin-top: 0.15rem; font-size: 0.7rem; color: hsl(var(--muted-foreground)); }
 .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.quota-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-top: 1rem; }
+.quota-group {
+  padding: 0.85rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.75rem;
+  background: hsl(var(--muted) / 0.22);
+}
+.quota-group-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.75rem; }
+.quota-group-head strong { display: block; font-size: 0.82rem; }
+.quota-group-head span:not(.badge) { display: block; margin-top: 0.15rem; font-size: 0.7rem; color: hsl(var(--muted-foreground)); }
+.quota-group .form-grid { grid-template-columns: 1fr 1fr; }
+.geo-status {
+  margin-top: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.55rem;
+  background: hsl(var(--muted) / 0.35);
+  font-size: 0.72rem;
+  color: hsl(var(--muted-foreground));
+}
 .smtp-test { display: flex; align-items: flex-end; gap: 0.6rem; margin-top: 0.9rem; }
 .site-brand-preview {
   display: flex;
@@ -398,7 +498,9 @@ onMounted(load);
 .icon-upload { position: relative; flex: 0 0 auto; cursor: pointer; }
 .announcement-input { min-height: 8rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.75rem; line-height: 1.6; }
 @media (max-width: 900px) {
-  .settings-grid { grid-template-columns: 1fr; }
+  .settings-grid,
+  .quota-grid,
+  .quota-group .form-grid { grid-template-columns: 1fr; }
   .settings-bar { position: static; flex-direction: column; align-items: flex-start; }
   .smtp-test { flex-direction: column; align-items: stretch; }
 }

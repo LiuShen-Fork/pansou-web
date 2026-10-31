@@ -142,10 +142,11 @@ export const search = async (params: SearchParams): Promise<SearchResponse> => {
     ext: JSON.stringify({ referer: "https://dm.xueximeng.com" })
   };
 
-  // 已登录走受保护的 /api/search；匿名走 /api/web/search，
-  // 后者由管理后台的「前端直接搜索」开关、网页凭证与匿名限流共同控制。
+  // 网页端始终走 /api/web/search：登录用户计入「网页搜索」配额，
+  // 匿名用户由前端直接搜索开关、网页凭证与匿名限流共同控制。
+  // 外部应用应使用 /api/search（API 配额），两者在后台分开统计。
   const token = localStorage.getItem('auth_token');
-  const endpoint = token ? '/search' : '/web/search';
+  const endpoint = '/web/search';
 
   const request = (webToken?: string) =>
     api.get<ApiResponse<SearchResponse>>(endpoint, {

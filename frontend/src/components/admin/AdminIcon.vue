@@ -92,6 +92,10 @@ const icons: Record<string, Shape[]> = {
   refresh: [{ d: 'M21 12a9 9 0 1 1-3-6.7M21 3v6h-6' }],
   database: [{ d: 'M12 3c4.97 0 9 1.34 9 3s-4.03 3-9 3-9-1.34-9-3 4.03-3 9-3zM3 6v6c0 1.66 4.03 3 9 3s9-1.34 9-3V6M3 12v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6' }],
   chart: [{ d: 'M3 3v18h18M7 15l4-4 3 3 5-7' }],
+  pin: [
+    { d: 'M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11z' },
+    { type: 'circle', cx: 12, cy: 10, r: 2.5 },
+  ],
 };
 
 const paths = computed(() => icons[props.name] || icons.dashboard);

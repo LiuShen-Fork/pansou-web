@@ -21,9 +21,11 @@ export interface AuthUser {
   role: 'admin' | 'user';
   status: string;
   must_change_password: boolean;
-  daily_search_limit: number;
+  web_daily_search_limit: number;
   api_daily_search_limit: number;
-  search_count_today?: number;
+  web_rate_limit_per_min: number;
+  api_rate_limit_per_min: number;
+  web_search_count_today?: number;
   api_search_count_today?: number;
   created_at: string;
   updated_at: string;
@@ -38,8 +40,26 @@ export interface PublicAuthConfig {
   api_require_login: boolean;
   web_search_enabled: boolean;
   allow_user_api_tokens: boolean;
-  default_daily_search_limit: number;
+  default_web_daily_limit?: number;
+  default_web_rate_limit?: number;
+  default_api_daily_limit?: number;
+  default_api_rate_limit?: number;
+  anonymous_daily_limit?: number;
+  anonymous_rate_limit?: number;
+  anonymous_global_daily?: number;
   smtp_configured?: boolean;
+}
+
+export interface UserQuotaInfo {
+  web_daily_used: number;
+  web_daily_limit: number;
+  web_rate_limit: number;
+  api_daily_used: number;
+  api_daily_limit: number;
+  api_rate_limit: number;
+  web_limit_custom: boolean;
+  api_limit_custom: boolean;
+  reset_at: string;
 }
 
 export interface PublicProvider {
@@ -65,9 +85,13 @@ export interface AuthSettings extends PublicAuthConfig {
   site_slogan: string;
   site_icon: string;
   announcement: string;
-  anonymous_web_search_limit: number;
+  anonymous_rate_limit: number;
   anonymous_daily_limit: number;
   anonymous_global_daily_limit: number;
+  ip_geo_enabled: boolean;
+  ip_geo_ipv4_path: string;
+  ip_geo_ipv6_path: string;
+  quota_defaults_version?: number;
   session_ttl_hours: number;
 }
 
@@ -117,6 +141,7 @@ export interface OAuthAccount {
 export interface MeResponse {
   user: AuthUser;
   auth: PublicAuthConfig;
+  quota: UserQuotaInfo;
   token: APIToken | null;
   oauth_accounts: OAuthAccount[] | null;
   is_admin: boolean;
@@ -135,6 +160,14 @@ export const getPublicConfig = async (): Promise<PublicConfig> => {
 
 export const getMe = async (): Promise<MeResponse> => {
   const { data } = await authApi.get<MeResponse>('/auth/me');
+  return data;
+};
+
+export const getMyUsage = async (): Promise<{
+  quota: UserQuotaInfo;
+  recent_searches: SearchLog[];
+}> => {
+  const { data } = await authApi.get('/auth/usage');
   return data;
 };
 
@@ -208,6 +241,11 @@ export const oauthStartUrl = (slug: string, mode: 'login' | 'bind' = 'login') =>
 
 // ---------------- 管理员 ----------------
 
+export interface NameCount {
+  name: string;
+  count: number;
+}
+
 export interface Overview {
   users_total: number;
   users_active: number;
@@ -215,8 +253,15 @@ export interface Overview {
   searches_today: number;
   searches_total: number;
   anonymous_today: number;
+  web_user_today: number;
+  api_user_today: number;
+  quota_exceeded_today: number;
+  audit_today: number;
   sessions_active: number;
+  top_countries: NameCount[];
+  top_ips: NameCount[];
   recent_searches: SearchLog[];
+  recent_audit: AuditLog[];
   default_admin_alive: boolean;
 }
 
@@ -227,6 +272,29 @@ export interface SearchLog {
   source: string;
   keyword: string;
   ip: string;
+  user_agent?: string;
+  country?: string;
+  region?: string;
+  city?: string;
+  duration_ms: number;
+  result_count: number;
+  status: string;
+  error?: string;
+  created_at: string;
+}
+
+export interface AuditLog {
+  id: number;
+  user_id: number;
+  username: string;
+  event: string;
+  target?: string;
+  detail?: string;
+  ip?: string;
+  country?: string;
+  region?: string;
+  city?: string;
+  user_agent?: string;
   created_at: string;
 }
 
@@ -306,7 +374,10 @@ export const adminCreateUser = async (payload: {
   email: string;
   password: string;
   role: string;
-  daily_search_limit: number;
+  web_daily_search_limit: number;
+  api_daily_search_limit: number;
+  web_rate_limit_per_min: number;
+  api_rate_limit_per_min: number;
 }) => {
   const { data } = await authApi.post('/admin/users', payload);
   return data.user as AuthUser;
@@ -321,9 +392,16 @@ export const adminDeleteUser = async (id: number) => {
   await authApi.delete(`/admin/users/${id}`);
 };
 
+export interface GeoIPStatus {
+  enabled: boolean;
+  ipv4_loaded: boolean;
+  ipv6_loaded: boolean;
+}
+
 export const adminGetSettings = async (): Promise<AdminSettingsPayload & {
   email_password_set: boolean;
   oauth_providers: OAuthProvider[];
+  geo_status?: GeoIPStatus;
 }> => {
   const { data } = await authApi.get('/admin/settings');
   return data;
@@ -412,11 +490,18 @@ export const adminDeleteOAuthProvider = async (id: number) => {
   await authApi.delete(`/admin/oauth-providers/${id}`);
 };
 
-export const adminListSearchLogs = async (q = '', page = 1, pageSize = 20, source = '') => {
+export const adminListSearchLogs = async (q = '', page = 1, pageSize = 20, source = '', status = '') => {
   const { data } = await authApi.get('/admin/search-logs', {
-    params: { q, page, page_size: pageSize, source },
+    params: { q, page, page_size: pageSize, source, status },
   });
   return data as { items: SearchLog[]; total: number; page: number; page_size: number };
+};
+
+export const adminListAuditLogs = async (q = '', page = 1, pageSize = 20, event = '') => {
+  const { data } = await authApi.get('/admin/audit-logs', {
+    params: { q, page, page_size: pageSize, event },
+  });
+  return data as { items: AuditLog[]; total: number; page: number; page_size: number };
 };
 
 export const adminGetUpstreamSync = async (): Promise<UpstreamSyncInfo> => {

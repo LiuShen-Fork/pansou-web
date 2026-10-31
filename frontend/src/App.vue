@@ -9,6 +9,7 @@ import SearchForm from '@/components/SearchForm.vue';
 import ResultTabs from '@/components/ResultTabs.vue';
 import SearchStats from '@/components/SearchStats.vue';
 import LoginDialog from '@/components/LoginDialog.vue';
+import QuotaDialog from '@/components/QuotaDialog.vue';
 import ToastHost from '@/components/ToastHost.vue';
 import QQPDManager from '@/components/QQPDManager.vue';
 import AccountCenter from '@/components/AccountCenter.vue';
@@ -89,6 +90,14 @@ const showLogin = ref(false);
 const isAuthenticated = ref(false);
 const currentUsername = ref('');
 const currentView = ref<'search' | 'user' | 'admin'>('search');
+const quotaDialog = reactive({
+  visible: false,
+  anonymous: true,
+  title: '',
+  message: '',
+  limit: 0,
+  used: 0,
+});
 const siteName = computed(() => authState.config?.site.name || '清羽盘搜');
 const siteSlogan = computed(
   () => authState.config?.site.slogan || authState.config?.site.description || '清羽飞扬自建网盘搜索，众多资源，一键直达',
@@ -1096,20 +1105,36 @@ const handleSearchFailure = (error: any) => {
   const status = error?.response?.status;
   const code = error?.response?.data?.code;
   const msg = error?.response?.data?.error;
+  const quotaCodes = [
+    'DAILY_LIMIT_REACHED',
+    'API_DAILY_LIMIT_REACHED',
+    'WEB_DAILY_LIMIT_REACHED',
+    'WEB_RATE_LIMITED',
+    'API_RATE_LIMITED',
+    'ANON_IP_DAILY_LIMIT',
+    'ANON_GLOBAL_DAILY_LIMIT',
+    'ANON_RATE_LIMITED',
+    'RATE_LIMITED',
+  ];
   if (status === 401 || code === 'WEB_SEARCH_DISABLED' || code === 'MUST_CHANGE_PASSWORD') {
     globalError.value = msg || '请先登录后再搜索';
     showLogin.value = true;
-  } else if (
-    code === 'DAILY_LIMIT_REACHED' ||
-    code === 'API_DAILY_LIMIT_REACHED' ||
-    code === 'ANON_IP_DAILY_LIMIT' ||
-    code === 'ANON_GLOBAL_DAILY_LIMIT' ||
-    code === 'RATE_LIMITED'
-  ) {
-    globalError.value = msg || '搜索过于频繁，请稍后再试';
+  } else if (quotaCodes.includes(code)) {
+    const data = error.response?.data || {};
+    quotaDialog.anonymous = !isAuthenticated.value || String(code).startsWith('ANON_');
+    quotaDialog.title = data.retry_after ? '搜索太频繁了' : '今日搜索额度已用完';
+    quotaDialog.message = msg || '当前配额已触发，请稍后再试。';
+    quotaDialog.limit = Number(data.limit) || 0;
+    quotaDialog.used = Number(data.used) || 0;
+    quotaDialog.visible = true;
   } else if (code === 'WEB_TOKEN_REQUIRED' || code === 'WEB_ORIGIN_REJECTED') {
     globalError.value = msg || '搜索凭证失效，请刷新页面后重试';
   }
+};
+
+const openLoginFromQuota = () => {
+  quotaDialog.visible = false;
+  showLogin.value = true;
 };
 
 // 登录成功处理
@@ -1384,6 +1409,16 @@ onUnmounted(() => {
     <LoginDialog
       v-model:visible="showLogin"
       @success="handleLoginSuccess"
+    />
+    <QuotaDialog
+      :visible="quotaDialog.visible"
+      :anonymous="quotaDialog.anonymous"
+      :title="quotaDialog.title"
+      :message="quotaDialog.message"
+      :limit="quotaDialog.limit"
+      :used="quotaDialog.used"
+      @close="quotaDialog.visible = false"
+      @login="openLoginFromQuota"
     />
     <ToastHost />
 

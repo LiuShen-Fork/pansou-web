@@ -28,7 +28,8 @@
               </div>
               <p>{{ user?.email || '未绑定邮箱' }} · 注册于 {{ shortDate(user?.created_at) }}</p>
               <div class="hero-meta">
-                <span><AdminIcon name="search" :size="14" /> 今日搜索 {{ user?.search_count_today || 0 }}{{ limitText }}</span>
+                <span><AdminIcon name="search" :size="14" /> 网页 {{ quotaText(quota.web_daily_used, quota.web_daily_limit) }}</span>
+                <span><AdminIcon name="key" :size="14" /> API {{ quotaText(quota.api_daily_used, quota.api_daily_limit) }}</span>
                 <span><AdminIcon name="clock" :size="14" /> 最近登录 {{ user?.last_login_at ? shortTime(user.last_login_at) : '—' }}</span>
               </div>
             </div>
@@ -42,11 +43,21 @@
         <div class="stat-grid">
           <div class="stat-card">
             <div>
-              <div class="stat-label">今日搜索</div>
-              <div class="stat-value">{{ user?.search_count_today || 0 }}</div>
-              <div class="stat-meta">每日上限 {{ user?.daily_search_limit || '跟随全局' }}</div>
+              <div class="stat-label">网页搜索（今日）</div>
+              <div class="stat-value">{{ quota.web_daily_used }}<span class="stat-limit"> / {{ quota.web_daily_limit }}</span></div>
+              <div class="quota-track"><i :style="{ width: webQuotaPercent + '%' }" :class="{ hot: webQuotaPercent >= 80 }" /></div>
+              <div class="stat-meta">每分钟最多 {{ quota.web_rate_limit }} 次 · {{ quota.web_limit_custom ? '账号独立额度' : '全站默认额度' }}</div>
             </div>
             <div class="stat-icon"><AdminIcon name="search" :size="19" /></div>
+          </div>
+          <div class="stat-card">
+            <div>
+              <div class="stat-label">API 调用（今日）</div>
+              <div class="stat-value">{{ quota.api_daily_used }}<span class="stat-limit"> / {{ quota.api_daily_limit }}</span></div>
+              <div class="quota-track"><i :style="{ width: apiQuotaPercent + '%' }" :class="{ hot: apiQuotaPercent >= 80 }" /></div>
+              <div class="stat-meta">每分钟最多 {{ quota.api_rate_limit }} 次 · {{ quota.api_limit_custom ? '账号独立额度' : '全站默认额度' }}</div>
+            </div>
+            <div class="stat-icon emerald"><AdminIcon name="key" :size="19" /></div>
           </div>
           <div class="stat-card">
             <div>
@@ -54,29 +65,48 @@
               <div class="stat-value" style="font-size: 1rem">
                 <span class="badge" :class="user?.role === 'admin' ? 'badge-primary' : ''">{{ user?.role === 'admin' ? '管理员' : '普通用户' }}</span>
               </div>
-              <div class="stat-meta">状态 {{ user?.status === 'active' ? '正常' : '已禁用' }}</div>
+              <div class="stat-meta">状态 {{ user?.status === 'active' ? '正常' : '已禁用' }} · 令牌 {{ tokens.length }} 个</div>
             </div>
             <div class="stat-icon violet"><AdminIcon name="shield" :size="19" /></div>
           </div>
           <div class="stat-card">
             <div>
-              <div class="stat-label">API 令牌</div>
-              <div class="stat-value" style="font-size: 1rem">
-                <span class="badge" :class="tokens.length ? 'badge-success' : ''">{{ tokens.length ? tokens.length + ' 个' : '未创建' }}</span>
-              </div>
-              <div class="stat-meta">共享每日搜索额度</div>
+              <div class="stat-label">额度重置</div>
+              <div class="stat-value" style="font-size: 0.92rem">{{ resetText(quota.reset_at) }}</div>
+              <div class="stat-meta">UTC 每日 00:00 · OAuth 绑定 {{ bindings.length }} 个</div>
             </div>
-            <div class="stat-icon emerald"><AdminIcon name="key" :size="19" /></div>
-          </div>
-          <div class="stat-card">
-            <div>
-              <div class="stat-label">OAuth 绑定</div>
-              <div class="stat-value">{{ bindings.length }}</div>
-              <div class="stat-meta">第三方登录方式</div>
-            </div>
-            <div class="stat-icon amber"><AdminIcon name="external" :size="19" /></div>
+            <div class="stat-icon amber"><AdminIcon name="clock" :size="19" /></div>
           </div>
         </div>
+
+        <section class="section-card">
+          <div class="section-head">
+            <div>
+              <div class="section-title"><AdminIcon name="logs" :size="16" /> 最近搜索任务</div>
+              <div class="section-desc">最近 20 条网页与 API 搜索记录，包含耗时、结果数与状态</div>
+            </div>
+            <span class="badge">{{ recentSearches.length }} 条</span>
+          </div>
+          <div v-if="recentSearches.length" class="table-wrap">
+            <table class="data-table">
+              <thead><tr><th>时间</th><th>来源</th><th>关键词</th><th>结果</th><th>耗时</th><th>状态</th></tr></thead>
+              <tbody>
+                <tr v-for="log in recentSearches" :key="log.id">
+                  <td class="hide-sm nowrap">{{ shortTime(log.created_at) }}</td>
+                  <td><span class="badge" :class="log.source === 'web' ? 'badge-warning' : 'badge-primary'">{{ log.source === 'web' ? '网页' : 'API' }}</span></td>
+                  <td class="cell-strong">{{ log.keyword || '—' }}</td>
+                  <td class="mono">{{ log.result_count }}</td>
+                  <td class="mono">{{ log.duration_ms ? log.duration_ms + 'ms' : '—' }}</td>
+                  <td><span class="badge" :class="log.status === 'ok' ? 'badge-success' : log.status === 'error' ? 'badge-danger' : ''">{{ statusText(log.status) }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else class="empty-state">
+            <strong>还没有搜索记录</strong>
+            <span>完成一次搜索后会在这里显示</span>
+          </div>
+        </section>
 
         <div class="user-grid">
           <section class="section-card">
@@ -208,13 +238,13 @@
           <div class="token-quota">
             <div>
               <span>今日 API 调用</span>
-              <strong>{{ user?.api_search_count_today || 0 }}<template v-if="apiLimit"> / {{ apiLimit }}</template></strong>
+              <strong>{{ quotaText(quota.api_daily_used, quota.api_daily_limit) }}</strong>
             </div>
             <div>
-              <span>每日搜索总额度</span>
-              <strong>{{ user?.daily_search_limit || '跟随全站' }}</strong>
+              <span>API 每分钟限频</span>
+              <strong>{{ quota.api_rate_limit }} 次</strong>
             </div>
-            <p>所有令牌共享同一账号额度；API 独立额度由管理员设置。</p>
+            <p>所有令牌共享同一账号额度；网页搜索与 API 额度分开计算，管理员可按账号覆盖。</p>
           </div>
 
           <div class="token-list-head">
@@ -357,6 +387,7 @@ import {
   changePassword,
   createAPIToken,
   deleteAPIToken,
+  getMyUsage,
   getOAuthBindings,
   listAPITokens,
   oauthStartUrl,
@@ -364,6 +395,8 @@ import {
   updateProfile,
   type APIToken,
   type OAuthAccount,
+  type SearchLog,
+  type UserQuotaInfo,
 } from '@/api/auth';
 import { authState, refreshMe } from '@/stores/auth';
 import AdminShell from './admin/AdminShell.vue';
@@ -377,11 +410,45 @@ const nav = consoleNav.user;
 const active = ref('overview');
 const current = computed(() => consolePages.user[active.value] || consolePages.user.overview);
 const user = computed(() => authState.user);
-const limitText = computed(() => {
-  const limit = user.value?.daily_search_limit || 0;
-  return limit > 0 ? ` / ${limit}` : '（不限）';
+const quota = ref<UserQuotaInfo>({
+  web_daily_used: 0,
+  web_daily_limit: 100,
+  web_rate_limit: 10,
+  api_daily_used: 0,
+  api_daily_limit: 100,
+  api_rate_limit: 10,
+  web_limit_custom: false,
+  api_limit_custom: false,
+  reset_at: '',
 });
-const apiLimit = computed(() => user.value?.api_daily_search_limit || 0);
+const recentSearches = ref<SearchLog[]>([]);
+const webQuotaPercent = computed(() => quotaPercent(quota.value.web_daily_used, quota.value.web_daily_limit));
+const apiQuotaPercent = computed(() => quotaPercent(quota.value.api_daily_used, quota.value.api_daily_limit));
+
+function quotaPercent(used: number, limit: number) {
+  if (limit <= 0) return 0;
+  return Math.min(100, Math.round((used / limit) * 100));
+}
+function quotaText(used: number, limit: number) {
+  return `${used} / ${limit}`;
+}
+function resetText(value: string) {
+  return value ? new Date(value).toLocaleString() : '—';
+}
+function statusText(status: string) {
+  switch (status) {
+    case 'ok':
+      return '完成';
+    case 'error':
+      return '失败';
+    case 'bad_request':
+      return '参数错误';
+    case 'pending':
+      return '进行中';
+    default:
+      return status || '—';
+  }
+}
 
 const bindings = ref<OAuthAccount[]>([]);
 const bindableProviders = computed(() => {
@@ -431,8 +498,18 @@ const loadBindings = async () => {
   }
 };
 
+const loadUsage = async () => {
+  try {
+    const data = await getMyUsage();
+    quota.value = data.quota;
+    recentSearches.value = data.recent_searches || [];
+  } catch {
+    recentSearches.value = [];
+  }
+};
+
 onMounted(async () => {
-  await Promise.all([loadTokens(), loadBindings()]);
+  await Promise.all([loadTokens(), loadBindings(), loadUsage()]);
   if (user.value) {
     profile.username = user.value.username;
     profile.email = user.value.email || '';
@@ -546,6 +623,26 @@ const removeBinding = async (providerId: number) => {
 </script>
 
 <style scoped>
+.stat-limit {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+}
+.quota-track {
+  height: 4px;
+  margin: 0.45rem 0 0.4rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: hsl(var(--muted));
+}
+.quota-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: hsl(var(--primary));
+  transition: width 0.25s ease;
+}
+.quota-track i.hot { background: hsl(var(--destructive)); }
 .user-hero {
   display: flex;
   align-items: center;
