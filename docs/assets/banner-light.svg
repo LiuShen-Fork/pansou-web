@@ -1,0 +1,77 @@
+<svg width="1280" height="360" viewBox="0 0 1280 360" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="清羽盘搜 · PanSou Web">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="360" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FAFF"/>
+      <stop offset="0.55" stop-color="#EEF3FF"/>
+      <stop offset="1" stop-color="#E6EDFF"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="120" y1="58" x2="206" y2="158" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4F46E5"/>
+      <stop offset="1" stop-color="#0891B2"/>
+    </linearGradient>
+    <linearGradient id="title" x1="220" y1="100" x2="720" y2="180" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#3730A3"/>
+    </linearGradient>
+    <linearGradient id="line" x1="840" y1="40" x2="1210" y2="330" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4F46E5" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#0891B2" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(1030 120) rotate(90) scale(260 380)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#818CF8" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#818CF8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="0" cy="0" r="1" gradientTransform="translate(760 350) rotate(-90) scale(180 300)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22D3EE" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#22D3EE" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" stroke="#4F46E5" stroke-opacity="0.07" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1280" height="360" rx="28" fill="url(#bg)"/>
+  <rect width="1280" height="360" rx="28" fill="url(#grid)"/>
+  <ellipse cx="1030" cy="120" rx="380" ry="260" fill="url(#glow)"/>
+  <ellipse cx="820" cy="360" rx="300" ry="180" fill="url(#glow2)"/>
+
+  <g opacity="0.65">
+    <circle cx="1030" cy="176" r="132" stroke="#4F46E5" stroke-opacity="0.2"/>
+    <circle cx="1030" cy="176" r="196" stroke="#4F46E5" stroke-opacity="0.12"/>
+    <circle cx="1030" cy="176" r="262" stroke="#4F46E5" stroke-opacity="0.07"/>
+    <circle cx="898" cy="176" r="5" fill="#0891B2"/>
+    <circle cx="1162" cy="258" r="4" fill="#4F46E5"/>
+    <circle cx="1042" cy="44" r="3" fill="#6366F1"/>
+  </g>
+
+  <g transform="translate(978 96) rotate(-16)">
+    <path d="M132 8C92 30 62 72 58 122C54 170 76 210 112 232C96 198 94 162 108 128C120 98 144 74 176 60C158 34 146 18 132 8Z" fill="url(#mark)" fill-opacity="0.88"/>
+    <path d="M132 8C120 56 108 108 112 232" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="3" stroke-linecap="round"/>
+    <path d="M124 54C102 64 86 82 74 106M121 92C102 102 90 116 82 134M118 130C104 138 94 150 88 164" stroke="#FFFFFF" stroke-opacity="0.5" stroke-width="3" stroke-linecap="round"/>
+  </g>
+
+  <g transform="translate(80 68)">
+    <rect width="92" height="92" rx="26" fill="url(#mark)"/>
+    <rect x="1" y="1" width="90" height="90" rx="25" stroke="#FFFFFF" stroke-opacity="0.35"/>
+    <path d="M63 20C45 29 33 47 32 67C31 76 33 83 37 89C40 77 45 69 54 62C61 56 69 52 77 50C72 39 68 28 63 20Z" fill="#FFFFFF" fill-opacity="0.92"/>
+    <path d="M63 20C57 42 48 68 37 89" stroke="#4F46E5" stroke-opacity="0.55" stroke-width="2.2" stroke-linecap="round"/>
+  </g>
+
+  <text x="198" y="118" fill="url(#title)" font-family="'Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,sans-serif" font-size="54" font-weight="700" letter-spacing="2">清羽盘搜</text>
+  <text x="201" y="153" fill="#64748B" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="16" font-weight="600" letter-spacing="6">PANSOU WEB · SELF-HOSTED</text>
+  <text x="82" y="224" fill="#334155" font-family="'Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,sans-serif" font-size="18">聚合搜索 · 账户体系 · 配额治理 · 运维后台</text>
+
+  <g font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="13" font-weight="600">
+    <rect x="82" y="258" width="86" height="34" rx="17" fill="#4F46E5" fill-opacity="0.08" stroke="#4F46E5" stroke-opacity="0.22"/>
+    <text x="125" y="280" fill="#4338CA" text-anchor="middle">Go 1.25</text>
+    <rect x="180" y="258" width="82" height="34" rx="17" fill="#0891B2" fill-opacity="0.07" stroke="#0891B2" stroke-opacity="0.2"/>
+    <text x="221" y="280" fill="#0E7490" text-anchor="middle">Vue 3</text>
+    <rect x="274" y="258" width="92" height="34" rx="17" fill="#D97706" fill-opacity="0.07" stroke="#D97706" stroke-opacity="0.22"/>
+    <text x="320" y="280" fill="#B45309" text-anchor="middle">SQLite</text>
+    <rect x="378" y="258" width="150" height="34" rx="17" fill="#FFFFFF" fill-opacity="0.72" stroke="#94A3B8" stroke-opacity="0.4"/>
+    <text x="453" y="280" fill="#475569" text-anchor="middle">Docker / Binary</text>
+  </g>
+
+  <path d="M780 310H1200" stroke="url(#line)" stroke-width="1.5"/>
+  <text x="1200" y="336" fill="#94A3B8" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="12" text-anchor="end">FAST · PRIVATE · CONTROLLABLE</text>
+</svg>
