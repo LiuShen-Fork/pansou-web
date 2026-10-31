@@ -78,8 +78,8 @@ func TestValidateGeoIPSettingsRequiresIPv4(t *testing.T) {
 	if err := ValidateGeoIPSettings(Settings{IPGeoEnabled: true}); err == nil {
 		t.Fatal("开启 GeoIP 且未配置 IPv4 文件时应报错")
 	}
-	if err := ValidateGeoIPSettings(Settings{IPGeoEnabled: true, IPGeoIPv4Path: "/not/exist.mmdb"}); err == nil {
-		t.Fatal("不存在的 IPv4 文件应报错")
+	if err := ValidateGeoIPSettings(Settings{IPGeoEnabled: true, IPGeoIPv4Path: "/not/exist.xdb"}); err == nil {
+		t.Fatal("不存在的 IPv4 xdb 文件应报错")
 	}
 	if err := ValidateGeoIPSettings(Settings{IPGeoEnabled: false}); err != nil {
 		t.Fatalf("未开启时不应校验文件: %v", err)

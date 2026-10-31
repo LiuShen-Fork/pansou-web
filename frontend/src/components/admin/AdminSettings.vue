@@ -192,26 +192,26 @@
         <div class="section-head">
           <div>
             <div class="section-title"><AdminIcon name="pin" :size="16" /> IP 归属地</div>
-            <div class="section-desc">可选功能：使用 MaxMind MMDB 文件把搜索与审计日志中的 IP 解析为国家 / 地区 / 城市</div>
+            <div class="section-desc">可选功能：使用 ip2region xdb 文件把搜索与审计日志中的 IP 解析为国家 / 地区 / 城市</div>
           </div>
           <span class="badge" :class="auth.ip_geo_enabled ? 'badge-success' : ''">{{ auth.ip_geo_enabled ? '已启用' : '未启用' }}</span>
         </div>
         <div class="section-body">
           <div class="switch-row">
-            <div><strong>启用 IP 归属地</strong><small>启用后必须配置 IPv4 数据库；查询失败只记录空归属地，不影响搜索。</small></div>
+            <div><strong>启用 IP 归属地</strong><small>启用后必须配置 IPv4 xdb；查询失败只记录空归属地，不影响搜索。</small></div>
             <label class="switch"><input v-model="auth.ip_geo_enabled" type="checkbox" /><span /></label>
           </div>
           <div class="form-grid" style="margin-top: 0.8rem">
             <div class="field">
-              <label>IPv4 数据库路径（必填）</label>
-              <input v-model.trim="auth.ip_geo_ipv4_path" class="input" placeholder="/app/data/geoip/GeoLite2-City.mmdb" spellcheck="false" />
+              <label>IPv4 xdb 路径（必填）</label>
+              <input v-model.trim="auth.ip_geo_ipv4_path" class="input" placeholder="/app/data/geoip/ip2region.xdb" spellcheck="false" />
             </div>
             <div class="field">
-              <label>IPv6 数据库路径（可选）</label>
-              <input v-model.trim="auth.ip_geo_ipv6_path" class="input" placeholder="留空则复用 IPv4 数据库" spellcheck="false" />
+              <label>IPv6 xdb 路径（可选）</label>
+              <input v-model.trim="auth.ip_geo_ipv6_path" class="input" placeholder="留空则不解析 IPv6，例如 ip2region_v6.xdb" spellcheck="false" />
             </div>
           </div>
-          <span class="hint">把 MMDB 文件挂载到容器内（例如 <code>./geoip:/app/data/geoip:ro</code>）后填写容器内路径。开启时后端会立即校验文件是否可读。</span>
+          <span class="hint">把 ip2region xdb 文件挂载到容器内（例如 <code>./geoip:/app/data/geoip:ro</code>）后填写容器内路径。开启时后端会校验文件版本与可读性。</span>
           <div v-if="geoStatus" class="geo-status">
             当前：IPv4 {{ geoStatus.ipv4_loaded ? '已加载' : '未加载' }} · IPv6 {{ geoStatus.ipv6_loaded ? '已加载' : '未加载' }}
           </div>

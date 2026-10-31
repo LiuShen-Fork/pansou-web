@@ -102,9 +102,9 @@ type Settings struct {
 
 	// IPGeoEnabled 开启后把搜索/审计日志的 IP 解析为国家、地区、城市。
 	IPGeoEnabled bool `json:"ip_geo_enabled"`
-	// IPGeoIPv4Path 是 MaxMind MMDB 文件（IPv4 必填）。
+	// IPGeoIPv4Path 是 ip2region IPv4 xdb 文件（启用时必填）。
 	IPGeoIPv4Path string `json:"ip_geo_ipv4_path"`
-	// IPGeoIPv6Path 可选；留空时复用 IPv4 数据库。
+	// IPGeoIPv6Path 是可选 IPv6 xdb；留空时不解析 IPv6。
 	IPGeoIPv6Path string `json:"ip_geo_ipv6_path"`
 
 	// QuotaDefaultsVersion 用于把旧部署一次性迁移到新的分离配额默认值。
