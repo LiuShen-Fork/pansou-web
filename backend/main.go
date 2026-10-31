@@ -114,6 +114,9 @@ import (
 var globalCacheWriteManager *cache.DelayedBatchWriteManager
 
 func main() {
+	// 单文件二进制发行包会自带 upstream-defaults.env；Docker 版由 start.sh 处理。
+	loadStandaloneDefaults()
+
 	// 容器内存配额可见：按 cgroup 配额设置 Go 堆软上限（automemlimit 的做法，取配额的 9/10，
 	// 留 10% 给 goroutine 栈、运行时结构和堆外内存）。必须在做任何重分配之前执行。
 	// 容器外、配额无限、或部署方已显式设置 GOMEMLIMIT 时都是 no-op，理由打在日志里便于核对。
@@ -154,6 +157,9 @@ func initApp() {
 	// 应用管理后台保存的运行参数（优先于环境变量）。
 	// 必须早于 HTTP 客户端、缓存与搜索服务初始化。
 	admin.ApplyRuntimeSettings()
+	if err := admin.ReloadGeoIP(); err != nil {
+		log.Printf("[admin] IP 归属地数据库加载失败: %v", err)
+	}
 
 	// 初始化HTTP客户端
 	util.InitHTTPClient()

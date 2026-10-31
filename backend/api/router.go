@@ -105,5 +105,8 @@ func SetupRouter(searchService *service.SearchService) *gin.Engine {
 		}
 	}
 
+	// 单文件二进制（release_frontend 构建标签）内置前端；Docker/nginx 模式为 no-op。
+	setupWebUI(r)
+
 	return r
 }

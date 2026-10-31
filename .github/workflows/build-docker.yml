@@ -1,37 +1,42 @@
-name: Build and Push Docker Image
+name: Build and Release
+
+# 版本号直接显示在 Actions 运行标题里，方便判断下一个版本。
+run-name: "发布 ${{ inputs.image_tag || github.event.release.tag_name || github.ref_name }}"
 
 on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "Docker image tag, for example v1.2.3"
+        description: "版本号，例如 v1.4.0"
         required: true
         type: string
+      publish_latest:
+        description: "同时发布 latest 标签"
+        required: true
+        type: boolean
+        default: true
   release:
     types: [published]
+
+permissions:
+  contents: write
+  packages: write
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  IMAGE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.image_tag }}
+  IMAGE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.image_tag }}
+  PUBLISH_LATEST: ${{ github.event_name == 'release' || inputs.publish_latest }}
 
 jobs:
-  build:
+  image:
+    name: 构建多架构镜像
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: "22"
-
-      # 构建时抓取上游最新的插件/TG频道默认值；抓取失败会保留仓库内快照。
+      # 构建时抓取上游最新的插件/TG 频道默认值；抓取失败会保留仓库内快照。
       - name: Sync upstream plugin and channel defaults
         run: node scripts/sync-upstream-defaults.mjs
 
@@ -55,8 +60,16 @@ jobs:
         shell: bash
         run: |
           image_name="$(printf '%s' "${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]')"
-          echo "name=${image_name}" >> "$GITHUB_OUTPUT"
-          echo "tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          tags="${REGISTRY}/${image_name}:${IMAGE_TAG}"
+          if [ "${PUBLISH_LATEST}" = "true" ]; then
+            tags="${tags}"$'\n'"${REGISTRY}/${image_name}:latest"
+          fi
+          {
+            echo "name=${image_name}"
+            echo "tags<<EOF"
+            echo "${tags}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -65,15 +78,162 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.image.outputs.tag }}
-            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest
+          tags: ${{ steps.image.outputs.tags }}
           labels: |
-            org.opencontainers.image.version=${{ steps.image.outputs.tag }}
+            org.opencontainers.image.version=${{ env.IMAGE_TAG }}
             org.opencontainers.image.revision=${{ github.sha }}
           build-args: |
             BUILDTIME=${{ github.run_id }}
-            VERSION=${{ steps.image.outputs.tag }}
+            VERSION=${{ env.IMAGE_TAG }}
             REVISION=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  frontend:
+    name: 构建前端产物
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Upload frontend dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 3
+
+  binaries:
+    name: 构建 ${{ matrix.goos }}-${{ matrix.goarch }} 二进制
+    needs: frontend
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { goos: linux, goarch: amd64, ext: "", archive: tar.gz }
+          - { goos: linux, goarch: arm64, ext: "", archive: tar.gz }
+          - { goos: darwin, goarch: amd64, ext: "", archive: tar.gz }
+          - { goos: darwin, goarch: arm64, ext: "", archive: tar.gz }
+          - { goos: windows, goarch: amd64, ext: ".exe", archive: zip }
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # 每个平台的发行包都带上当前上游快照；抓取失败时脚本会保留仓库快照。
+      - name: Sync upstream plugin and channel defaults
+        run: node scripts/sync-upstream-defaults.mjs
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache-dependency-path: backend/go.sum
+
+      - name: Download frontend dist
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
+      - name: Embed frontend
+        shell: bash
+        run: |
+          rm -rf backend/webui/dist
+          cp -R frontend/dist backend/webui/dist
+
+      - name: Build binary
+        shell: bash
+        working-directory: backend
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          mkdir -p ../dist
+          go build -tags release_frontend -trimpath -ldflags="-s -w" -o "../dist/pansou${{ matrix.ext }}" .
+
+      - name: Prepare package
+        shell: bash
+        run: |
+          set -euo pipefail
+          name="pansou-web_${IMAGE_TAG}_${{ matrix.goos }}_${{ matrix.goarch }}"
+          mkdir -p "release/${name}"
+          cp "dist/pansou${{ matrix.ext }}" "release/${name}/"
+          cp deploy/upstream-defaults.env "release/${name}/upstream-defaults.env"
+          cat > "release/${name}/START_HERE.txt" <<'EOF'
+          PanSou Web standalone binary
+          =============================
+
+          1. Run /双击:
+               Linux / macOS:  ./pansou
+               Windows:        pansou.exe
+
+          2. Optional environment variables:
+               PORT=8888
+               ADMIN_DB_PATH=./data/pansou-admin.db
+               CACHE_PATH=./data/cache
+               CHANNELS=...            (or leave empty; admin upstream sync will fill it)
+               ENABLED_PLUGINS=...
+               PROXY=http://127.0.0.1:7890
+
+          3. Open http://localhost:8888 and sign in with admin / admin123456.
+             Change the password immediately.
+
+          4. All data is stored under ./data by default. Back up this directory.
+          EOF
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            (cd release && zip -qr "${name}.zip" "${name}")
+          else
+            tar -C release -czf "release/${name}.tar.gz" "${name}"
+          fi
+
+      - name: Upload release archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            release/*.tar.gz
+            release/*.zip
+          if-no-files-found: error
+
+  release:
+    name: 发布 Release
+    needs: binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all binary archives
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bin-*
+          path: release
+          merge-multiple: true
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ env.IMAGE_TAG }}
+        run: |
+          set -euo pipefail
+          ls -lh release
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" release/* --clobber
+          else
+            gh release create "$TAG" release/* --generate-notes --title "$TAG"
+          fi

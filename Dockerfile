@@ -25,6 +25,10 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} \
 # ---------- 运行镜像 ----------
 FROM nginx:alpine AS runtime
 
+ARG VERSION=dev
+ARG BUILDTIME=unknown
+ARG REVISION=unknown
+
 RUN apk add --no-cache ca-certificates tzdata curl && \
     apk add --no-cache bash --allow-untrusted 2>/dev/null || \
     (apk add --no-cache --force-broken-world bash || true)
@@ -75,7 +79,8 @@ RUN chmod +x /app/healthcheck.sh
 RUN mkdir -p /app/data/cache \
              /app/data/logs/backend \
              /app/data/logs/nginx \
-             /app/data/ssl
+             /app/data/ssl \
+             /app/data/geoip
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD /app/healthcheck.sh || exit 1
