@@ -84,7 +84,7 @@ operated for the long term.
 | Limit UX | Anonymous users are invited to sign in; signed-in users are told to contact the admin |
 | Admin console | Overview, users, logs/audit, auth/site, OAuth, upstream sync, runtime settings, system status |
 | Observability | Per-search keyword, source, IP, UA, geolocation, result count, duration, status, error |
-| GeoIP | MaxMind MMDB; IPv4 required / IPv6 optional; private IPs skipped; hot reload on save |
+| GeoIP | ip2region xdb; IPv4 required / IPv6 optional; private IPs skipped; hot reload on save |
 | Site customization | Site name, slogan, description, icon, Markdown announcement, light/dark theme |
 | Distribution | Docker amd64/arm64, Linux/macOS/Windows binaries, GitHub Release, GHCR |
 | Upstream upkeep | Build-time and runtime sync of upstream channels/plugins; hot reload and fallback |
@@ -93,7 +93,7 @@ operated for the long term.
 
 ```mermaid
 flowchart LR
-    U[Browser / third-party app] --> N[Nginx or embedded static server]
+    U[Browser / third-party app] --> N[Static file server / reverse proxy]
     N --> G[Gin HTTP layer]
     G --> A[Account and quota middleware]
     A --> S[Search service]
@@ -108,8 +108,8 @@ flowchart LR
 
 **Request path**
 
-1. A browser opens the app; Nginx (Docker) or Go's embedded file system (standalone binary)
-   serves the Vue build.
+1. A browser opens the app; a static file server or Go's embedded file system (standalone
+   binary) serves the Vue build.
 2. Anonymous web search first exchanges `/api/web/token` for a short-lived token bound to
    the client IP and User-Agent.
 3. The search request enters Gin. `AttachUser` identifies a session or API token, and
@@ -158,8 +158,8 @@ cd pansou-web_v1.0.0_linux_amd64
 ```
 
 On Windows, unzip and run `pansou.exe`. The server listens on `http://localhost:8888` by
-default. The frontend is embedded in the binary, so no Node.js, Nginx, or extra static files
-are needed. The bundled `upstream-defaults.env` is loaded automatically.
+default. The frontend is embedded in the binary, so no Node.js, extra static server, or frontend
+files are needed. The bundled `upstream-defaults.env` is loaded automatically.
 
 ### Option 4: Run from source
 
@@ -231,7 +231,9 @@ The OAuth2 callback URL is always:
 https://your-domain/api/auth/oauth/callback
 ```
 
-Register that URL with the provider, then fill in the Client ID / Client Secret. GitHub,
+Register that URL with the provider, then fill in the Client ID / Client Secret. The app derives
+the callback scheme and host from the browser-visible page address, `Origin` / `Referer`, and
+standard forwarding headers, so no extra reverse-proxy configuration is required. GitHub,
 Google, Linux DO, and generic OIDC presets are built in.
 
 ## User Center
@@ -421,9 +423,10 @@ region, and city are empty.
 
 ### 1. Obtain the database
 
-Download `GeoLite2-City.mmdb` from
-[MaxMind GeoLite2](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data). Follow
-MaxMind's license and attribution requirements.
+Use [ip2region](https://github.com/lionsoul2014/ip2region) xdb files:
+
+- IPv4: `ip2region.xdb` (**required when enabled**; the official `ip2region_v4.xdb` works as-is)
+- IPv6: `ip2region_v6.xdb` (optional, configured separately)
 
 ### 2. Mount it into the container
 
@@ -435,20 +438,21 @@ volumes:
   - ./geoip:/app/data/geoip:ro
 ```
 
-Place the file at `./geoip/GeoLite2-City.mmdb` on the host, then run `docker compose up -d`.
+Place the IPv4 file at `./geoip/ip2region.xdb` on the host. For IPv6, also add
+`./geoip/ip2region_v6.xdb`, then run `docker compose up -d`.
 
 ### 3. Enable it in the admin console
 
 Go to **Admin → Auth & Site → IP Geolocation**:
 
 1. Enable **IP geolocation**;
-2. Enter `/app/data/geoip/GeoLite2-City.mmdb` as the IPv4 database path (**required when enabled**);
-3. IPv6 is optional; leave it empty to reuse the IPv4 database;
+2. Enter `/app/data/geoip/ip2region.xdb` as the IPv4 xdb path (**required when enabled**);
+3. IPv6 is optional; leave it empty to skip IPv6 lookups;
 4. Save.
 
-The backend verifies that the file exists and is a readable MMDB before saving. On success it
-hot-reloads immediately, with no restart. Loopback, private, and invalid IPs are skipped.
-For standalone binaries, use an absolute path on that machine.
+The backend verifies that each file exists, has the correct xdb version, and passes integrity
+checks before saving. On success it hot-reloads immediately, with no restart. Loopback, private,
+and invalid IPs are skipped. For standalone binaries, use an absolute path on that machine.
 
 ## Releases and Standalone Binaries
 
@@ -636,10 +640,10 @@ password-change endpoints are available. If the password is lost, start once wit
 <details>
 <summary><strong>Anonymous search says the web token is invalid.</strong></summary>
 
-The page first calls `/api/web/token`. If you use a reverse proxy, preserve `Origin`, `Host`,
-and the real client IP headers (`X-Forwarded-For` / `X-Real-IP`), and make
-`X-Forwarded-Proto` match the actual scheme. Tokens are bound to IP and UA; refreshing the page
-requests a new one.
+The page first calls `/api/web/token`. Tokens are bound to IP and UA; refreshing the page
+requests a new one. If a reverse proxy is used, make sure it preserves the original `Host`,
+`Origin`, and client IP; the app infers the scheme and origin from those values, with no
+domain setting required.
 </details>
 
 <details>
@@ -652,8 +656,8 @@ browser usage from consuming bot/script API capacity, and let the admin tune eac
 <details>
 <summary><strong>GeoIP settings will not save.</strong></summary>
 
-When enabled, the IPv4 path is required and must point to an existing, readable MMDB file.
-The path inside the container must be mounted. IPv6 is optional; leave it empty to reuse IPv4.
+When enabled, the IPv4 path is required and must point to a valid ip2region xdb file.
+The path inside the container must be mounted. IPv6 is optional and needs its own xdb file.
 </details>
 
 <details>
@@ -668,7 +672,7 @@ failure reason and last success time. Runtime sync only updates configuration da
 
 Download the archive from Releases rather than running a plain `go build`. Release binaries are
 built with the `release_frontend` tag and embed the frontend via `go:embed`; a normal build
-expects Nginx to serve `frontend/dist`.
+expects an external static file server to serve `frontend/dist`.
 </details>
 
 ## Security Notes
@@ -688,7 +692,7 @@ expects Nginx to serve `frontend/dist`.
 
 - Backend and plugin ecosystem: [fish2018/pansou](https://github.com/fish2018/pansou)
 - Original frontend: [fish2018/pansou-web](https://github.com/fish2018/pansou-web)
-- IP geolocation data: [MaxMind GeoLite2](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data)
+- IP geolocation data: [ip2region](https://github.com/lionsoul2014/ip2region)
 
 This is a self-maintained fork built on upstream work. Copyright in upstream code, plugins, and
 data belongs to the original authors; follow their licenses and terms before use or redistribution.

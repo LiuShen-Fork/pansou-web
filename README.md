@@ -79,7 +79,7 @@ PanSou 解决了“聚合搜索”本身：TG 频道、插件、网盘链接、�
 | 超出提示 | 匿名用户引导登录，登录用户提示联系管理员；弹窗展示已用/上限与重置时间 |
 | 管理后台 | 运营概览、用户管理、日志审计、认证与站点、OAuth、上游同步、运行参数、系统状态 |
 | 可观测性 | 搜索关键词、来源、IP、UA、归属地、结果数、耗时、状态、错误逐条记录 |
-| IP 归属地 | MaxMind MMDB，IPv4 必填 / IPv6 可选，私有地址自动跳过，保存后热加载 |
+| IP 归属地 | ip2region xdb，IPv4 必填 / IPv6 可选，私有地址自动跳过，保存后热加载 |
 | 站点定制 | 站点名称、Slogan、描述、图标、Markdown 公告、浅色/深色主题 |
 | 部署发行 | Docker amd64/arm64、Linux/macOS/Windows 二进制、GitHub Release、GHCR |
 | 上游维护 | 构建时与运行时同步上游频道/插件默认值，支持热更新与失败回退 |
@@ -88,7 +88,7 @@ PanSou 解决了“聚合搜索”本身：TG 频道、插件、网盘链接、�
 
 ```mermaid
 flowchart LR
-    U[浏览器 / 第三方应用] --> N[Nginx 或内嵌静态服务]
+    U[浏览器 / 第三方应用] --> N[静态文件服务 / 反向代理]
     N --> G[Gin HTTP 层]
     G --> A[账户与配额中间件]
     A --> S[搜索服务]
@@ -103,7 +103,7 @@ flowchart LR
 
 **请求路径**
 
-1. 浏览器打开页面，Nginx（Docker）或 Go 内嵌文件系统（单文件二进制）返回 Vue 应用。
+1. 浏览器打开页面，由静态文件服务或 Go 内嵌文件系统（单文件二进制）返回 Vue 应用。
 2. 匿名网页搜索先向 `/api/web/token` 换取与 IP、UA 绑定的短期凭证。
 3. 搜索请求进入 Gin，`AttachUser` 识别会话/API 令牌，`AccessGate` 依次校验：
    登录要求 → 网页搜索开关 → 同源凭证 → 分钟限频 → 每日额度。
@@ -147,7 +147,7 @@ cd pansou-web_v1.0.0_linux_amd64
 ```
 
 Windows 解压后双击 `pansou.exe`。默认监听 `http://localhost:8888`，前端已嵌入二进制，
-不需要 Node.js、Nginx 或额外静态文件。发行包内的 `upstream-defaults.env` 会被自动加载。
+不需要 Node.js、额外静态服务器或前端文件。发行包内的 `upstream-defaults.env` 会被自动加载。
 
 ### 方式四：源码运行
 
@@ -217,8 +217,9 @@ OAuth2 回调地址统一为：
 https://你的域名/api/auth/oauth/callback
 ```
 
-在服务商后台登记该地址，再填写 Client ID / Client Secret。内置 GitHub、Google、
-Linux DO 与通用 OIDC 预设。
+在服务商后台登记该地址，再填写 Client ID / Client Secret。程序会根据浏览器实际访问的
+页面地址、`Origin` / `Referer` 与标准转发头自动推断回调域名和协议，反向代理不需要额外配置。
+内置 GitHub、Google、Linux DO 与通用 OIDC 预设。
 
 ## 用户中心
 
@@ -399,8 +400,10 @@ GET 查询参数与 POST JSON 字段一致：
 
 ### 1. 准备数据库
 
-从 [MaxMind GeoLite2](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data)
-下载 `GeoLite2-City.mmdb`。请遵守 MaxMind 的许可与署名要求。
+使用 [ip2region](https://github.com/lionsoul2014/ip2region) 的 xdb 数据文件：
+
+- IPv4：`ip2region.xdb`（**启用时必填**；官方仓库的 `ip2region_v4.xdb` 也可直接使用）
+- IPv6：`ip2region_v6.xdb`（可选，单独配置）
 
 ### 2. 挂载进容器
 
@@ -412,18 +415,19 @@ volumes:
   - ./geoip:/app/data/geoip:ro
 ```
 
-把文件放到宿主机 `./geoip/GeoLite2-City.mmdb`，然后 `docker compose up -d`。
+把 IPv4 文件放到宿主机 `./geoip/ip2region.xdb`；如需解析 IPv6，再放入
+`./geoip/ip2region_v6.xdb`，然后 `docker compose up -d`。
 
 ### 3. 后台开启
 
 进入「管理后台 → 认证与站点 → IP 归属地」：
 
 1. 打开「启用 IP 归属地」；
-2. IPv4 数据库路径填 `/app/data/geoip/GeoLite2-City.mmdb`（**开启后必填**）；
-3. IPv6 数据库可选；留空时复用 IPv4 数据库；
+2. IPv4 xdb 路径填 `/app/data/geoip/ip2region.xdb`（**开启后必填**）；
+3. IPv6 xdb 路径可选；留空时不解析 IPv6；
 4. 保存。
 
-保存时后端会校验文件存在且能被 MMDB 读取，失败会拒绝保存；成功后立即热加载，
+保存时后端会校验文件存在、xdb 版本与完整性，失败会拒绝保存；成功后立即热加载，
 无需重启。回环地址、私有地址与非法 IP 自动跳过。单文件二进制部署时填写本机绝对路径即可。
 
 ## 发行版与单文件二进制
@@ -603,9 +607,9 @@ npm --prefix frontend run build
 <details>
 <summary><strong>匿名搜索提示“凭证无效”？</strong></summary>
 
-页面会先请求 `/api/web/token`。如果使用了反向代理，请确保保留 `Origin`、`Host`
-与真实客户端 IP 头（`X-Forwarded-For` / `X-Real-IP`），并让 `X-Forwarded-Proto`
-与实际协议一致。凭证与 IP、UA 绑定，刷新页面会重新获取。
+页面会先请求 `/api/web/token`。凭证与 IP、UA 绑定，刷新页面会重新获取。
+如果经过反向代理，请确保它保留原始 `Host`、`Origin` 与客户端 IP；程序会从这些信息
+自动判断协议与来源，不需要额外配置域名。
 </details>
 
 <details>
@@ -618,8 +622,8 @@ npm --prefix frontend run build
 <details>
 <summary><strong>GeoIP 保存失败？</strong></summary>
 
-开启后 IPv4 路径必填，且文件必须存在、可读、是有效的 MMDB。容器内路径要先通过
-volume 挂载进去。IPv6 可选；留空时复用 IPv4 数据库。
+开启后 IPv4 路径必填，且文件必须存在、可读、是有效的 ip2region xdb。容器内路径要先通过
+volume 挂载进去。IPv6 可选；留空时不解析 IPv6，需要单独提供 IPv6 xdb。
 </details>
 
 <details>
@@ -634,7 +638,7 @@ volume 挂载进去。IPv6 可选；留空时复用 IPv4 数据库。
 
 请确认下载的是 Release 中的发行包，而不是自行执行普通 `go build`。
 发行包使用 `release_frontend` 标签构建，前端已通过 `go:embed` 嵌入；
-普通构建需要由 Nginx 提供 `frontend/dist`。
+普通构建需要由额外的静态文件服务提供 `frontend/dist`。
 </details>
 
 ## 安全说明
@@ -652,7 +656,7 @@ volume 挂载进去。IPv6 可选；留空时复用 IPv4 数据库。
 
 - 后端与插件生态：[fish2018/pansou](https://github.com/fish2018/pansou)
 - 原前端项目：[fish2018/pansou-web](https://github.com/fish2018/pansou-web)
-- IP 归属地数据库：[MaxMind GeoLite2](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data)
+- IP 归属地数据库：[ip2region](https://github.com/lionsoul2014/ip2region)
 
 本项目是在上游基础上的自维护改造版。上游代码、插件与数据的版权归原作者所有，
 使用与再分发前请遵守对应项目的许可与服务条款。
