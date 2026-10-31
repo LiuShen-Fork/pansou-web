@@ -218,53 +218,6 @@ killasgroup=true
 
 </details>
 
-<details>
-<summary>点击展开 nginx 配置参考</summary>
-
-```
-server {
-    listen 80;
-    server_name pansou.252035.xyz;
-
-    # 将 HTTP 重定向到 HTTPS
-    return 301 https://$host$request_uri;
-}
-
-limit_req_zone $binary_remote_addr zone=api_limit:10m rate=60r/m;
-
-server {
-    listen 443 ssl http2;
-    server_name pansou.252035.xyz;
-
-    access_log /home/work/logs/pansou.log;
-
-    # 证书和密钥路径
-    ssl_certificate /etc/letsencrypt/live/252035.xyz/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/252035.xyz/privkey.pem;
-
-    # 增强 SSL 安全性
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH;
-    ssl_prefer_server_ciphers on;
-
-    # 后端代理，应用限流
-    location / {
-        # 应用限流规则
-        limit_req zone=api_limit burst=10 nodelay;
-        # 当超过限制时返回 429 状态码
-        limit_req_status 429;
-
-        proxy_pass http://127.0.0.1:8888;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-</details>
-
 ## API文档
 
 ### 认证说明

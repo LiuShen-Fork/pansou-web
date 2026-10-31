@@ -97,12 +97,12 @@ export const getHashByIdentifier = async (identifier: string): Promise<string> =
     return hashMatch[1]
   }
 
-  // 走到这里说明 /woniu/ 没有转发到后端。最常见的原因是部署时 nginx 少了
-  // location /woniu/ 块：请求落进 SPA 的 try_files 回退，返回 200 的 index.html，
-  // 后端根本没收到请求，responseURL 自然没有 hash。本地开发走 vite 代理不会复现，
-  // 所以直接把判别方法写进错误里，省得只看到"获取hash失败"无从下手。
+  // 走到这里说明 /woniu/ 没有转发到后端。最常见的原因是反向代理没有把该路径
+  // 交给后端：请求落进前端 SPA 回退，返回 200 的 index.html，后端根本没收到请求，
+  // responseURL 自然没有 hash。本地开发走 vite 代理不会复现，所以直接把判别方法
+  // 写进错误里，省得只看到“获取 hash 失败”无从下手。
   if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
-    throw new Error('服务端未转发 /woniu/ 请求：返回的是前端页面而非后端跳转，请在 nginx 增加 location /woniu/ 代理块')
+    throw new Error('服务端未转发 /woniu/ 请求：返回的是前端页面而非后端跳转，请检查反向代理的 /woniu/ 路由')
   }
   throw new Error('无法从重定向URL中提取hash')
 }

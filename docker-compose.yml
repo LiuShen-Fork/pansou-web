@@ -8,7 +8,6 @@ services:
       - "80:80"
     environment:
       # 基础配置
-      - DOMAIN=${DOMAIN:-localhost}
       - PANSOU_PORT=8888
       - PANSOU_HOST=127.0.0.1
 
@@ -43,8 +42,8 @@ services:
       - pansou-data:/app/data
       # 如需使用自己的 SSL 证书：
       # - ./ssl:/app/data/ssl
-      # IP 归属地（可选）：把 GeoLite2-City.mmdb 放到宿主机 ./geoip，
-      # 然后在「管理后台 → 认证与站点 → IP 归属地」填写 /app/data/geoip/GeoLite2-City.mmdb
+      # IP 归属地（可选）：把 ip2region.xdb 放到宿主机 ./geoip，
+      # 然后在「管理后台 → 认证与站点 → IP 归属地」填写 /app/data/geoip/ip2region.xdb
       # - ./geoip:/app/data/geoip:ro
     restart: unless-stopped
 
