@@ -233,7 +233,9 @@ async function load() {
   loading.value = true;
   try {
     const state = await adminGetOAuthProvider();
-    redirectUri.value = state.redirect_uri || `${window.location.origin}/api/auth/oauth/callback`;
+    // 管理页本身就在浏览器实际访问的域名下，直接用它展示回调地址，
+    // 不依赖代理是否透传协议头。
+    redirectUri.value = `${window.location.origin}/api/auth/oauth/callback`;
     secretSet.value = state.secret_set;
     hasProvider.value = !!state.provider;
     if (state.provider) {

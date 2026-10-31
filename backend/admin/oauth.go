@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"pansou/util/json"
@@ -14,19 +15,90 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func oauthRedirectURL(c *gin.Context) string {
-	scheme := "http"
-	if c.Request.TLS != nil || strings.EqualFold(c.GetHeader("X-Forwarded-Proto"), "https") {
-		scheme = "https"
-	}
-	host := c.Request.Host
-	if xf := c.GetHeader("X-Forwarded-Host"); xf != "" {
-		host = xf
-	}
-	return scheme + "://" + host + "/api/auth/oauth/callback"
+// oauthRedirectBase 根据浏览器实际访问地址推断 OAuth 对外地址。
+//
+// 反向代理可能在 TLS 终止后以 HTTP 访问后端，也可能不传 X-Forwarded-Proto。
+// 因此先看浏览器发来的 Origin/Referer，再看标准 Forwarded / X-Forwarded-*，
+// 最后才回退到请求自身的 TLS 与 Host。部署时不需要额外配置域名。
+func oauthRedirectBase(c *gin.Context) string {
+	scheme, host := requestPublicSchemeHost(c)
+	return scheme + "://" + host
 }
 
-func buildOAuthConfig(c *gin.Context, p *OAuthProvider) (*oauth2.Config, error) {
+func requestPublicSchemeHost(c *gin.Context) (string, string) {
+	// 浏览器访问页面时会在 Origin/Referer 中带上真实的 scheme 与 host。
+	for _, raw := range []string{c.GetHeader("Origin"), c.GetHeader("Referer")} {
+		if u, err := url.Parse(strings.TrimSpace(raw)); err == nil &&
+			u.Host != "" && (u.Scheme == "http" || u.Scheme == "https") {
+			return strings.ToLower(u.Scheme), u.Host
+		}
+	}
+
+	scheme, host := "", ""
+	if forwarded := firstHeaderValue(c.GetHeader("Forwarded")); forwarded != "" {
+		for _, part := range strings.Split(forwarded, ";") {
+			kv := strings.SplitN(strings.TrimSpace(part), "=", 2)
+			if len(kv) != 2 {
+				continue
+			}
+			value := strings.Trim(strings.TrimSpace(kv[1]), `"`)
+			switch strings.ToLower(strings.TrimSpace(kv[0])) {
+			case "proto":
+				scheme = strings.ToLower(value)
+			case "host":
+				host = value
+			}
+		}
+	}
+	if scheme == "" {
+		for _, header := range []string{"X-Forwarded-Proto", "X-Forwarded-Scheme", "X-Url-Scheme"} {
+			if value := strings.ToLower(firstHeaderValue(c.GetHeader(header))); value == "http" || value == "https" {
+				scheme = value
+				break
+			}
+		}
+	}
+	if scheme == "" && strings.EqualFold(firstHeaderValue(c.GetHeader("X-Forwarded-Ssl")), "on") {
+		scheme = "https"
+	}
+	if host == "" {
+		host = firstHeaderValue(c.GetHeader("X-Forwarded-Host"))
+	}
+	if host == "" {
+		host = c.Request.Host
+	}
+	if scheme == "" {
+		// 公网域名默认按 HTTPS 处理；OAuth 服务商通常也只接受 HTTPS 回调。
+		if c.Request.TLS != nil || !isLocalHost(host) {
+			scheme = "https"
+		} else {
+			scheme = "http"
+		}
+	}
+	return scheme, host
+}
+
+func isLocalHost(hostport string) bool {
+	host := hostport
+	if h, _, err := net.SplitHostPort(hostport); err == nil {
+		host = h
+	}
+	host = strings.Trim(strings.ToLower(host), "[]")
+	return host == "localhost" || host == "127.0.0.1" || host == "::1"
+}
+
+func firstHeaderValue(raw string) string {
+	if i := strings.IndexByte(raw, ','); i >= 0 {
+		raw = raw[:i]
+	}
+	return strings.TrimSpace(raw)
+}
+
+func oauthRedirectURL(c *gin.Context) string {
+	return oauthRedirectBase(c) + "/api/auth/oauth/callback"
+}
+
+func buildOAuthConfig(p *OAuthProvider, redirectURL string) (*oauth2.Config, error) {
 	if p == nil || !p.Enabled || p.ClientID == "" || p.ClientSecret == "" {
 		return nil, fmt.Errorf("该 OAuth 服务商未启用或未配置")
 	}
@@ -40,7 +112,7 @@ func buildOAuthConfig(c *gin.Context, p *OAuthProvider) (*oauth2.Config, error) 
 	return &oauth2.Config{
 		ClientID:     p.ClientID,
 		ClientSecret: p.ClientSecret,
-		RedirectURL:  oauthRedirectURL(c),
+		RedirectURL:  redirectURL,
 		Scopes:       scopes,
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  p.AuthURL,
@@ -159,7 +231,8 @@ func OAuthStart(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "该 OAuth 服务商已停用", "code": "OAUTH_PROVIDER_NOT_FOUND"})
 		return
 	}
-	cfg, err := buildOAuthConfig(c, p)
+	redirectURL := oauthRedirectURL(c)
+	cfg, err := buildOAuthConfig(p, redirectURL)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": "OAUTH_NOT_CONFIGURED"})
 		return
@@ -177,7 +250,7 @@ func OAuthStart(c *gin.Context) {
 	} else {
 		mode = "login"
 	}
-	state, err := CreateOAuthState(p.ID, mode, userID)
+	state, err := CreateOAuthState(p.ID, mode, userID, redirectURL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建 OAuth 状态失败"})
 		return
@@ -202,7 +275,12 @@ func OAuthCallback(c *gin.Context) {
 		oauthRedirectError(c, err.Error())
 		return
 	}
-	cfg, err := buildOAuthConfig(c, p)
+	redirectURL := st.RedirectURI
+	if redirectURL == "" {
+		// 兼容升级前创建的旧 state。
+		redirectURL = oauthRedirectURL(c)
+	}
+	cfg, err := buildOAuthConfig(p, redirectURL)
 	if err != nil {
 		oauthRedirectError(c, err.Error())
 		return

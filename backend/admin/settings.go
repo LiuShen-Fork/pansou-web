@@ -375,20 +375,21 @@ func UnbindOAuthAccount(userID, providerID int64) error {
 // ---------------- OAuth state ----------------
 
 type oauthState struct {
-	State      string
-	ProviderID int64
-	Mode       string
-	UserID     int64
-	ExpiresAt  string
-	CreatedAt  string
+	State       string
+	ProviderID  int64
+	Mode        string
+	UserID      int64
+	RedirectURI string
+	ExpiresAt   string
+	CreatedAt   string
 }
 
-func CreateOAuthState(providerID int64, mode string, userID int64) (string, error) {
+func CreateOAuthState(providerID int64, mode string, userID int64, redirectURI string) (string, error) {
 	state := randomHex(24)
 	now := Now()
 	_, err := DB.Exec(
-		`INSERT INTO oauth_states (state, provider_id, mode, user_id, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
-		state, providerID, mode, userID, timePlus(15*60), now,
+		`INSERT INTO oauth_states (state, provider_id, mode, user_id, redirect_uri, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		state, providerID, mode, userID, strings.TrimSpace(redirectURI), timePlus(15*60), now,
 	)
 	if err != nil {
 		return "", err
@@ -399,8 +400,8 @@ func CreateOAuthState(providerID int64, mode string, userID int64) (string, erro
 func TakeOAuthState(state string) (*oauthState, error) {
 	st := &oauthState{}
 	err := DB.QueryRow(
-		`SELECT state, provider_id, mode, user_id, expires_at, created_at FROM oauth_states WHERE state = ?`, state,
-	).Scan(&st.State, &st.ProviderID, &st.Mode, &st.UserID, &st.ExpiresAt, &st.CreatedAt)
+		`SELECT state, provider_id, mode, user_id, redirect_uri, expires_at, created_at FROM oauth_states WHERE state = ?`, state,
+	).Scan(&st.State, &st.ProviderID, &st.Mode, &st.UserID, &st.RedirectURI, &st.ExpiresAt, &st.CreatedAt)
 	if err != nil {
 		if isNoRows(err) {
 			return nil, fmt.Errorf("OAuth 状态无效或已过期")

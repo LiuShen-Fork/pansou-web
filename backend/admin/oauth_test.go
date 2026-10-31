@@ -1,6 +1,72 @@
 package admin
 
-import "testing"
+import (
+	"net/http/httptest"
+	"testing"
+
+	"github.com/gin-gonic/gin"
+)
+
+func TestOAuthRedirectURLPrefersBrowserOrigin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest("GET", "http://backend:8888/api/auth/oauth/linuxdo/start", nil)
+	c.Request.Header.Set("Origin", "https://so.liushen.fun")
+
+	if got, want := oauthRedirectURL(c), "https://so.liushen.fun/api/auth/oauth/callback"; got != want {
+		t.Fatalf("redirect URL = %q，期望 %q", got, want)
+	}
+}
+
+func TestOAuthRedirectURLUsesForwardedHeaders(t *testing.T) {
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest("GET", "http://backend:8888/api/auth/oauth/linuxdo/start", nil)
+	c.Request.Header.Set("X-Forwarded-Proto", "https, http")
+	c.Request.Header.Set("X-Forwarded-Host", "so.liushen.fun")
+
+	if got, want := oauthRedirectURL(c), "https://so.liushen.fun/api/auth/oauth/callback"; got != want {
+		t.Fatalf("redirect URL = %q，期望 %q", got, want)
+	}
+}
+
+func TestOAuthRedirectURLFallsBackToRequestHost(t *testing.T) {
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest("GET", "http://localhost:8888/api/auth/oauth/linuxdo/start", nil)
+
+	if got, want := oauthRedirectURL(c), "http://localhost:8888/api/auth/oauth/callback"; got != want {
+		t.Fatalf("redirect URL = %q，期望 %q", got, want)
+	}
+}
+
+func TestOAuthRedirectURLUsesHTTPSForPublicHost(t *testing.T) {
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest("GET", "http://so.liushen.fun/api/auth/oauth/linuxdo/start", nil)
+
+	if got, want := oauthRedirectURL(c), "https://so.liushen.fun/api/auth/oauth/callback"; got != want {
+		t.Fatalf("redirect URL = %q，期望 %q", got, want)
+	}
+}
+
+func TestOAuthStatePersistsRedirectURI(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	state, err := CreateOAuthState(1, "login", 0, "https://so.liushen.fun/api/auth/oauth/callback")
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, err := TakeOAuthState(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.RedirectURI != "https://so.liushen.fun/api/auth/oauth/callback" {
+		t.Fatalf("redirect URI = %q", st.RedirectURI)
+	}
+}
 
 func TestUpsertPrimaryOAuthProviderKeepsSingleRow(t *testing.T) {
 	cleanup := setupTestDB(t)

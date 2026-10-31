@@ -153,6 +153,7 @@ func migrate() error {
 			provider_id INTEGER NOT NULL,
 			mode TEXT NOT NULL,
 			user_id INTEGER NOT NULL DEFAULT 0,
+			redirect_uri TEXT NOT NULL DEFAULT '',
 			expires_at TEXT NOT NULL,
 			created_at TEXT NOT NULL
 		)`,
@@ -245,6 +246,10 @@ func migrate() error {
 		if err := ensureColumn("search_logs", col.name, col.sql); err != nil {
 			return fmt.Errorf("迁移搜索日志字段 %s 失败: %w", col.name, err)
 		}
+	}
+	if err := ensureColumn("oauth_states", "redirect_uri",
+		`ALTER TABLE oauth_states ADD COLUMN redirect_uri TEXT NOT NULL DEFAULT ''`); err != nil {
+		return fmt.Errorf("迁移 OAuth 状态字段失败: %w", err)
 	}
 	if err := migrateAPITokens(); err != nil {
 		return fmt.Errorf("迁移 API 令牌表失败: %w", err)
