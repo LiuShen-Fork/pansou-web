@@ -1,7 +1,5 @@
 <div align="center">
 
-**简体中文** · [English](README.en.md)
-
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="docs/assets/banner-light.svg">
@@ -10,16 +8,18 @@
 
 <h1>清羽盘搜</h1>
 
+**简体中文** · [English](README.en.md)
+
 ### 一个真正能自己运营的网盘搜索站
 
 搜索聚合、账号体系、配额治理、IP 归属地、审计日志、上游自动同步与多平台发行，
 全部收在同一个仓库里。Docker 一条命令上线，也可以下载单文件二进制直接运行。
 
-[![Release](https://img.shields.io/github/v/release/willow-god/pansou-web?style=flat-square&color=6366f1&label=release)](https://github.com/willow-god/pansou-web/releases)
+[![Release](https://img.shields.io/github/v/release/liushen-fork/pansou-web?style=flat-square&color=6366f1&label=release)](https://github.com/liushen-fork/pansou-web/releases)
 [![Go](https://img.shields.io/badge/Go-1.25-00ADD8?style=flat-square&logo=go&logoColor=white)](backend/go.mod)
 [![Vue](https://img.shields.io/badge/Vue-3.5-42B883?style=flat-square&logo=vuedotjs&logoColor=white)](frontend/package.json)
 [![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57?style=flat-square&logo=sqlite&logoColor=white)](backend/admin/db.go)
-[![Docker](https://img.shields.io/badge/GHCR-pansou--web-2496ED?style=flat-square&logo=docker&logoColor=white)](https://github.com/willow-god/pansou-web/pkgs/container/pansou-web)
+[![Docker](https://img.shields.io/badge/GHCR-pansou--web-2496ED?style=flat-square&logo=docker&logoColor=white)](https://github.com/liushen-fork/pansou-web/pkgs/container/pansou-web)
 [![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macOS%20%7C%20Windows-64748b?style=flat-square)](#发行版与单文件二进制)
 
 </div>
@@ -116,7 +116,7 @@ flowchart LR
 ### 方式一：Docker Compose（推荐）
 
 ```bash
-curl -O https://raw.githubusercontent.com/willow-god/pansou-web/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/liushen-fork/pansou-web/main/docker-compose.yml
 docker compose up -d
 ```
 
@@ -125,11 +125,12 @@ docker compose up -d
 ### 方式二：直接运行镜像
 
 ```bash
+docker pull ghcr.io/liushen-fork/pansou-web:latest
 docker run -d --name pansou \
   -p 80:80 \
   -v pansou-data:/app/data \
   --restart unless-stopped \
-  ghcr.io/willow-god/pansou-web:latest
+  ghcr.io/liushen-fork/pansou-web:latest
 ```
 
 镜像同时支持 `linux/amd64` 与 `linux/arm64`。所有持久化数据（账户库、缓存、日志、SSL、
@@ -137,7 +138,7 @@ GeoIP）都在 `/app/data`，升级镜像不会丢失。
 
 ### 方式三：下载单文件二进制
 
-从 [Releases](https://github.com/willow-god/pansou-web/releases) 下载对应平台压缩包：
+从 [Releases](https://github.com/liushen-fork/pansou-web/releases) 下载对应平台压缩包：
 
 ```bash
 tar -xzf pansou-web_v1.0.0_linux_amd64.tar.gz

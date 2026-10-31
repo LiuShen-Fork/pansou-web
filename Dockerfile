@@ -93,6 +93,6 @@ LABEL org.opencontainers.image.title="PanSou Web" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.created="${BUILDTIME}" \
       org.opencontainers.image.revision="${REVISION}" \
-      org.opencontainers.image.source="https://github.com/willow-god/pansou-web"
+      org.opencontainers.image.source="https://github.com/liushen-fork/pansou-web"
 
 CMD ["/app/start.sh"]

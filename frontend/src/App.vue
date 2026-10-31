@@ -1572,7 +1572,7 @@ onUnmounted(() => {
     <a
       v-if="currentView === 'search'"
       class="github-float"
-      href="https://github.com/willow-god/pansou-web"
+      href="https://github.com/liushen-fork/pansou-web"
       target="_blank"
       rel="noopener noreferrer"
       aria-label="访问项目 GitHub 仓库"

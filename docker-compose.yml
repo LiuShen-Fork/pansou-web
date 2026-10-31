@@ -2,10 +2,8 @@ version: "3.3"
 
 services:
   pansou:
-    image: ${PANSOU_IMAGE:-ghcr.io/willow-god/pansou-web:latest}
+    image: ${PANSOU_IMAGE:-ghcr.io/liushen-fork/pansou-web:latest}
     container_name: pansou-app
-    labels:
-      - "autoheal=true"
     ports:
       - "80:80"
     environment:
@@ -49,18 +47,6 @@ services:
       # 然后在「管理后台 → 认证与站点 → IP 归属地」填写 /app/data/geoip/GeoLite2-City.mmdb
       # - ./geoip:/app/data/geoip:ro
     restart: unless-stopped
-
-  autoheal:
-    image: willfarrell/autoheal:latest
-    container_name: pansou-autoheal
-    restart: always
-    environment:
-      - AUTOHEAL_CONTAINER_LABEL=autoheal
-      - AUTOHEAL_INTERVAL=30
-      - AUTOHEAL_START_PERIOD=60
-      - AUTOHEAL_DEFAULT_STOP_TIMEOUT=10
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
   pansou-data:

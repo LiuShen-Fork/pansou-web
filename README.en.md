@@ -1,7 +1,5 @@
 <div align="center">
 
-[简体中文](README.md) · **English**
-
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="docs/assets/banner-light.svg">
@@ -10,17 +8,19 @@
 
 <h1>Qingyu PanSou</h1>
 
+[简体中文](README.md) · **English**
+
 ### A cloud-drive search site you can actually operate
 
 Search aggregation, accounts, quota governance, IP geolocation, audit logs, upstream sync,
 and multi-platform releases — all in one repository. Deploy with one Docker command,
 or download a self-contained binary and run it directly.
 
-[![Release](https://img.shields.io/github/v/release/willow-god/pansou-web?style=flat-square&color=6366f1&label=release)](https://github.com/willow-god/pansou-web/releases)
+[![Release](https://img.shields.io/github/v/release/liushen-fork/pansou-web?style=flat-square&color=6366f1&label=release)](https://github.com/liushen-fork/pansou-web/releases)
 [![Go](https://img.shields.io/badge/Go-1.25-00ADD8?style=flat-square&logo=go&logoColor=white)](backend/go.mod)
 [![Vue](https://img.shields.io/badge/Vue-3.5-42B883?style=flat-square&logo=vuedotjs&logoColor=white)](frontend/package.json)
 [![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57?style=flat-square&logo=sqlite&logoColor=white)](backend/admin/db.go)
-[![Docker](https://img.shields.io/badge/GHCR-pansou--web-2496ED?style=flat-square&logo=docker&logoColor=white)](https://github.com/willow-god/pansou-web/pkgs/container/pansou-web)
+[![Docker](https://img.shields.io/badge/GHCR-pansou--web-2496ED?style=flat-square&logo=docker&logoColor=white)](https://github.com/liushen-fork/pansou-web/pkgs/container/pansou-web)
 [![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macOS%20%7C%20Windows-64748b?style=flat-square)](#releases-and-standalone-binaries)
 
 </div>
@@ -126,7 +126,7 @@ flowchart LR
 ### Option 1: Docker Compose (recommended)
 
 ```bash
-curl -O https://raw.githubusercontent.com/willow-god/pansou-web/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/liushen-fork/pansou-web/main/docker-compose.yml
 docker compose up -d
 ```
 
@@ -135,11 +135,12 @@ Open `http://localhost`. Data lives in the `pansou-data` volume at `/app/data`.
 ### Option 2: Run the image directly
 
 ```bash
+docker pull ghcr.io/liushen-fork/pansou-web:latest
 docker run -d --name pansou \
   -p 80:80 \
   -v pansou-data:/app/data \
   --restart unless-stopped \
-  ghcr.io/willow-god/pansou-web:latest
+  ghcr.io/liushen-fork/pansou-web:latest
 ```
 
 Images are published for `linux/amd64` and `linux/arm64`. All persistent data (account DB,
@@ -148,7 +149,7 @@ cache, logs, SSL, GeoIP) is under `/app/data`, so image upgrades do not lose sta
 ### Option 3: Download a standalone binary
 
 Download the archive for your platform from
-[Releases](https://github.com/willow-god/pansou-web/releases):
+[Releases](https://github.com/liushen-fork/pansou-web/releases):
 
 ```bash
 tar -xzf pansou-web_v1.0.0_linux_amd64.tar.gz
