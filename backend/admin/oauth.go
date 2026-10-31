@@ -236,6 +236,7 @@ func OAuthCallback(c *gin.Context) {
 			oauthRedirectError(c, "绑定失败: "+err.Error())
 			return
 		}
+		RecordAudit(user, "oauth_bind", p.Name, "绑定第三方账号", c.ClientIP(), c.GetHeader("User-Agent"))
 		oauthRedirectSuccess(c, "bound")
 		return
 	}
@@ -269,6 +270,7 @@ func OAuthCallback(c *gin.Context) {
 		oauthRedirectError(c, "绑定第三方账号失败: "+err.Error())
 		return
 	}
+	RecordAudit(user, "register", p.Name, "通过 OAuth 注册", c.ClientIP(), c.GetHeader("User-Agent"))
 	finishOAuthLogin(c, user)
 }
 
@@ -281,6 +283,7 @@ func finishOAuthLogin(c *gin.Context, user *User) {
 	}
 	TouchLastLogin(user.ID)
 	setSessionCookie(c, token, SessionTTLForSettings(settings))
+	RecordAudit(user, "login_success", "oauth", "OAuth 登录成功", c.ClientIP(), c.GetHeader("User-Agent"))
 	oauthRedirectSuccess(c, "login")
 }
 

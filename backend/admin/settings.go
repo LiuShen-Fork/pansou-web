@@ -69,9 +69,6 @@ func LoadSettings() Settings {
 	if s.SessionTTLHours <= 0 {
 		s.SessionTTLHours = 168
 	}
-	if s.AnonymousWebSearchLimit <= 0 {
-		s.AnonymousWebSearchLimit = 20
-	}
 	// 兼容旧默认值：仍为英文默认名时自动迁移到中文默认名。
 	if s.SiteName == "" || s.SiteName == "Qingyu PanSou" {
 		s.SiteName = DefaultSettings().SiteName
@@ -82,6 +79,7 @@ func LoadSettings() Settings {
 	if strings.TrimSpace(s.SiteIcon) == "" {
 		s.SiteIcon = DefaultSettings().SiteIcon
 	}
+	normalizeQuotaSettings(&s)
 
 	settingsCache.Lock()
 	settingsCache.value = s
@@ -90,13 +88,52 @@ func LoadSettings() Settings {
 	return s
 }
 
+// normalizeQuotaSettings 把旧部署一次性迁移到拆分后的配额模型。
+// 新安装默认 QuotaDefaultsVersion=1，不会触发迁移；旧设置文件没有该字段，
+// 会在此处补上用户要求的一组默认值，之后管理员保存即可持久化。
+func normalizeQuotaSettings(s *Settings) {
+	defaults := DefaultSettings()
+	if s.QuotaDefaultsVersion < 1 {
+		s.DefaultWebDailyLimit = defaults.DefaultWebDailyLimit
+		s.DefaultWebRateLimit = defaults.DefaultWebRateLimit
+		s.DefaultAPIDailyLimit = defaults.DefaultAPIDailyLimit
+		s.DefaultAPIRateLimit = defaults.DefaultAPIRateLimit
+		s.AnonymousRateLimit = defaults.AnonymousRateLimit
+		s.AnonymousDailyLimit = defaults.AnonymousDailyLimit
+		s.AnonymousGlobalDailyLimit = defaults.AnonymousGlobalDailyLimit
+		s.QuotaDefaultsVersion = 1
+	}
+	if s.DefaultWebDailyLimit <= 0 {
+		s.DefaultWebDailyLimit = defaults.DefaultWebDailyLimit
+	}
+	if s.DefaultWebRateLimit <= 0 {
+		s.DefaultWebRateLimit = defaults.DefaultWebRateLimit
+	}
+	if s.DefaultAPIDailyLimit <= 0 {
+		s.DefaultAPIDailyLimit = defaults.DefaultAPIDailyLimit
+	}
+	if s.DefaultAPIRateLimit <= 0 {
+		s.DefaultAPIRateLimit = defaults.DefaultAPIRateLimit
+	}
+	if s.AnonymousRateLimit <= 0 {
+		s.AnonymousRateLimit = defaults.AnonymousRateLimit
+	}
+	if s.AnonymousDailyLimit <= 0 {
+		s.AnonymousDailyLimit = defaults.AnonymousDailyLimit
+	}
+	if s.AnonymousGlobalDailyLimit <= 0 {
+		s.AnonymousGlobalDailyLimit = defaults.AnonymousGlobalDailyLimit
+	}
+	s.IPGeoIPv4Path = strings.TrimSpace(s.IPGeoIPv4Path)
+	s.IPGeoIPv6Path = strings.TrimSpace(s.IPGeoIPv6Path)
+}
+
 func SaveSettings(s Settings) error {
 	if s.SessionTTLHours <= 0 {
 		s.SessionTTLHours = 168
 	}
-	if s.AnonymousWebSearchLimit <= 0 {
-		s.AnonymousWebSearchLimit = 20
-	}
+	normalizeQuotaSettings(&s)
+	s.QuotaDefaultsVersion = 1
 	if err := SetSetting(settingKeyAuth, s); err != nil {
 		return err
 	}
@@ -383,6 +420,7 @@ func CleanupExpiredAuthData() {
 	_, _ = DB.Exec(`DELETE FROM oauth_states WHERE expires_at < ?`, now)
 	_, _ = DB.Exec(`DELETE FROM email_codes WHERE expires_at < ?`, now)
 	_, _ = DB.Exec(`DELETE FROM login_attempts WHERE created_at < ?`, timeMinus(7*24*60*60))
-	// 搜索日志保留 180 天，避免长期运行把 SQLite 撑大；更早的统计不再保留。
+	// 搜索与审计日志保留 180 天，避免长期运行把 SQLite 撑大；更早的统计不再保留。
 	_, _ = DB.Exec(`DELETE FROM search_logs WHERE created_at < ?`, timeMinus(180*24*60*60))
+	_, _ = DB.Exec(`DELETE FROM audit_logs WHERE created_at < ?`, timeMinus(180*24*60*60))
 }

@@ -198,6 +198,7 @@ func AdminPutRuntime(c *gin.Context) {
 		SetWebTokenSecret(s.WebTokenSecret)
 	}
 
+	RecordAudit(CurrentUser(c), "runtime_update", "runtime", "更新运行参数", c.ClientIP(), c.GetHeader("User-Agent"))
 	response := s
 	response.WebTokenSecret = ""
 	c.JSON(http.StatusOK, gin.H{

@@ -25,11 +25,15 @@ type User struct {
 	Role               string `json:"role"`
 	Status             string `json:"status"`
 	MustChangePassword bool   `json:"must_change_password"`
-	DailySearchLimit   int    `json:"daily_search_limit"`
-	// APIDailySearchLimit 仅统计 /api/search 的调用；0 表示跟随每日搜索额度。
-	APIDailySearchLimit int    `json:"api_daily_search_limit"`
+	// WebDailySearchLimit 是网页搜索的每日额度；0 表示跟随全站默认。
+	WebDailySearchLimit int `json:"web_daily_search_limit"`
+	// APIDailySearchLimit 仅统计 /api/search 的调用；0 表示跟随全站默认。
+	APIDailySearchLimit int `json:"api_daily_search_limit"`
+	// 分钟级限频；0 表示跟随全站默认。
+	WebRateLimitPerMin  int    `json:"web_rate_limit_per_min"`
+	APIRateLimitPerMin  int    `json:"api_rate_limit_per_min"`
+	WebSearchCountToday int    `json:"web_search_count_today,omitempty"`
 	APISearchCountToday int    `json:"api_search_count_today,omitempty"`
-	SearchCountToday    int    `json:"search_count_today,omitempty"`
 	CreatedAt           string `json:"created_at"`
 	UpdatedAt           string `json:"updated_at"`
 	LastLoginAt         string `json:"last_login_at,omitempty"`
@@ -82,15 +86,31 @@ type Settings struct {
 	WebSearchEnabled bool `json:"web_search_enabled"`
 	// AllowUserAPITokens 允许用户在用户中心生成个人 API 令牌。
 	AllowUserAPITokens bool `json:"allow_user_api_tokens"`
-	// DefaultDailySearchLimit 为 0 表示不限制；用户级设置优先。
-	DefaultDailySearchLimit int `json:"default_daily_search_limit"`
-	// AnonymousWebSearchLimit 匿名网页搜索的每分钟请求数上限。
-	AnonymousWebSearchLimit int `json:"anonymous_web_search_limit"`
-	// AnonymousDailyLimit 同一 IP 每天可用的匿名搜索次数，0 表示不限制。
+
+	// 登录用户未单独配置额度时使用的全站默认值。
+	DefaultWebDailyLimit int `json:"default_web_daily_limit"`
+	DefaultWebRateLimit  int `json:"default_web_rate_limit"`
+	DefaultAPIDailyLimit int `json:"default_api_daily_limit"`
+	DefaultAPIRateLimit  int `json:"default_api_rate_limit"`
+
+	// AnonymousRateLimit 匿名搜索每分钟每 IP 上限。
+	AnonymousRateLimit int `json:"anonymous_rate_limit"`
+	// AnonymousDailyLimit 同一 IP 每天可用的匿名搜索次数。
 	AnonymousDailyLimit int `json:"anonymous_daily_limit"`
-	// AnonymousGlobalDailyLimit 全站每天允许的匿名搜索总次数，0 表示不限制。
+	// AnonymousGlobalDailyLimit 全站每天允许的匿名搜索总次数。
 	AnonymousGlobalDailyLimit int `json:"anonymous_global_daily_limit"`
-	SessionTTLHours           int `json:"session_ttl_hours"`
+
+	// IPGeoEnabled 开启后把搜索/审计日志的 IP 解析为国家、地区、城市。
+	IPGeoEnabled bool `json:"ip_geo_enabled"`
+	// IPGeoIPv4Path 是 MaxMind MMDB 文件（IPv4 必填）。
+	IPGeoIPv4Path string `json:"ip_geo_ipv4_path"`
+	// IPGeoIPv6Path 可选；留空时复用 IPv4 数据库。
+	IPGeoIPv6Path string `json:"ip_geo_ipv6_path"`
+
+	// QuotaDefaultsVersion 用于把旧部署一次性迁移到新的分离配额默认值。
+	QuotaDefaultsVersion int `json:"quota_defaults_version"`
+
+	SessionTTLHours int `json:"session_ttl_hours"`
 }
 
 func DefaultSettings() Settings {
@@ -106,10 +126,14 @@ func DefaultSettings() Settings {
 		APIRequireLogin:           true,
 		WebSearchEnabled:          true,
 		AllowUserAPITokens:        true,
-		DefaultDailySearchLimit:   0,
-		AnonymousWebSearchLimit:   20,
-		AnonymousDailyLimit:       0,
-		AnonymousGlobalDailyLimit: 0,
+		DefaultWebDailyLimit:      100,
+		DefaultWebRateLimit:       10,
+		DefaultAPIDailyLimit:      100,
+		DefaultAPIRateLimit:       10,
+		AnonymousRateLimit:        4,
+		AnonymousDailyLimit:       20,
+		AnonymousGlobalDailyLimit: 200,
+		QuotaDefaultsVersion:      1,
 		SessionTTLHours:           168,
 	}
 }
@@ -153,23 +177,58 @@ type OAuthAccount struct {
 }
 
 type SearchLog struct {
+	ID          int64  `json:"id"`
+	UserID      int64  `json:"user_id"`
+	Username    string `json:"username"`
+	Source      string `json:"source"`
+	Keyword     string `json:"keyword"`
+	IP          string `json:"ip"`
+	UserAgent   string `json:"user_agent,omitempty"`
+	Country     string `json:"country,omitempty"`
+	Region      string `json:"region,omitempty"`
+	City        string `json:"city,omitempty"`
+	DurationMS  int64  `json:"duration_ms"`
+	ResultCount int    `json:"result_count"`
+	Status      string `json:"status"`
+	Error       string `json:"error,omitempty"`
+	CreatedAt   string `json:"created_at"`
+}
+
+type AuditLog struct {
 	ID        int64  `json:"id"`
 	UserID    int64  `json:"user_id"`
 	Username  string `json:"username"`
-	Source    string `json:"source"`
-	Keyword   string `json:"keyword"`
-	IP        string `json:"ip"`
+	Event     string `json:"event"`
+	Target    string `json:"target,omitempty"`
+	Detail    string `json:"detail,omitempty"`
+	IP        string `json:"ip,omitempty"`
+	Country   string `json:"country,omitempty"`
+	Region    string `json:"region,omitempty"`
+	City      string `json:"city,omitempty"`
+	UserAgent string `json:"user_agent,omitempty"`
 	CreatedAt string `json:"created_at"`
 }
 
+type NameCount struct {
+	Name  string `json:"name"`
+	Count int    `json:"count"`
+}
+
 type Overview struct {
-	UsersTotal        int         `json:"users_total"`
-	UsersActive       int         `json:"users_active"`
-	AdminsTotal       int         `json:"admins_total"`
-	SearchesToday     int         `json:"searches_today"`
-	SearchesTotal     int         `json:"searches_total"`
-	AnonymousToday    int         `json:"anonymous_today"`
-	SessionsActive    int         `json:"sessions_active"`
-	RecentSearches    []SearchLog `json:"recent_searches"`
-	DefaultAdminAlive bool        `json:"default_admin_alive"`
+	UsersTotal         int         `json:"users_total"`
+	UsersActive        int         `json:"users_active"`
+	AdminsTotal        int         `json:"admins_total"`
+	SearchesToday      int         `json:"searches_today"`
+	SearchesTotal      int         `json:"searches_total"`
+	AnonymousToday     int         `json:"anonymous_today"`
+	WebUserToday       int         `json:"web_user_today"`
+	APIUserToday       int         `json:"api_user_today"`
+	QuotaExceededToday int         `json:"quota_exceeded_today"`
+	AuditToday         int         `json:"audit_today"`
+	SessionsActive     int         `json:"sessions_active"`
+	TopCountries       []NameCount `json:"top_countries"`
+	TopIPs             []NameCount `json:"top_ips"`
+	RecentSearches     []SearchLog `json:"recent_searches"`
+	RecentAudit        []AuditLog  `json:"recent_audit"`
+	DefaultAdminAlive  bool        `json:"default_admin_alive"`
 }

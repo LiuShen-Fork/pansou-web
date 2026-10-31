@@ -95,8 +95,17 @@ func TestSearchQuotaCounting(t *testing.T) {
 	if n, err := AnonymousGlobalSearchCountToday(); err != nil || n != 2 {
 		t.Fatalf("匿名全站计数 = %d, err=%v, 期望 2", n, err)
 	}
-	if limit := EffectiveAPIDailyLimit(user, DefaultSettings()); limit != 0 {
-		t.Fatalf("默认 API 额度 = %d, 期望 0（不限制）", limit)
+	if limit := EffectiveAPIDailyLimit(user, DefaultSettings()); limit != 100 {
+		t.Fatalf("默认 API 额度 = %d, 期望 100", limit)
+	}
+	if n, err := UserWebSearchCountToday(user.ID); err != nil || n != 1 {
+		t.Fatalf("用户网页计数 = %d, err=%v, 期望 1", n, err)
+	}
+	if limit := EffectiveWebDailyLimit(user, DefaultSettings()); limit != 100 {
+		t.Fatalf("默认网页额度 = %d, 期望 100", limit)
+	}
+	if rate := EffectiveWebRateLimit(user, DefaultSettings()); rate != 10 {
+		t.Fatalf("默认网页限频 = %d, 期望 10", rate)
 	}
 	apiLimit := 5
 	if _, err := UpdateUser(user.ID, UserUpdate{APIDailySearchLimit: &apiLimit}); err != nil {

@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"net/http"
 	// "os"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"pansou/admin"
 	"pansou/config"
 	"pansou/model"
 	"pansou/service"
@@ -26,6 +28,14 @@ func SetSearchService(service *service.SearchService) {
 func SearchHandler(c *gin.Context) {
 	var req model.SearchRequest
 	var err error
+	startedAt := time.Now()
+	logID := admin.SearchLogID(c)
+	resultCount := 0
+	finishStatus := "ok"
+	finishError := ""
+	defer func() {
+		admin.FinishSearchLog(logID, req.Keyword, resultCount, time.Since(startedAt).Milliseconds(), finishStatus, finishError)
+	}()
 
 	// 根据请求方法不同处理参数
 	if c.Request.Method == http.MethodGet {
@@ -121,6 +131,8 @@ func SearchHandler(c *gin.Context) {
 				ext = make(map[string]interface{})
 			} else {
 				if err := jsonutil.Unmarshal([]byte(extStr), &ext); err != nil {
+					finishStatus = "bad_request"
+					finishError = "无效的ext参数格式: " + err.Error()
 					c.JSON(http.StatusBadRequest, model.NewErrorResponse(400, "无效的ext参数格式: "+err.Error()))
 					return
 				}
@@ -137,6 +149,8 @@ func SearchHandler(c *gin.Context) {
 		if filterStr != "" && filterStr != " " {
 			filter = &model.FilterConfig{}
 			if err := jsonutil.Unmarshal([]byte(filterStr), filter); err != nil {
+				finishStatus = "bad_request"
+				finishError = "无效的filter参数格式: " + err.Error()
 				c.JSON(http.StatusBadRequest, model.NewErrorResponse(400, "无效的filter参数格式: "+err.Error()))
 				return
 			}
@@ -159,6 +173,8 @@ func SearchHandler(c *gin.Context) {
 		// 请求体必须封顶：gin 的 GetRawData 就是 util.ReadAllLimited(Request.Body, util.MaxUpstreamResponseBytes)，
 		// 而认证默认关闭，任何可达客户端都能提交超大 body 把整包物化进内存。
 		if c.Request.ContentLength > maxSearchRequestBodyBytes {
+			finishStatus = "bad_request"
+			finishError = "请求体过大"
 			c.JSON(http.StatusRequestEntityTooLarge, model.NewErrorResponse(413,
 				fmt.Sprintf("请求体过大（上限 %d 字节）", maxSearchRequestBodyBytes)))
 			return
@@ -166,11 +182,15 @@ func SearchHandler(c *gin.Context) {
 		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxSearchRequestBodyBytes)
 		data, err := c.GetRawData()
 		if err != nil {
+			finishStatus = "bad_request"
+			finishError = "读取请求数据失败: " + err.Error()
 			c.JSON(http.StatusBadRequest, model.NewErrorResponse(400, "读取请求数据失败: "+err.Error()))
 			return
 		}
 
 		if err := jsonutil.Unmarshal(data, &req); err != nil {
+			finishStatus = "bad_request"
+			finishError = "无效的请求参数: " + err.Error()
 			c.JSON(http.StatusBadRequest, model.NewErrorResponse(400, "无效的请求参数: "+err.Error()))
 			return
 		}
@@ -179,8 +199,9 @@ func SearchHandler(c *gin.Context) {
 	// 请求指定的频道/插件数量必须封顶：它会被当作 TG 路径的工作池大小，
 	// 直接决定 goroutine 数与出站请求数（见 service.searchTG）。
 	if channelsOverLimit(len(req.Channels)) {
-		c.JSON(http.StatusBadRequest, model.NewErrorResponse(400,
-			fmt.Sprintf("channels 数量 %d 超过上限 %d", len(req.Channels), maxRequestChannels)))
+		finishStatus = "bad_request"
+		finishError = fmt.Sprintf("channels 数量 %d 超过上限 %d", len(req.Channels), maxRequestChannels)
+		c.JSON(http.StatusBadRequest, model.NewErrorResponse(400, finishError))
 		return
 	}
 
@@ -222,15 +243,19 @@ func SearchHandler(c *gin.Context) {
 	result, err := searchService.Search(req.Keyword, req.Channels, req.Concurrency, req.ForceRefresh, req.ResultType, req.SourceType, req.Plugins, req.CloudTypes, req.Ext)
 
 	if err != nil {
+		finishStatus = "error"
+		finishError = err.Error()
 		response := model.NewErrorResponse(500, "搜索失败: "+err.Error())
 		jsonData, _ := jsonutil.Marshal(response)
 		c.Data(http.StatusInternalServerError, "application/json", jsonData)
 		return
 	}
+	resultCount = result.Total
 
 	// 应用过滤器
 	if req.Filter != nil {
 		result = applyResultFilter(result, req.Filter, req.ResultType)
+		resultCount = result.Total
 	}
 
 	// 包装SearchResponse到标准响应格式中

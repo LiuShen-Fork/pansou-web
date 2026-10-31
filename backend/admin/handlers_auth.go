@@ -51,15 +51,21 @@ func PublicConfig(c *gin.Context) {
 			"announcement": s.Announcement,
 		},
 		"auth": gin.H{
-			"email_login_enabled":        s.EmailLoginEnabled,
-			"email_register_enabled":     s.EmailRegisterEnabled,
-			"oauth_login_enabled":        s.OAuthLoginEnabled,
-			"oauth_register_enabled":     s.OAuthRegisterEnabled,
-			"api_require_login":          s.APIRequireLogin,
-			"web_search_enabled":         s.WebSearchEnabled,
-			"allow_user_api_tokens":      s.AllowUserAPITokens,
-			"default_daily_search_limit": s.DefaultDailySearchLimit,
-			"smtp_configured":            e.Enabled && e.Host != "",
+			"email_login_enabled":     s.EmailLoginEnabled,
+			"email_register_enabled":  s.EmailRegisterEnabled,
+			"oauth_login_enabled":     s.OAuthLoginEnabled,
+			"oauth_register_enabled":  s.OAuthRegisterEnabled,
+			"api_require_login":       s.APIRequireLogin,
+			"web_search_enabled":      s.WebSearchEnabled,
+			"allow_user_api_tokens":   s.AllowUserAPITokens,
+			"default_web_daily_limit": s.DefaultWebDailyLimit,
+			"default_web_rate_limit":  s.DefaultWebRateLimit,
+			"default_api_daily_limit": s.DefaultAPIDailyLimit,
+			"default_api_rate_limit":  s.DefaultAPIRateLimit,
+			"anonymous_daily_limit":   s.AnonymousDailyLimit,
+			"anonymous_rate_limit":    s.AnonymousRateLimit,
+			"anonymous_global_daily":  s.AnonymousGlobalDailyLimit,
+			"smtp_configured":         e.Enabled && e.Host != "",
 		},
 		"oauth_providers": list,
 	})
@@ -74,25 +80,69 @@ func Me(c *gin.Context) {
 	s := LoadSettings()
 	token, _ := GetAPIToken(u.ID)
 	accounts, _ := ListUserOAuthAccounts(u.ID)
-	count, _ := UserSearchCountToday(u.ID)
-	u.SearchCountToday = count
+	webCount, _ := UserWebSearchCountToday(u.ID)
 	apiCount, _ := UserAPISearchCountToday(u.ID)
+	u.WebSearchCountToday = webCount
 	u.APISearchCountToday = apiCount
 	c.JSON(http.StatusOK, gin.H{
 		"user": u,
 		"auth": gin.H{
-			"email_login_enabled":        s.EmailLoginEnabled,
-			"email_register_enabled":     s.EmailRegisterEnabled,
-			"oauth_login_enabled":        s.OAuthLoginEnabled,
-			"oauth_register_enabled":     s.OAuthRegisterEnabled,
-			"api_require_login":          s.APIRequireLogin,
-			"web_search_enabled":         s.WebSearchEnabled,
-			"allow_user_api_tokens":      s.AllowUserAPITokens,
-			"default_daily_search_limit": s.DefaultDailySearchLimit,
+			"email_login_enabled":     s.EmailLoginEnabled,
+			"email_register_enabled":  s.EmailRegisterEnabled,
+			"oauth_login_enabled":     s.OAuthLoginEnabled,
+			"oauth_register_enabled":  s.OAuthRegisterEnabled,
+			"api_require_login":       s.APIRequireLogin,
+			"web_search_enabled":      s.WebSearchEnabled,
+			"allow_user_api_tokens":   s.AllowUserAPITokens,
+			"default_web_daily_limit": s.DefaultWebDailyLimit,
+			"default_web_rate_limit":  s.DefaultWebRateLimit,
+			"default_api_daily_limit": s.DefaultAPIDailyLimit,
+			"default_api_rate_limit":  s.DefaultAPIRateLimit,
+			"anonymous_daily_limit":   s.AnonymousDailyLimit,
+			"anonymous_rate_limit":    s.AnonymousRateLimit,
+			"anonymous_global_daily":  s.AnonymousGlobalDailyLimit,
+		},
+		"quota": gin.H{
+			"web_daily_used":   webCount,
+			"web_daily_limit":  EffectiveWebDailyLimit(u, s),
+			"web_rate_limit":   EffectiveWebRateLimit(u, s),
+			"api_daily_used":   apiCount,
+			"api_daily_limit":  EffectiveAPIDailyLimit(u, s),
+			"api_rate_limit":   EffectiveAPIRateLimit(u, s),
+			"web_limit_custom": u.WebDailySearchLimit > 0,
+			"api_limit_custom": u.APIDailySearchLimit > 0,
+			"reset_at":         nextDayStart(),
 		},
 		"token":          token,
 		"oauth_accounts": accounts,
 		"is_admin":       u.IsAdmin(),
+	})
+}
+
+// MyUsage 返回当前用户的配额、限频与最近搜索任务，供个人中心展示。
+func MyUsage(c *gin.Context) {
+	u := CurrentUser(c)
+	if u == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "未登录", "code": "UNAUTHORIZED"})
+		return
+	}
+	s := LoadSettings()
+	webCount, _ := UserWebSearchCountToday(u.ID)
+	apiCount, _ := UserAPISearchCountToday(u.ID)
+	recent, _ := ListUserSearchLogs(u.ID, 20)
+	c.JSON(http.StatusOK, gin.H{
+		"quota": gin.H{
+			"web_daily_used":   webCount,
+			"web_daily_limit":  EffectiveWebDailyLimit(u, s),
+			"web_rate_limit":   EffectiveWebRateLimit(u, s),
+			"api_daily_used":   apiCount,
+			"api_daily_limit":  EffectiveAPIDailyLimit(u, s),
+			"api_rate_limit":   EffectiveAPIRateLimit(u, s),
+			"web_limit_custom": u.WebDailySearchLimit > 0,
+			"api_limit_custom": u.APIDailySearchLimit > 0,
+			"reset_at":         nextDayStart(),
+		},
+		"recent_searches": recent,
 	})
 }
 
@@ -111,8 +161,10 @@ func Login(c *gin.Context) {
 		return
 	}
 	ip := c.ClientIP()
+	ua := c.GetHeader("User-Agent")
 	byIP, byAccount := CountRecentFailures(ip, account, 15*time.Minute)
 	if byIP >= 5 || byAccount >= 5 {
+		RecordAudit(nil, "login_throttled", account, "登录失败次数过多", ip, ua)
 		c.JSON(http.StatusTooManyRequests, gin.H{"error": "登录失败次数过多，请 15 分钟后再试", "code": "LOGIN_THROTTLED"})
 		return
 	}
@@ -121,17 +173,20 @@ func Login(c *gin.Context) {
 	user, err := FindUserByAccount(account)
 	if err != nil || !CheckPassword(user.PasswordHash, req.Password) {
 		RecordLoginAttempt(ip, account, false)
+		RecordAudit(nil, "login_failed", account, "账号或密码错误", ip, ua)
 		time.Sleep(250 * time.Millisecond)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "账号或密码错误", "code": "INVALID_CREDENTIALS"})
 		return
 	}
 	if !user.Active() {
 		RecordLoginAttempt(ip, account, false)
+		RecordAudit(user, "login_failed", account, "账号已被禁用", ip, ua)
 		c.JSON(http.StatusForbidden, gin.H{"error": "账号已被禁用", "code": "USER_DISABLED"})
 		return
 	}
 	// 关闭邮箱登录后，仅管理员仍可用密码登录，避免把自己锁在门外。
 	if !settings.EmailLoginEnabled && !user.IsAdmin() {
+		RecordAudit(user, "login_failed", account, "密码登录已关闭", ip, ua)
 		c.JSON(http.StatusForbidden, gin.H{"error": "密码登录已被管理员关闭，请使用 OAuth 登录", "code": "PASSWORD_LOGIN_DISABLED"})
 		return
 	}
@@ -145,8 +200,9 @@ func Login(c *gin.Context) {
 	TouchLastLogin(user.ID)
 	RecordLoginAttempt(ip, account, true)
 	setSessionCookie(c, token, ttl)
-	count, _ := UserSearchCountToday(user.ID)
-	user.SearchCountToday = count
+	RecordAudit(user, "login_success", "password", "密码登录成功", ip, ua)
+	count, _ := UserWebSearchCountToday(user.ID)
+	user.WebSearchCountToday = count
 
 	c.JSON(http.StatusOK, gin.H{
 		"token":      token,
@@ -249,6 +305,7 @@ func Register(c *gin.Context) {
 	}
 	TouchLastLogin(user.ID)
 	setSessionCookie(c, token, ttl)
+	RecordAudit(user, "register", "email", "邮箱注册成功", c.ClientIP(), c.GetHeader("User-Agent"))
 	c.JSON(http.StatusCreated, gin.H{
 		"token":      token,
 		"expires_at": time.Now().Add(ttl).Unix(),
@@ -257,6 +314,9 @@ func Register(c *gin.Context) {
 }
 
 func Logout(c *gin.Context) {
+	if u := CurrentUser(c); u != nil {
+		RecordAudit(u, "logout", "", "退出登录", c.ClientIP(), c.GetHeader("User-Agent"))
+	}
 	if sid := CurrentSessionID(c); sid != "" {
 		DeleteSession(sid)
 	}
@@ -288,6 +348,7 @@ func ChangePassword(c *gin.Context) {
 	} else {
 		DeleteUserSessions(u.ID)
 	}
+	RecordAudit(u, "password_change", "", "修改登录密码", c.ClientIP(), c.GetHeader("User-Agent"))
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -315,6 +376,7 @@ func UpdateProfile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": "UPDATE_FAILED"})
 		return
 	}
+	RecordAudit(u, "profile_update", "", "更新个人资料", c.ClientIP(), c.GetHeader("User-Agent"))
 	c.JSON(http.StatusOK, gin.H{"user": updated})
 }
 
@@ -362,6 +424,7 @@ func APITokenCreate(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": "TOKEN_LIMIT"})
 		return
 	}
+	RecordAudit(u, "api_token_create", item.Name, "创建 API 令牌 "+item.Prefix, c.ClientIP(), c.GetHeader("User-Agent"))
 	c.JSON(http.StatusOK, gin.H{"token": token, "item": item, "max": MaxAPITokensPerUser})
 }
 
@@ -384,6 +447,7 @@ func APITokenDelete(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除令牌失败", "code": "TOKEN_FAILED"})
 		return
 	}
+	RecordAudit(u, "api_token_delete", strconv.FormatInt(id, 10), "删除 API 令牌", c.ClientIP(), c.GetHeader("User-Agent"))
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -398,6 +462,7 @@ func APITokenReset(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "重置令牌失败", "code": "TOKEN_FAILED"})
 		return
 	}
+	RecordAudit(u, "api_token_reset", t.Prefix, "重置全部 API 令牌", c.ClientIP(), c.GetHeader("User-Agent"))
 	c.JSON(http.StatusOK, gin.H{"token": token, "prefix": t.Prefix, "created_at": t.CreatedAt})
 }
 

@@ -20,6 +20,7 @@ func RegisterRoutes(r *gin.Engine) {
 	auth.Use(RequireAuth())
 	{
 		auth.GET("/me", Me)
+		auth.GET("/usage", MyUsage)
 		auth.POST("/logout", Logout)
 		auth.POST("/change-password", ChangePassword)
 		auth.POST("/profile", UpdateProfile)
@@ -51,6 +52,7 @@ func RegisterRoutes(r *gin.Engine) {
 		admin.DELETE("/users/:id", AdminDeleteUser)
 
 		admin.GET("/search-logs", AdminSearchLogs)
+		admin.GET("/audit-logs", AdminAuditLogs)
 
 		admin.GET("/upstream-sync", AdminGetUpstreamSync)
 		admin.PUT("/upstream-sync", AdminPutUpstreamSync)

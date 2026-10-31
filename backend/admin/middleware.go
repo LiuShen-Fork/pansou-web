@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	ctxUserKey      = "pansou_admin_user"
-	ctxSessionIDKey = "pansou_admin_session"
-	ctxAuthMethod   = "pansou_admin_auth_method"
+	ctxUserKey        = "pansou_admin_user"
+	ctxSessionIDKey   = "pansou_admin_session"
+	ctxAuthMethod     = "pansou_admin_auth_method"
+	ctxSearchLogIDKey = "pansou_search_log_id"
 )
 
 // CurrentUser 返回当前请求已识别的用户（可能是 nil）。
@@ -202,72 +203,98 @@ func AccessGate() gin.HandlerFunc {
 			return
 		}
 
+		source := "api"
+		if isWebSearch {
+			source = "web"
+		}
+		ip := c.ClientIP()
+
 		if (isSearch || isWebSearch) && user == nil {
-			if !allowAnonymousSearch(c.ClientIP(), settings.AnonymousWebSearchLimit) {
-				c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-					"error": "请求过于频繁，请稍后再试或登录使用",
-					"code":  "RATE_LIMITED",
-				})
+			perMinute := settings.AnonymousRateLimit
+			if !allowAnonymousSearch(ip, perMinute) {
+				denyQuota(c, "ANON_RATE_LIMITED", "anonymous_minute",
+					fmt.Sprintf("匿名搜索过于频繁（每分钟上限 %d 次），请稍后再试或登录使用", perMinute),
+					perMinute, perMinute, 60, true)
 				return
 			}
-			if settings.AnonymousDailyLimit > 0 {
-				count, err := AnonymousIPSearchCountToday(c.ClientIP())
-				if err == nil && count >= settings.AnonymousDailyLimit {
-					c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-						"error": fmt.Sprintf("当前 IP 今日匿名搜索次数已达上限（%d 次），请登录后继续使用", settings.AnonymousDailyLimit),
-						"code":  "ANON_IP_DAILY_LIMIT",
-					})
-					return
-				}
+			if used, err := AnonymousIPSearchCountToday(ip); err == nil && used >= settings.AnonymousDailyLimit {
+				denyQuota(c, "ANON_IP_DAILY_LIMIT", "anonymous_ip_daily",
+					fmt.Sprintf("当前 IP 今日匿名搜索次数已达上限（%d 次），登录后可享受更高额度", settings.AnonymousDailyLimit),
+					settings.AnonymousDailyLimit, used, 0, true)
+				return
 			}
-			if settings.AnonymousGlobalDailyLimit > 0 {
-				count, err := AnonymousGlobalSearchCountToday()
-				if err == nil && count >= settings.AnonymousGlobalDailyLimit {
-					c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-						"error": "今日全站匿名搜索额度已用完，请登录后继续使用",
-						"code":  "ANON_GLOBAL_DAILY_LIMIT",
-					})
-					return
-				}
+			if used, err := AnonymousGlobalSearchCountToday(); err == nil && used >= settings.AnonymousGlobalDailyLimit {
+				denyQuota(c, "ANON_GLOBAL_DAILY_LIMIT", "anonymous_global_daily",
+					fmt.Sprintf("今日全站匿名搜索额度已用完（%d 次），登录后仍可继续搜索", settings.AnonymousGlobalDailyLimit),
+					settings.AnonymousGlobalDailyLimit, used, 0, true)
+				return
 			}
 		}
 		if (isSearch || isWebSearch) && user != nil {
-			if limit := EffectiveDailyLimit(user, settings); limit > 0 {
-				count, _ := UserSearchCountToday(user.ID)
-				if count >= limit {
-					c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-						"error": fmt.Sprintf("今日搜索次数已达上限（%d 次）", limit),
-						"code":  "DAILY_LIMIT_REACHED",
-					})
-					return
-				}
-			}
-			// API 独立额度：仅统计 /api/search，所有令牌共享。
+			dailyLimit, rateLimit, countToday := EffectiveWebDailyLimit(user, settings), EffectiveWebRateLimit(user, settings), UserWebSearchCountToday
+			dailyCode, rateCode, scope := "WEB_DAILY_LIMIT_REACHED", "WEB_RATE_LIMITED", "user_web"
 			if isSearch {
-				if limit := EffectiveAPIDailyLimit(user, settings); limit > 0 {
-					count, _ := UserAPISearchCountToday(user.ID)
-					if count >= limit {
-						c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-							"error": fmt.Sprintf("今日 API 调用次数已达上限（%d 次）", limit),
-							"code":  "API_DAILY_LIMIT_REACHED",
-						})
-						return
-					}
-				}
+				dailyLimit, rateLimit, countToday = EffectiveAPIDailyLimit(user, settings), EffectiveAPIRateLimit(user, settings), UserAPISearchCountToday
+				dailyCode, rateCode, scope = "API_DAILY_LIMIT_REACHED", "API_RATE_LIMITED", "user_api"
+			}
+			if used, err := UserRecentSearchCount(user.ID, source, time.Minute); err == nil && used >= rateLimit {
+				denyQuota(c, rateCode, scope+"_minute",
+					fmt.Sprintf("当前账号每分钟最多 %d 次 %s 请求，请稍后再试", rateLimit, quotaSourceName(isSearch)),
+					rateLimit, used, 60, false)
+				return
+			}
+			if used, err := countToday(user.ID); err == nil && used >= dailyLimit {
+				denyQuota(c, dailyCode, scope+"_daily",
+					fmt.Sprintf("当前账号今日%s额度已用完（%d 次），请联系管理员提高额度", quotaSourceName(isSearch), dailyLimit),
+					dailyLimit, used, 0, false)
+				return
 			}
 		}
 
 		// 只有真正的搜索计入搜索日志与配额；插件 Web 接口/链接检测
 		// 属于账户操作，不应消耗用户的每日搜索次数。
 		if isSearch || isWebSearch {
-			source := "api"
-			if isWebSearch {
-				source = "web"
-			}
-			RecordSearch(user, source, c.Query("kw"), c.ClientIP())
+			id := StartSearchLog(user, source, c.Query("kw"), ip, c.GetHeader("User-Agent"))
+			c.Set(ctxSearchLogIDKey, id)
 		}
 		c.Next()
 	}
+}
+
+func quotaSourceName(isAPI bool) string {
+	if isAPI {
+		return "API"
+	}
+	return "网页搜索"
+}
+
+// denyQuota 返回带配额详情的 429，并记录一条审计日志。
+func denyQuota(c *gin.Context, code, scope, message string, limit, used, retryAfter int, loginRecommended bool) {
+	if user := CurrentUser(c); user != nil {
+		RecordAudit(user, "quota_exceeded", scope, message, c.ClientIP(), c.GetHeader("User-Agent"))
+	} else {
+		RecordAudit(nil, "quota_exceeded", scope, message, c.ClientIP(), c.GetHeader("User-Agent"))
+	}
+	c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
+		"error":             message,
+		"code":              code,
+		"scope":             scope,
+		"limit":             limit,
+		"used":              used,
+		"retry_after":       retryAfter,
+		"login_recommended": loginRecommended,
+		"contact_admin":     !loginRecommended,
+	})
+}
+
+// SearchLogID 返回当前请求对应的搜索日志 ID。
+func SearchLogID(c *gin.Context) int64 {
+	if v, ok := c.Get(ctxSearchLogIDKey); ok {
+		if id, ok := v.(int64); ok {
+			return id
+		}
+	}
+	return 0
 }
 
 // CSRFGuard 对使用 Cookie 的非 GET 请求校验 Origin，避免跨站表单提交。
@@ -323,7 +350,7 @@ var anonLimiter = struct {
 
 func allowAnonymousSearch(ip string, perMinute int) bool {
 	if perMinute <= 0 {
-		perMinute = 20
+		perMinute = DefaultSettings().AnonymousRateLimit
 	}
 	if ip == "" {
 		ip = "unknown"

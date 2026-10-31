@@ -358,6 +358,9 @@ func RunUpstreamSync(force bool) (UpstreamSyncStatus, error) {
 		st.LastSuccessAt = Now()
 	}
 	saveUpstreamSyncStatus(st)
+	RecordAudit(nil, "upstream_sync", settings.Repo+"@"+settings.Ref,
+		fmt.Sprintf("频道 %d 个，插件 %d 个，变化=%v/%v", len(channels), len(plugins), st.ChannelsChanged, st.PluginsChanged),
+		"", "system")
 	log.Printf("[admin] 上游同步完成：频道 %d 个（变化=%v），插件 %d 个（变化=%v），插件已热更新=%v",
 		len(channels), st.ChannelsChanged, len(plugins), st.PluginsChanged, !st.RestartRequired)
 	return st, nil

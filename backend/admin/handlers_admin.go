@@ -57,6 +57,7 @@ func AdminGetSettings(c *gin.Context) {
 		"email":              e,
 		"email_password_set": LoadEmailSettings().Password != "",
 		"oauth_providers":    providers,
+		"geo_status":         GeoIPStatus(),
 	})
 }
 
@@ -94,20 +95,29 @@ func AdminPutSettings(c *gin.Context) {
 		s.SiteSlogan = string([]rune(s.SiteSlogan)[:120])
 	}
 	s.Announcement = payload.Site.Announcement
-	if s.DefaultDailySearchLimit < 0 || s.DefaultDailySearchLimit > 100000 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "默认每日搜索上限不合法", "code": "BAD_LIMIT"})
-		return
+	quotaFields := []struct {
+		name  string
+		value int
+		max   int
+	}{
+		{"登录用户网页每日额度", s.DefaultWebDailyLimit, 10000000},
+		{"登录用户网页每分钟限频", s.DefaultWebRateLimit, 100000},
+		{"登录用户 API 每日额度", s.DefaultAPIDailyLimit, 10000000},
+		{"登录用户 API 每分钟限频", s.DefaultAPIRateLimit, 100000},
+		{"匿名单 IP 每日额度", s.AnonymousDailyLimit, 10000000},
+		{"匿名每分钟限频", s.AnonymousRateLimit, 100000},
+		{"全站匿名每日额度", s.AnonymousGlobalDailyLimit, 100000000},
 	}
-	if s.AnonymousWebSearchLimit < 0 || s.AnonymousWebSearchLimit > 100000 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "匿名搜索每分钟上限不合法", "code": "BAD_LIMIT"})
-		return
+	for _, q := range quotaFields {
+		if q.value < 1 || q.value > q.max {
+			c.JSON(http.StatusBadRequest, gin.H{"error": q.name + "不合法", "code": "BAD_LIMIT"})
+			return
+		}
 	}
-	if s.AnonymousDailyLimit < 0 || s.AnonymousDailyLimit > 1000000 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "匿名搜索单 IP 每日上限不合法", "code": "BAD_LIMIT"})
-		return
-	}
-	if s.AnonymousGlobalDailyLimit < 0 || s.AnonymousGlobalDailyLimit > 100000000 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "匿名搜索全站每日上限不合法", "code": "BAD_LIMIT"})
+	s.IPGeoIPv4Path = strings.TrimSpace(payload.Auth.IPGeoIPv4Path)
+	s.IPGeoIPv6Path = strings.TrimSpace(payload.Auth.IPGeoIPv6Path)
+	if err := ValidateGeoIPSettings(s); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": "BAD_GEOIP"})
 		return
 	}
 	if s.SessionTTLHours < 1 || s.SessionTTLHours > 8760 {
@@ -172,6 +182,8 @@ func AdminPutSettings(c *gin.Context) {
 		return
 	}
 	InvalidateSettingsCache()
+	_ = ReloadGeoIP()
+	RecordAudit(CurrentUser(c), "settings_update", "auth", "更新认证、配额或站点设置", c.ClientIP(), c.GetHeader("User-Agent"))
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -231,11 +243,14 @@ func AdminListUsers(c *gin.Context) {
 
 func AdminCreateUser(c *gin.Context) {
 	var body struct {
-		Username         string `json:"username"`
-		Email            string `json:"email"`
-		Password         string `json:"password"`
-		Role             string `json:"role"`
-		DailySearchLimit int    `json:"daily_search_limit"`
+		Username            string `json:"username"`
+		Email               string `json:"email"`
+		Password            string `json:"password"`
+		Role                string `json:"role"`
+		WebDailySearchLimit int    `json:"web_daily_search_limit"`
+		APIDailySearchLimit int    `json:"api_daily_search_limit"`
+		WebRateLimitPerMin  int    `json:"web_rate_limit_per_min"`
+		APIRateLimitPerMin  int    `json:"api_rate_limit_per_min"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "参数无效", "code": "BAD_REQUEST"})
@@ -246,14 +261,17 @@ func AdminCreateUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": "CREATE_FAILED"})
 		return
 	}
-	if body.DailySearchLimit != 0 {
-		limit := body.DailySearchLimit
-		user, err = UpdateUser(user.ID, UserUpdate{DailySearchLimit: &limit})
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": "UPDATE_FAILED"})
-			return
-		}
+	upd := UserUpdate{
+		WebDailySearchLimit: &body.WebDailySearchLimit,
+		APIDailySearchLimit: &body.APIDailySearchLimit,
+		WebRateLimitPerMin:  &body.WebRateLimitPerMin,
+		APIRateLimitPerMin:  &body.APIRateLimitPerMin,
 	}
+	if user, err = UpdateUser(user.ID, upd); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": "UPDATE_FAILED"})
+		return
+	}
+	RecordAudit(CurrentUser(c), "user_create", user.Username, "创建用户", c.ClientIP(), c.GetHeader("User-Agent"))
 	c.JSON(http.StatusCreated, gin.H{"user": user})
 }
 
@@ -277,6 +295,7 @@ func AdminUpdateUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": "UPDATE_FAILED"})
 		return
 	}
+	RecordAudit(CurrentUser(c), "user_update", user.Username, "更新用户资料或配额", c.ClientIP(), c.GetHeader("User-Agent"))
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
@@ -291,13 +310,25 @@ func AdminDeleteUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": "DELETE_FAILED"})
 		return
 	}
+	RecordAudit(current, "user_delete", strconv.FormatInt(id, 10), "删除用户", c.ClientIP(), c.GetHeader("User-Agent"))
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
 func AdminSearchLogs(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-	list, total, err := ListSearchLogs(page, pageSize, c.Query("q"), c.Query("source"))
+	list, total, err := ListSearchLogs(page, pageSize, c.Query("q"), c.Query("source"), c.Query("status"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"items": list, "total": total, "page": page, "page_size": pageSize})
+}
+
+func AdminAuditLogs(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	list, total, err := ListAuditLogs(page, pageSize, c.Query("q"), c.Query("event"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

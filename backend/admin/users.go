@@ -21,13 +21,17 @@ var (
 )
 
 const userColumns = `id, username, email, password_hash, role, status, must_change_password,
-	COALESCE(daily_search_limit, 0), COALESCE(api_daily_search_limit, 0), created_at, updated_at, COALESCE(last_login_at, '')`
+	COALESCE(daily_search_limit, 0), COALESCE(api_daily_search_limit, 0),
+	COALESCE(web_rate_limit_per_min, 0), COALESCE(api_rate_limit_per_min, 0),
+	created_at, updated_at, COALESCE(last_login_at, '')`
 
 func scanUser(row rowScanner) (*User, error) {
 	u := &User{}
 	var mustChange int
 	if err := row.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role, &u.Status,
-		&mustChange, &u.DailySearchLimit, &u.APIDailySearchLimit, &u.CreatedAt, &u.UpdatedAt, &u.LastLoginAt); err != nil {
+		&mustChange, &u.WebDailySearchLimit, &u.APIDailySearchLimit,
+		&u.WebRateLimitPerMin, &u.APIRateLimitPerMin,
+		&u.CreatedAt, &u.UpdatedAt, &u.LastLoginAt); err != nil {
 		return nil, err
 	}
 	u.MustChangePassword = mustChange == 1
@@ -237,7 +241,7 @@ func ListUsers(query, role, status string, page, pageSize int) ([]User, int, err
 	// 必须先关闭结果集再逐条查搜索次数，否则会占着连接等待第二条连接。
 	rows.Close()
 	for i := range list {
-		list[i].SearchCountToday, _ = UserSearchCountToday(list[i].ID)
+		list[i].WebSearchCountToday, _ = UserWebSearchCountToday(list[i].ID)
 		list[i].APISearchCountToday, _ = UserAPISearchCountToday(list[i].ID)
 	}
 	return list, total, nil
@@ -248,8 +252,10 @@ type UserUpdate struct {
 	Email               *string `json:"email"`
 	Role                *string `json:"role"`
 	Status              *string `json:"status"`
-	DailySearchLimit    *int    `json:"daily_search_limit"`
+	WebDailySearchLimit *int    `json:"web_daily_search_limit"`
 	APIDailySearchLimit *int    `json:"api_daily_search_limit"`
+	WebRateLimitPerMin  *int    `json:"web_rate_limit_per_min"`
+	APIRateLimitPerMin  *int    `json:"api_rate_limit_per_min"`
 	Password            *string `json:"password"`
 	MustChangePass      *bool   `json:"must_change_password"`
 }
@@ -318,10 +324,10 @@ func UpdateUser(id int64, upd UserUpdate) (*User, error) {
 			DeleteUserSessions(id)
 		}
 	}
-	if upd.DailySearchLimit != nil {
-		limit := *upd.DailySearchLimit
+	if upd.WebDailySearchLimit != nil {
+		limit := *upd.WebDailySearchLimit
 		if limit < 0 || limit > 100000 {
-			return nil, fmt.Errorf("每日搜索上限不合法")
+			return nil, fmt.Errorf("网页搜索每日上限不合法")
 		}
 		if _, err := DB.Exec(`UPDATE users SET daily_search_limit = ?, updated_at = ? WHERE id = ?`, limit, Now(), id); err != nil {
 			return nil, err
@@ -330,9 +336,27 @@ func UpdateUser(id int64, upd UserUpdate) (*User, error) {
 	if upd.APIDailySearchLimit != nil {
 		limit := *upd.APIDailySearchLimit
 		if limit < 0 || limit > 100000 {
-			return nil, fmt.Errorf("每日 API 调用上限不合法")
+			return nil, fmt.Errorf("API 每日调用上限不合法")
 		}
 		if _, err := DB.Exec(`UPDATE users SET api_daily_search_limit = ?, updated_at = ? WHERE id = ?`, limit, Now(), id); err != nil {
+			return nil, err
+		}
+	}
+	if upd.WebRateLimitPerMin != nil {
+		limit := *upd.WebRateLimitPerMin
+		if limit < 0 || limit > 100000 {
+			return nil, fmt.Errorf("网页搜索每分钟上限不合法")
+		}
+		if _, err := DB.Exec(`UPDATE users SET web_rate_limit_per_min = ?, updated_at = ? WHERE id = ?`, limit, Now(), id); err != nil {
+			return nil, err
+		}
+	}
+	if upd.APIRateLimitPerMin != nil {
+		limit := *upd.APIRateLimitPerMin
+		if limit < 0 || limit > 100000 {
+			return nil, fmt.Errorf("API 每分钟上限不合法")
+		}
+		if _, err := DB.Exec(`UPDATE users SET api_rate_limit_per_min = ?, updated_at = ? WHERE id = ?`, limit, Now(), id); err != nil {
 			return nil, err
 		}
 	}
@@ -596,40 +620,70 @@ func CountRecentFailures(ip, account string, window time.Duration) (int, int) {
 
 // ---------------- 搜索日志与配额 ----------------
 
-func EffectiveDailyLimit(u *User, s Settings) int {
-	if u != nil && u.DailySearchLimit > 0 {
-		return u.DailySearchLimit
+// EffectiveWebDailyLimit 返回用户网页搜索的每日额度。
+func EffectiveWebDailyLimit(u *User, s Settings) int {
+	if u != nil && u.WebDailySearchLimit > 0 {
+		return u.WebDailySearchLimit
 	}
-	return s.DefaultDailySearchLimit
+	return s.DefaultWebDailyLimit
 }
 
-// EffectiveAPIDailyLimit 返回用户每日 API 调用额度。
-// 用户单独设置了 API 额度时优先使用；否则与网页搜索共享每日额度。
+// EffectiveAPIDailyLimit 返回用户 API 调用的每日额度。
 func EffectiveAPIDailyLimit(u *User, s Settings) int {
 	if u != nil && u.APIDailySearchLimit > 0 {
 		return u.APIDailySearchLimit
 	}
-	return EffectiveDailyLimit(u, s)
+	return s.DefaultAPIDailyLimit
 }
 
-func UserSearchCountToday(userID int64) (int, error) {
-	if userID <= 0 {
-		return 0, nil
+// EffectiveWebRateLimit 返回用户网页搜索的每分钟上限。
+func EffectiveWebRateLimit(u *User, s Settings) int {
+	if u != nil && u.WebRateLimitPerMin > 0 {
+		return u.WebRateLimitPerMin
 	}
-	var count int
-	err := DB.QueryRow(`SELECT COUNT(*) FROM search_logs WHERE user_id = ? AND created_at >= ?`, userID, todayStart()).Scan(&count)
-	return count, err
+	return s.DefaultWebRateLimit
+}
+
+// EffectiveAPIRateLimit 返回用户 API 调用的每分钟上限。
+func EffectiveAPIRateLimit(u *User, s Settings) int {
+	if u != nil && u.APIRateLimitPerMin > 0 {
+		return u.APIRateLimitPerMin
+	}
+	return s.DefaultAPIRateLimit
+}
+
+// UserWebSearchCountToday 统计登录用户通过网页入口完成的搜索次数。
+func UserWebSearchCountToday(userID int64) (int, error) {
+	return userSearchCountToday(userID, "web")
 }
 
 // UserAPISearchCountToday 只统计通过 /api/search 的调用，用于独立 API 额度。
 func UserAPISearchCountToday(userID int64) (int, error) {
+	return userSearchCountToday(userID, "api")
+}
+
+func userSearchCountToday(userID int64, source string) (int, error) {
 	if userID <= 0 {
 		return 0, nil
 	}
 	var count int
 	err := DB.QueryRow(
-		`SELECT COUNT(*) FROM search_logs WHERE user_id = ? AND source = 'api' AND created_at >= ?`,
-		userID, todayStart(),
+		`SELECT COUNT(*) FROM search_logs WHERE user_id = ? AND source = ? AND created_at >= ?`,
+		userID, source, todayStart(),
+	).Scan(&count)
+	return count, err
+}
+
+// UserRecentSearchCount 统计用户在最近 window 内某一来源的搜索次数，用于分钟级限频。
+func UserRecentSearchCount(userID int64, source string, window time.Duration) (int, error) {
+	if userID <= 0 {
+		return 0, nil
+	}
+	since := time.Now().UTC().Add(-window).Format(time.RFC3339)
+	var count int
+	err := DB.QueryRow(
+		`SELECT COUNT(*) FROM search_logs WHERE user_id = ? AND source = ? AND created_at >= ?`,
+		userID, source, since,
 	).Scan(&count)
 	return count, err
 }
@@ -657,20 +711,53 @@ func AnonymousGlobalSearchCountToday() (int, error) {
 	return count, err
 }
 
-func RecordSearch(u *User, source, keyword, ip string) {
+// StartSearchLog 在配额校验通过后写入一条待完成任务，返回日志 ID。
+// 搜索处理完成后由 FinishSearchLog 补上关键词、耗时、结果数与状态。
+func StartSearchLog(u *User, source, keyword, ip, userAgent string) int64 {
+	if DB == nil {
+		return 0
+	}
 	userID := int64(0)
 	username := ""
 	if u != nil {
 		userID = u.ID
 		username = u.Username
 	}
-	_, _ = DB.Exec(
-		`INSERT INTO search_logs (user_id, username, source, keyword, ip, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
-		userID, username, source, truncate(keyword, 200), ip, Now(),
+	geo := LookupIP(ip)
+	res, err := DB.Exec(
+		`INSERT INTO search_logs (user_id, username, source, keyword, ip, user_agent, country, region, city, status, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
+		userID, username, source, truncate(keyword, 200), ip, truncate(userAgent, 300),
+		geo.Country, geo.Region, geo.City, Now(),
 	)
+	if err != nil {
+		return 0
+	}
+	id, _ := res.LastInsertId()
+	return id
 }
 
-func ListSearchLogs(page, pageSize int, query, source string) ([]SearchLog, int, error) {
+// FinishSearchLog 补充一次搜索任务的最终状态。日志 ID 为 0 时安全忽略。
+func FinishSearchLog(id int64, keyword string, resultCount int, durationMS int64, status, errMsg string) {
+	if id <= 0 || DB == nil {
+		return
+	}
+	update := `UPDATE search_logs SET result_count = ?, duration_ms = ?, status = ?, error = ?`
+	args := []any{resultCount, durationMS, status, truncate(errMsg, 500)}
+	if kw := strings.TrimSpace(keyword); kw != "" {
+		update += `, keyword = ?`
+		args = append(args, truncate(kw, 200))
+	}
+	update += ` WHERE id = ?`
+	args = append(args, id)
+	_, _ = DB.Exec(update, args...)
+}
+
+func RecordSearch(u *User, source, keyword, ip string) int64 {
+	return StartSearchLog(u, source, keyword, ip, "")
+}
+
+func ListSearchLogs(page, pageSize int, query, source, status string) ([]SearchLog, int, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -688,6 +775,10 @@ func ListSearchLogs(page, pageSize int, query, source string) ([]SearchLog, int,
 		conds = append(conds, `source = ?`)
 		args = append(args, source)
 	}
+	if status = strings.TrimSpace(status); status != "" {
+		conds = append(conds, `status = ?`)
+		args = append(args, status)
+	}
 	where := ""
 	if len(conds) > 0 {
 		where = ` WHERE ` + strings.Join(conds, ` AND `)
@@ -698,8 +789,9 @@ func ListSearchLogs(page, pageSize int, query, source string) ([]SearchLog, int,
 	}
 	args = append(args, pageSize, (page-1)*pageSize)
 	rows, err := DB.Query(
-		`SELECT id, user_id, username, source, keyword, ip, created_at FROM search_logs`+where+
-			` ORDER BY id DESC LIMIT ? OFFSET ?`, args...,
+		`SELECT id, user_id, username, source, keyword, ip, user_agent, country, region, city,
+		        duration_ms, result_count, status, error, created_at
+		 FROM search_logs`+where+` ORDER BY id DESC LIMIT ? OFFSET ?`, args...,
 	)
 	if err != nil {
 		return nil, 0, err
@@ -708,12 +800,126 @@ func ListSearchLogs(page, pageSize int, query, source string) ([]SearchLog, int,
 	var list []SearchLog
 	for rows.Next() {
 		var l SearchLog
-		if err := rows.Scan(&l.ID, &l.UserID, &l.Username, &l.Source, &l.Keyword, &l.IP, &l.CreatedAt); err != nil {
+		if err := rows.Scan(&l.ID, &l.UserID, &l.Username, &l.Source, &l.Keyword, &l.IP,
+			&l.UserAgent, &l.Country, &l.Region, &l.City,
+			&l.DurationMS, &l.ResultCount, &l.Status, &l.Error, &l.CreatedAt); err != nil {
 			return nil, 0, err
 		}
 		list = append(list, l)
 	}
 	return list, total, rows.Err()
+}
+
+// RecordAudit 写入全局审计日志。调用方保证 event 为稳定的 snake_case 标识。
+// 审计失败不影响主流程。
+func RecordAudit(u *User, event, target, detail, ip, userAgent string) {
+	if DB == nil {
+		return
+	}
+	userID := int64(0)
+	username := ""
+	if u != nil {
+		userID = u.ID
+		username = u.Username
+	}
+	geo := LookupIP(ip)
+	_, _ = DB.Exec(
+		`INSERT INTO audit_logs (user_id, username, event, target, detail, ip, country, region, city, user_agent, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		userID, username, truncate(event, 80), truncate(target, 200), truncate(detail, 1000),
+		ip, geo.Country, geo.Region, geo.City, truncate(userAgent, 300), Now(),
+	)
+}
+
+func ListAuditLogs(page, pageSize int, query, event string) ([]AuditLog, int, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 200 {
+		pageSize = 20
+	}
+	conds := []string{}
+	args := []any{}
+	if q := strings.TrimSpace(query); q != "" {
+		conds = append(conds, `(username LIKE ? OR target LIKE ? OR detail LIKE ? OR ip LIKE ?)`)
+		like := "%" + q + "%"
+		args = append(args, like, like, like, like)
+	}
+	if event = strings.TrimSpace(event); event != "" {
+		conds = append(conds, `event = ?`)
+		args = append(args, event)
+	}
+	where := ""
+	if len(conds) > 0 {
+		where = ` WHERE ` + strings.Join(conds, ` AND `)
+	}
+	var total int
+	if err := DB.QueryRow(`SELECT COUNT(*) FROM audit_logs`+where, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	args = append(args, pageSize, (page-1)*pageSize)
+	rows, err := DB.Query(
+		`SELECT id, user_id, username, event, target, detail, ip, country, region, city, user_agent, created_at
+		 FROM audit_logs`+where+` ORDER BY id DESC LIMIT ? OFFSET ?`, args...,
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var list []AuditLog
+	for rows.Next() {
+		var l AuditLog
+		if err := rows.Scan(&l.ID, &l.UserID, &l.Username, &l.Event, &l.Target, &l.Detail,
+			&l.IP, &l.Country, &l.Region, &l.City, &l.UserAgent, &l.CreatedAt); err != nil {
+			return nil, 0, err
+		}
+		list = append(list, l)
+	}
+	return list, total, rows.Err()
+}
+
+func topNameCounts(query string, args ...any) []NameCount {
+	rows, err := DB.Query(query, args...)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	out := make([]NameCount, 0, 5)
+	for rows.Next() {
+		var item NameCount
+		if err := rows.Scan(&item.Name, &item.Count); err != nil {
+			return out
+		}
+		out = append(out, item)
+	}
+	return out
+}
+
+// ListUserSearchLogs 返回某个用户最近的搜索任务，供个人中心展示。
+func ListUserSearchLogs(userID int64, limit int) ([]SearchLog, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	rows, err := DB.Query(
+		`SELECT id, user_id, username, source, keyword, ip, user_agent, country, region, city,
+		        duration_ms, result_count, status, error, created_at
+		 FROM search_logs WHERE user_id = ? ORDER BY id DESC LIMIT ?`, userID, limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	list := make([]SearchLog, 0, limit)
+	for rows.Next() {
+		var l SearchLog
+		if err := rows.Scan(&l.ID, &l.UserID, &l.Username, &l.Source, &l.Keyword, &l.IP,
+			&l.UserAgent, &l.Country, &l.Region, &l.City,
+			&l.DurationMS, &l.ResultCount, &l.Status, &l.Error, &l.CreatedAt); err != nil {
+			return nil, err
+		}
+		list = append(list, l)
+	}
+	return list, rows.Err()
 }
 
 func GetOverview() (*Overview, error) {
@@ -724,12 +930,22 @@ func GetOverview() (*Overview, error) {
 	_ = DB.QueryRow(`SELECT COUNT(*) FROM search_logs WHERE created_at >= ?`, todayStart()).Scan(&o.SearchesToday)
 	_ = DB.QueryRow(`SELECT COUNT(*) FROM search_logs`).Scan(&o.SearchesTotal)
 	_ = DB.QueryRow(`SELECT COUNT(*) FROM search_logs WHERE user_id = 0 AND created_at >= ?`, todayStart()).Scan(&o.AnonymousToday)
+	_ = DB.QueryRow(`SELECT COUNT(*) FROM search_logs WHERE user_id > 0 AND source = 'web' AND created_at >= ?`, todayStart()).Scan(&o.WebUserToday)
+	_ = DB.QueryRow(`SELECT COUNT(*) FROM search_logs WHERE user_id > 0 AND source = 'api' AND created_at >= ?`, todayStart()).Scan(&o.APIUserToday)
+	_ = DB.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE event = 'quota_exceeded' AND created_at >= ?`, todayStart()).Scan(&o.QuotaExceededToday)
+	_ = DB.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE created_at >= ?`, todayStart()).Scan(&o.AuditToday)
 	_ = DB.QueryRow(`SELECT COUNT(*) FROM sessions WHERE expires_at > ?`, Now()).Scan(&o.SessionsActive)
-	logs, _, err := ListSearchLogs(1, 10, "", "")
+	o.TopCountries = topNameCounts(`SELECT country AS name, COUNT(*) AS count FROM search_logs
+		WHERE country <> '' AND created_at >= ? GROUP BY country ORDER BY count DESC LIMIT 5`, todayStart())
+	o.TopIPs = topNameCounts(`SELECT ip AS name, COUNT(*) AS count FROM search_logs
+		WHERE user_id = 0 AND ip <> '' AND created_at >= ? GROUP BY ip ORDER BY count DESC LIMIT 5`, todayStart())
+	logs, _, err := ListSearchLogs(1, 10, "", "", "")
 	if err != nil {
 		return nil, err
 	}
 	o.RecentSearches = logs
+	audit, _, _ := ListAuditLogs(1, 8, "", "")
+	o.RecentAudit = audit
 	var adminHash string
 	if err := DB.QueryRow(`SELECT password_hash FROM users WHERE username = ? COLLATE NOCASE`, DefaultAdminUsername).Scan(&adminHash); err == nil {
 		o.DefaultAdminAlive = CheckPassword(adminHash, DefaultAdminPassword)
@@ -737,9 +953,25 @@ func GetOverview() (*Overview, error) {
 	return o, nil
 }
 
+// 每日额度按服务器本地时区的自然日计算（Docker 镜像默认 Asia/Shanghai），
+// 但数据库里的 created_at 是 UTC，因此边界要换算成 UTC 再比较。
+func localDayStart(now time.Time) time.Time {
+	local := now.Local()
+	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, local.Location()).UTC()
+}
+
+func nextLocalDayStart(now time.Time) time.Time {
+	local := now.Local()
+	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, local.Location()).
+		AddDate(0, 0, 1).UTC()
+}
+
 func todayStart() string {
-	now := time.Now().UTC()
-	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).Format(time.RFC3339)
+	return localDayStart(time.Now()).Format(time.RFC3339)
+}
+
+func nextDayStart() string {
+	return nextLocalDayStart(time.Now()).Format(time.RFC3339)
 }
 
 // ---------------- 工具 ----------------

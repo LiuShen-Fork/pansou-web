@@ -188,6 +188,24 @@ func migrate() error {
 		`CREATE INDEX IF NOT EXISTS idx_search_logs_time ON search_logs(created_at)`,
 		`CREATE INDEX IF NOT EXISTS idx_search_logs_ip_time ON search_logs(ip, created_at)`,
 		`CREATE INDEX IF NOT EXISTS idx_search_logs_source_time ON search_logs(source, created_at)`,
+		`CREATE TABLE IF NOT EXISTS audit_logs (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id INTEGER NOT NULL DEFAULT 0,
+			username TEXT NOT NULL DEFAULT '',
+			event TEXT NOT NULL DEFAULT '',
+			target TEXT NOT NULL DEFAULT '',
+			detail TEXT NOT NULL DEFAULT '',
+			ip TEXT NOT NULL DEFAULT '',
+			country TEXT NOT NULL DEFAULT '',
+			region TEXT NOT NULL DEFAULT '',
+			city TEXT NOT NULL DEFAULT '',
+			user_agent TEXT NOT NULL DEFAULT '',
+			created_at TEXT NOT NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_audit_logs_time ON audit_logs(created_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_audit_logs_event_time ON audit_logs(event, created_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_audit_logs_user_time ON audit_logs(user_id, created_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_audit_logs_ip_time ON audit_logs(ip, created_at)`,
 	}
 	for i, stmt := range statements {
 		if _, err := DB.Exec(stmt); err != nil {
@@ -197,6 +215,36 @@ func migrate() error {
 	if err := ensureColumn("users", "api_daily_search_limit",
 		`ALTER TABLE users ADD COLUMN api_daily_search_limit INTEGER NOT NULL DEFAULT 0`); err != nil {
 		return fmt.Errorf("迁移用户 API 额度字段失败: %w", err)
+	}
+	userColumnsToAdd := []struct {
+		name string
+		sql  string
+	}{
+		{"web_rate_limit_per_min", `ALTER TABLE users ADD COLUMN web_rate_limit_per_min INTEGER NOT NULL DEFAULT 0`},
+		{"api_rate_limit_per_min", `ALTER TABLE users ADD COLUMN api_rate_limit_per_min INTEGER NOT NULL DEFAULT 0`},
+	}
+	for _, col := range userColumnsToAdd {
+		if err := ensureColumn("users", col.name, col.sql); err != nil {
+			return fmt.Errorf("迁移用户字段 %s 失败: %w", col.name, err)
+		}
+	}
+	searchLogColumns := []struct {
+		name string
+		sql  string
+	}{
+		{"user_agent", `ALTER TABLE search_logs ADD COLUMN user_agent TEXT NOT NULL DEFAULT ''`},
+		{"country", `ALTER TABLE search_logs ADD COLUMN country TEXT NOT NULL DEFAULT ''`},
+		{"region", `ALTER TABLE search_logs ADD COLUMN region TEXT NOT NULL DEFAULT ''`},
+		{"city", `ALTER TABLE search_logs ADD COLUMN city TEXT NOT NULL DEFAULT ''`},
+		{"duration_ms", `ALTER TABLE search_logs ADD COLUMN duration_ms INTEGER NOT NULL DEFAULT 0`},
+		{"result_count", `ALTER TABLE search_logs ADD COLUMN result_count INTEGER NOT NULL DEFAULT 0`},
+		{"status", `ALTER TABLE search_logs ADD COLUMN status TEXT NOT NULL DEFAULT ''`},
+		{"error", `ALTER TABLE search_logs ADD COLUMN error TEXT NOT NULL DEFAULT ''`},
+	}
+	for _, col := range searchLogColumns {
+		if err := ensureColumn("search_logs", col.name, col.sql); err != nil {
+			return fmt.Errorf("迁移搜索日志字段 %s 失败: %w", col.name, err)
+		}
 	}
 	if err := migrateAPITokens(); err != nil {
 		return fmt.Errorf("迁移 API 令牌表失败: %w", err)
