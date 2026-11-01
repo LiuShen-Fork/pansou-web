@@ -3,7 +3,7 @@ import { ref, reactive, onMounted, onUnmounted, computed, nextTick, watch } from
 import { search, getHealth, type SearchParams, type HealthStatus } from '@/api';
 import UserCenter from '@/components/UserCenter.vue';
 import AdminPage from '@/components/admin/AdminPage.vue';
-import { authState, initAuth, isAdmin, isLoggedIn, logout as logoutUser, mustChangePassword, refreshMe } from '@/stores/auth';
+import { authState, clearToken, initAuth, isAdmin, isLoggedIn, logout as logoutUser, mustChangePassword, refreshMe } from '@/stores/auth';
 import type { SearchResponse, MergedResults, ExportField, ExportSettings } from '@/types';
 import SearchForm from '@/components/SearchForm.vue';
 import ResultTabs from '@/components/ResultTabs.vue';
@@ -1078,8 +1078,20 @@ const handleHashLanding = () => {
     showLogin.value = true;
   }
   if (oauth) {
+    // OAuth 回调只设置会话 Cookie，不会返回 Bearer token。initAuth 已通过
+    // /api/auth/me 读取 Cookie 会话；这里必须确认真的登录成功，否则只提示
+    // “登录成功”但页面仍是未登录状态，用户会反复看到登录弹窗。
+    if (!isLoggedIn.value) {
+      globalError.value = '第三方登录状态未能建立，请重试或使用账号密码登录';
+      globalNotice.value = '';
+      showLogin.value = true;
+      switchView('search', false);
+      return;
+    }
     globalNotice.value = oauth === 'bound' ? '第三方账号绑定成功' : '登录成功';
     switchView('user', false);
+    // 清掉 ?oauth=...，避免刷新页面时重复提示或再次触发回跳逻辑。
+    window.history.replaceState(null, '', '#/user');
     return;
   }
   if (path === 'user') switchView('user', false);
@@ -1091,6 +1103,11 @@ const handleHashLanding = () => {
 };
 
 const initAuthState = async () => {
+  // OAuth 回跳以服务端下发的 Cookie 会话为准。清掉本地可能残留的旧 Bearer
+  // token，避免它抢占身份（后端显式凭证优先），导致显示成上一个账号或未登录。
+  if (/[?&]oauth(=|_)/.test(window.location.hash)) {
+    clearToken();
+  }
   await initAuth();
   syncAuthState();
   handleHashLanding();

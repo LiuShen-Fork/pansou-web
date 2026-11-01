@@ -58,26 +58,38 @@ export async function loadPublicConfig(): Promise<PublicConfig | null> {
   return authState.config;
 }
 
-export async function refreshMe(): Promise<AuthUser | null> {
-  if (!authState.token) {
-    authState.ready = true;
-    return null;
+function applyMe(me: MeResponse): AuthUser {
+  authState.user = me.user;
+  authState.tokenMeta = me.token;
+  authState.oauthAccounts = me.oauth_accounts || [];
+  if (me.auth) {
+    authState.config = authState.config
+      ? { ...authState.config, auth: { ...authState.config.auth, ...me.auth } }
+      : authState.config;
   }
+  localStorage.setItem('auth_username', me.user.username);
+  return me.user;
+}
+
+export async function refreshMe(): Promise<AuthUser | null> {
+  // 不能只看 localStorage：OAuth 登录只下发会话 Cookie，浏览器刷新或 OAuth
+  // 回跳时没有 Bearer token，但仍可能是已登录状态。
   try {
-    const me = await getMe();
-    authState.user = me.user;
-    authState.tokenMeta = me.token;
-    authState.oauthAccounts = me.oauth_accounts || [];
-    if (me.auth) {
-      authState.config = authState.config
-        ? { ...authState.config, auth: { ...authState.config.auth, ...me.auth } }
-        : authState.config;
-    }
-    localStorage.setItem('auth_username', me.user.username);
-    return me.user;
+    return applyMe(await getMe());
   } catch {
+    // 本地残留的旧 Bearer token 优先级高于 Cookie，会让后端直接忽略 Cookie。
+    // 清掉后重试一次，让 OAuth 建立的 Cookie 会话能够生效。
+    if (!authState.token) {
+      authState.ready = true;
+      return null;
+    }
     clearToken();
-    return null;
+    try {
+      return applyMe(await getMe());
+    } catch {
+      clearToken();
+      return null;
+    }
   } finally {
     authState.ready = true;
   }
