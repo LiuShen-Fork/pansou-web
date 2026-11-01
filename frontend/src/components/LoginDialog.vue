@@ -15,20 +15,8 @@
         <p>{{ mode === 'register' ? `注册 ${siteName}，开始使用完整搜索` : `登录 ${siteName}，继续使用完整搜索` }}</p>
       </header>
 
-      <div v-if="canRegister" class="auth-tabs">
-        <button type="button" :class="{ active: mode === 'login' }" @click="switchMode('login')">登录</button>
-        <button type="button" :class="{ active: mode === 'register' }" @click="switchMode('register')">注册</button>
-      </div>
-
-      <div v-if="oauthProvider && (config?.auth.oauth_login_enabled || config?.auth.oauth_register_enabled)" class="oauth-row">
-        <button type="button" class="oauth-button" @click="startOAuth(oauthProvider.slug)">
-          <span class="oauth-avatar">{{ oauthProvider.name.slice(0, 1).toUpperCase() }}</span>
-          <span>使用 {{ oauthProvider.name }} {{ mode === 'register' ? '注册 / 登录' : '登录' }}</span>
-        </button>
-        <div class="divider"><span>或使用账号密码</span></div>
-      </div>
-
-      <form v-if="mode === 'login'" class="login-form" @submit.prevent="handleLogin">
+      <template v-if="mode === 'login'">
+      <form v-if="showPasswordForm" class="login-form" @submit.prevent="handleLogin">
         <div class="form-group">
           <label for="login-account">账号或邮箱</label>
           <input
@@ -74,12 +62,24 @@
           <span v-if="loading" class="btn-spinner" aria-hidden="true" />
           {{ loading ? '登录中' : '登录' }}
         </button>
-        <p v-if="!config?.auth.email_login_enabled" class="hint">
-          普通用户的密码登录已关闭，管理员仍可使用密码登录。
-        </p>
       </form>
 
-      <form v-else class="login-form" @submit.prevent="handleRegister">
+      <div v-else class="auth-empty">
+        <p>{{ loginAllowed ? '密码登录已关闭，请使用下方的第三方账号登录。' : '管理员尚未开放公开登录方式。' }}</p>
+        <button type="button" class="text-button" @click="adminFallback = true">管理员密码登录</button>
+      </div>
+
+      <div v-if="oauthLoginEnabled" class="oauth-section">
+        <div class="divider"><span>{{ showPasswordForm ? '或使用第三方账号' : '第三方账号登录' }}</span></div>
+        <button type="button" class="oauth-button" @click="startOAuth">
+          <span class="oauth-avatar">{{ oauthInitial }}</span>
+          <span>使用 {{ oauthName }} 登录</span>
+        </button>
+      </div>
+      </template>
+
+      <template v-else>
+      <form v-if="emailRegisterEnabled" class="login-form" @submit.prevent="handleRegister">
         <div class="form-group">
           <label for="register-username">用户名</label>
           <input
@@ -156,6 +156,33 @@
         </button>
       </form>
 
+      <div v-else-if="oauthRegisterEnabled" class="auth-empty">
+        <p>本站未开放邮箱注册，可使用下方的第三方账号创建账号。</p>
+      </div>
+      <div v-else class="auth-empty">
+        <p>管理员尚未开放注册方式。</p>
+      </div>
+
+      <div v-if="oauthRegisterEnabled" class="oauth-section">
+        <div class="divider"><span>{{ emailRegisterEnabled ? '或使用第三方账号' : '第三方账号注册' }}</span></div>
+        <button type="button" class="oauth-button" @click="startOAuth">
+          <span class="oauth-avatar">{{ oauthInitial }}</span>
+          <span>使用 {{ oauthName }} 注册</span>
+        </button>
+      </div>
+      </template>
+
+      <div v-if="canSwitchMode" class="auth-switch">
+        <template v-if="mode === 'login'">
+          还没有账号？
+          <button type="button" @click="switchMode('register')">立即注册</button>
+        </template>
+        <template v-else>
+          已有账号？
+          <button type="button" @click="switchMode('login')">返回登录</button>
+        </template>
+      </div>
+
       <footer class="login-footer">
         <span>{{ siteName }}</span>
         <span>安全登录 · 账号信息仅用于本站</span>
@@ -183,6 +210,8 @@ const error = ref('');
 const notice = ref('');
 const showLoginPassword = ref(false);
 const showRegisterPassword = ref(false);
+// 密码登录关闭后，管理员仍可通过这个入口登录，避免后台把自己锁在门外。
+const adminFallback = ref(false);
 let timer: number | null = null;
 
 const loginForm = reactive({ account: '', password: '' });
@@ -192,7 +221,19 @@ const config = computed(() => authState.config);
 const siteName = computed(() => authState.config?.site.name || '清羽盘搜');
 const siteIcon = computed(() => authState.config?.site.icon || '/favicon.ico');
 const oauthProvider = computed(() => authState.config?.oauth_providers?.[0] || null);
-const canRegister = computed(() => !!authState.config?.auth.email_register_enabled);
+const oauthName = computed(() => oauthProvider.value?.name || '第三方账号');
+const oauthInitial = computed(() => oauthName.value.slice(0, 1).toUpperCase());
+
+// 登录与注册各自只展示后台实际开放的方式：
+// 密码登录 / OAuth 登录属于登录，邮箱注册 / OAuth 注册属于注册。
+const passwordLoginEnabled = computed(() => !!config.value?.auth.email_login_enabled);
+const oauthLoginEnabled = computed(() => !!config.value?.auth.oauth_login_enabled && !!oauthProvider.value);
+const emailRegisterEnabled = computed(() => !!config.value?.auth.email_register_enabled);
+const oauthRegisterEnabled = computed(() => !!config.value?.auth.oauth_register_enabled && !!oauthProvider.value);
+const loginAllowed = computed(() => passwordLoginEnabled.value || oauthLoginEnabled.value);
+const registerAllowed = computed(() => emailRegisterEnabled.value || oauthRegisterEnabled.value);
+const canSwitchMode = computed(() => loginAllowed.value && registerAllowed.value);
+const showPasswordForm = computed(() => passwordLoginEnabled.value || adminFallback.value);
 
 // 弹窗打开时锁定页面滚动，避免背景跟着滚轮移动或滚动条在遮罩旁闪烁。
 let bodyOverflow = '';
@@ -231,7 +272,9 @@ watch(
       loginForm.password = '';
       registerForm.password = '';
       registerForm.code = '';
-      if (mode.value === 'register' && !canRegister.value) mode.value = 'login';
+      adminFallback.value = false;
+      if (mode.value === 'register' && !registerAllowed.value) mode.value = 'login';
+      if (mode.value === 'login' && !loginAllowed.value && registerAllowed.value) mode.value = 'register';
       lockBodyScroll();
     } else {
       unlockBodyScroll();
@@ -246,8 +289,9 @@ watch(
 
 onBeforeUnmount(unlockBodyScroll);
 
-watch(canRegister, (value) => {
-  if (!value && mode.value === 'register') mode.value = 'login';
+watch([loginAllowed, registerAllowed], () => {
+  if (mode.value === 'register' && !registerAllowed.value) mode.value = 'login';
+  if (mode.value === 'login' && !loginAllowed.value && registerAllowed.value) mode.value = 'register';
 });
 
 const close = () => emit('update:visible', false);
@@ -258,10 +302,12 @@ const switchMode = (next: 'login' | 'register') => {
   notice.value = '';
   showLoginPassword.value = false;
   showRegisterPassword.value = false;
+  adminFallback.value = false;
 };
 
-const startOAuth = (slug: string) => {
-  window.location.href = oauthStartUrl(slug, 'login');
+const startOAuth = () => {
+  if (!oauthProvider.value) return;
+  window.location.href = oauthStartUrl(oauthProvider.value.slug, 'login');
 };
 
 function onSiteIconError(event: Event) {
@@ -453,33 +499,44 @@ const handleRegister = async () => {
   color: hsl(var(--muted-foreground));
 }
 
-.auth-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.25rem;
-  padding: 0.25rem;
-  margin-bottom: 1rem;
-  border-radius: 0.7rem;
-  background: hsl(var(--muted));
+.oauth-section { display: flex; flex-direction: column; gap: 0.7rem; margin-top: 1rem; }
+.auth-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px dashed hsl(var(--border));
+  border-radius: 0.6rem;
+  text-align: center;
 }
-.auth-tabs button {
+.auth-empty p { margin: 0; font-size: 0.75rem; line-height: 1.6; color: hsl(var(--muted-foreground)); }
+.text-button {
   border: 0;
-  border-radius: 0.55rem;
-  padding: 0.5rem;
+  padding: 0;
   background: transparent;
-  color: hsl(var(--muted-foreground));
-  font-size: 0.8rem;
+  color: hsl(var(--primary));
+  font-size: 0.74rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
-.auth-tabs button.active {
-  background: hsl(var(--background-light, 0 0% 100%));
-  color: hsl(var(--foreground));
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+.text-button:hover { text-decoration: underline; }
+.auth-switch {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.74rem;
+  color: hsl(var(--muted-foreground));
 }
-
-.oauth-row { display: flex; flex-direction: column; gap: 0.7rem; margin-bottom: 1rem; }
+.auth-switch button {
+  border: 0;
+  padding: 0 0.1rem;
+  background: transparent;
+  color: hsl(var(--primary));
+  font-size: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.auth-switch button:hover { text-decoration: underline; }
 .oauth-button {
   display: flex;
   align-items: center;
@@ -627,8 +684,6 @@ const handleRegister = async () => {
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-
-.hint { font-size: 0.7rem; color: hsl(var(--muted-foreground)); text-align: center; line-height: 1.5; }
 
 .login-footer {
   display: flex;
