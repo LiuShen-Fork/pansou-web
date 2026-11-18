@@ -186,10 +186,10 @@ defineExpose({ fetchLiveness });
 
 <style scoped>
 .liveness-panel {
-  border: 1px solid #e2e8f0;
+  border: 1px solid hsl(var(--border));
   border-radius: 10px;
   padding: 1rem 1.25rem;
-  background: #fff;
+  background: hsl(var(--card));
   margin-bottom: 1.5rem;
 }
 
@@ -206,23 +206,23 @@ defineExpose({ fetchLiveness });
   gap: 0.4rem;
   font-size: 1rem;
   font-weight: 600;
-  color: #1e293b;
+  color: hsl(var(--foreground));
   margin: 0;
 }
 
 .liveness-scale {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 400;
-  color: #94a3b8;
+  color: hsl(var(--muted-foreground) / 0.7);
 }
 
 .liveness-refresh {
   font-size: 0.78rem;
   padding: 0.25rem 0.7rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid hsl(var(--border));
   border-radius: 6px;
-  background: #f8fafc;
-  color: #334155;
+  background: hsl(var(--muted) / 0.5);
+  color: hsl(var(--muted-foreground));
   cursor: pointer;
 }
 
@@ -238,7 +238,7 @@ defineExpose({ fetchLiveness });
 .liveness-block-title {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #475569;
+  color: hsl(var(--muted-foreground));
   margin-bottom: 0.5rem;
 }
 
@@ -250,29 +250,29 @@ defineExpose({ fetchLiveness });
 }
 
 .liveness-chip {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   padding: 0.15rem 0.55rem;
   border-radius: 999px;
 }
 
 .liveness-chip.ok {
-  background: #dcfce7;
-  color: #15803d;
+  background: hsl(var(--success) / 0.14);
+  color: hsl(var(--success));
 }
 
 .liveness-chip.danger {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: hsl(var(--destructive) / 0.14);
+  color: hsl(var(--destructive));
 }
 
 .liveness-chip.warn {
-  background: #fef3c7;
-  color: #b45309;
+  background: hsl(var(--warning) / 0.16);
+  color: hsl(var(--warning));
 }
 
 .liveness-chip.muted {
-  background: #e2e8f0;
-  color: #475569;
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
 }
 
 .liveness-group {
@@ -289,12 +289,12 @@ defineExpose({ fetchLiveness });
   border: none;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #334155;
+  color: hsl(var(--muted-foreground));
   cursor: pointer;
 }
 
 .toggle-icon {
-  font-size: 0.7rem;
+  font-size: 0.76rem;
   transition: transform 0.15s;
 }
 
@@ -303,29 +303,29 @@ defineExpose({ fetchLiveness });
 }
 
 .liveness-group-count {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   padding: 0.05rem 0.45rem;
   border-radius: 999px;
 }
 
 .liveness-group-count.danger {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: hsl(var(--destructive) / 0.14);
+  color: hsl(var(--destructive));
 }
 
 .liveness-group-count.warn {
-  background: #fef3c7;
-  color: #b45309;
+  background: hsl(var(--warning) / 0.16);
+  color: hsl(var(--warning));
 }
 
 .liveness-group-count.muted {
-  background: #e2e8f0;
-  color: #475569;
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
 }
 
 .liveness-hint {
-  font-size: 0.75rem;
-  color: #64748b;
+  font-size: 0.8rem;
+  color: hsl(var(--muted-foreground));
   margin: 0.15rem 0 0.35rem;
 }
 
@@ -342,24 +342,24 @@ defineExpose({ fetchLiveness });
   align-items: baseline;
   gap: 0.6rem;
   padding: 0.3rem 0.5rem;
-  background: #f8fafc;
+  background: hsl(var(--muted) / 0.5);
   border-radius: 6px;
   font-size: 0.78rem;
 }
 
 .liveness-name {
   font-weight: 600;
-  color: #1e293b;
+  color: hsl(var(--foreground));
   min-width: 7rem;
 }
 
 .liveness-stat {
-  color: #64748b;
+  color: hsl(var(--muted-foreground));
   white-space: nowrap;
 }
 
 .liveness-err {
-  color: #94a3b8;
+  color: hsl(var(--muted-foreground) / 0.7);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -367,28 +367,28 @@ defineExpose({ fetchLiveness });
 }
 
 .liveness-note {
-  font-size: 0.72rem;
-  color: #94a3b8;
+  font-size: 0.78rem;
+  color: hsl(var(--muted-foreground) / 0.7);
   line-height: 1.5;
   margin: 0.5rem 0 0;
   padding-top: 0.5rem;
-  border-top: 1px dashed #e2e8f0;
+  border-top: 1px dashed hsl(var(--border));
 }
 
 .liveness-msg {
   font-size: 0.8rem;
-  color: #64748b;
+  color: hsl(var(--muted-foreground));
 }
 
 .liveness-msg.error {
-  color: #b91c1c;
+  color: hsl(var(--destructive));
 }
 
 .liveness-msg.ok {
-  color: #15803d;
+  color: hsl(var(--success));
 }
 
 .liveness-msg.warn {
-  color: #b45309;
+  color: hsl(var(--warning));
 }
 </style>

@@ -1971,7 +1971,7 @@ const copyToClipboard = async (text: string) => {
   padding: 0.125rem 0.375rem;
   border-radius: 4px;
   font-family: 'Monaco', 'Menlo', monospace;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
 }
 
 .feature-list {
@@ -2116,7 +2116,7 @@ const copyToClipboard = async (text: string) => {
 }
 
 .field-status {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: #2563eb;
   background: rgba(37, 99, 235, 0.1);
   padding: 0.125rem 0.5rem;
@@ -2131,7 +2131,7 @@ const copyToClipboard = async (text: string) => {
 }
 
 .hint-text {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: #64748b;
   font-style: italic;
 }
@@ -2374,11 +2374,11 @@ const copyToClipboard = async (text: string) => {
   }
   
   .hint-text {
-    font-size: 0.7rem;
+    font-size: 0.76rem;
   }
   
   .field-status {
-    font-size: 0.7rem;
+    font-size: 0.76rem;
     padding: 0.0625rem 0.375rem;
   }
 

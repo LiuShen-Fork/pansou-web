@@ -992,13 +992,13 @@ onMounted(() => {
   border-radius: 999px;
   background: hsl(var(--primary) / 0.12);
   color: hsl(var(--primary));
-  font-size: 12px;
+  font-size: 0.8rem;
   font-weight: 700;
   flex-shrink: 0;
 }
 
 .result-time {
-  font-size: 12px;
+  font-size: 0.8rem;
   color: hsl(var(--muted-foreground));
   white-space: nowrap;
 }
@@ -1017,7 +1017,7 @@ onMounted(() => {
   border-radius: 999px;
   background: hsl(var(--muted));
   color: hsl(var(--muted-foreground));
-  font-size: 12px;
+  font-size: 0.8rem;
   line-height: 1;
 }
 
@@ -1074,7 +1074,7 @@ onMounted(() => {
   border-radius: 999px;
   background: hsl(var(--primary) / 0.12);
   color: hsl(var(--primary));
-  font-size: 11px;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   flex-shrink: 0;
@@ -1095,7 +1095,7 @@ onMounted(() => {
   min-height: 24px;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 0.8rem;
 }
 
 .link-password {

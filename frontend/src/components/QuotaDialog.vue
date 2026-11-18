@@ -134,7 +134,7 @@ const percentage = computed(() => {
 .quota-icon.danger { background: hsl(var(--destructive) / 0.12); color: hsl(var(--destructive)); }
 .quota-icon svg { width: 1.5rem; height: 1.5rem; }
 .quota-eyebrow {
-  font-size: 0.62rem;
+  font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.16em;
   color: hsl(var(--primary));
@@ -148,7 +148,7 @@ const percentage = computed(() => {
   border-radius: 0.7rem;
   background: hsl(var(--muted) / 0.28);
 }
-.quota-meter-head { display: flex; justify-content: space-between; gap: 0.8rem; font-size: 0.72rem; color: hsl(var(--muted-foreground)); }
+.quota-meter-head { display: flex; justify-content: space-between; gap: 0.8rem; font-size: 0.78rem; color: hsl(var(--muted-foreground)); }
 .quota-meter-head strong { color: hsl(var(--foreground)); font-weight: 600; }
 .quota-meter-track { height: 5px; margin-top: 0.5rem; overflow: hidden; border-radius: 999px; background: hsl(var(--muted)); }
 .quota-meter-track i { display: block; height: 100%; border-radius: inherit; background: hsl(var(--destructive)); }
@@ -156,7 +156,7 @@ const percentage = computed(() => {
   padding: 0.65rem 0.75rem;
   border-radius: 0.6rem;
   background: hsl(var(--primary) / 0.08);
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   line-height: 1.6;
   color: hsl(var(--muted-foreground));
   text-align: left;

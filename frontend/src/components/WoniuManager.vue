@@ -980,13 +980,13 @@ onMounted(() => {
   border-radius: 999px;
   background: hsl(var(--primary) / 0.12);
   color: hsl(var(--primary));
-  font-size: 12px;
+  font-size: 0.8rem;
   font-weight: 700;
   flex-shrink: 0;
 }
 
 .result-time {
-  font-size: 12px;
+  font-size: 0.8rem;
   color: hsl(var(--muted-foreground));
   white-space: nowrap;
 }
@@ -1005,7 +1005,7 @@ onMounted(() => {
   border-radius: 999px;
   background: hsl(var(--muted));
   color: hsl(var(--muted-foreground));
-  font-size: 12px;
+  font-size: 0.8rem;
 }
 
 .meta-chip-primary {
@@ -1042,14 +1042,14 @@ onMounted(() => {
   border-radius: 6px;
   background: hsl(var(--primary) / 0.1);
   color: hsl(var(--primary));
-  font-size: 11px;
+  font-size: 0.75rem;
   font-weight: 600;
   flex-shrink: 0;
   text-transform: uppercase;
 }
 
 .link-url {
-  font-size: 12px;
+  font-size: 0.8rem;
   color: hsl(var(--muted-foreground));
   word-break: break-all;
   min-width: 0;
@@ -1065,7 +1065,7 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 0.8rem;
 }
 
 .link-work-title {
@@ -1089,7 +1089,7 @@ onMounted(() => {
 }
 
 .link-action {
-  font-size: 12px;
+  font-size: 0.8rem;
   color: hsl(var(--primary));
   background: none;
   border: none;

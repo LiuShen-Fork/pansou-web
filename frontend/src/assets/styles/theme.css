@@ -18,36 +18,38 @@ html.dark {
   --popover: 228 24% 12%;
   --popover-foreground: 220 24% 92%;
 
-  --primary: 238 76% 72%;
+  --primary: var(--brand-primary-dark, 238 76% 72%);
   --primary-foreground: 230 32% 10%;
 
   --secondary: 228 20% 17%;
-  --secondary-foreground: 220 18% 84%;
+  --secondary-foreground: 220 18% 86%;
 
   --muted: 228 20% 16%;
-  --muted-foreground: 225 12% 63%;
+  --muted-foreground: 225 14% 77%;
 
-  --accent: 245 72% 76%;
-  --accent-secondary: 234 60% 62%;
+  --accent: var(--brand-accent-dark, 245 72% 76%);
+  --accent-secondary: var(--brand-accent-secondary-dark, 234 60% 62%);
   --accent-foreground: 230 32% 10%;
 
   --destructive: 0 68% 62%;
   --destructive-foreground: 0 0% 100%;
   --success: 152 52% 50%;
   --success-foreground: 150 40% 8%;
+  --warning: 32 90% 62%;
+  --warning-foreground: 30 40% 8%;
 
   --border: 228 16% 23%;
   --border-hover: 228 16% 31%;
   --border-active: 228 16% 38%;
   --input: 228 16% 23%;
-  --input-unread: 238 70% 70%;
-  --ring: 238 70% 70%;
+  --input-unread: var(--brand-primary-dark, 238 70% 72%);
+  --ring: var(--brand-primary-dark, 238 70% 72%);
 
   --text: 220 24% 92%;
   --text-light: 0 0% 100%;
-  --text-secondary: 225 12% 63%;
+  --text-secondary: 225 14% 77%;
 
-  --selection: 238 70% 70%;
+  --selection: var(--brand-primary-dark, 238 70% 72%);
   --selection-foreground: 230 32% 10%;
   --shadow: rgba(0, 0, 0, 0.35);
 }
@@ -58,7 +60,7 @@ html.dark body {
 
 html.dark .bg-mine-background {
   background:
-    radial-gradient(circle at 18% 12%, rgba(99, 102, 241, 0.18), transparent 30rem),
+    radial-gradient(circle at 18% 12%, hsl(var(--primary) / 0.18), transparent 30rem),
     radial-gradient(circle at 88% 88%, rgba(56, 189, 248, 0.08), transparent 26rem),
     linear-gradient(135deg, #0b0e17 0%, #101426 48%, #0a0d15 100%);
 }
@@ -66,7 +68,7 @@ html.dark .bg-mine-background::before {
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.18), rgba(15, 23, 42, 0.34));
 }
 html.dark .bg-decorative {
-  color: rgba(129, 140, 248, 0.11);
+  color: hsl(var(--primary) / 0.14);
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.28);
   mix-blend-mode: normal;
 }
@@ -328,3 +330,120 @@ html.dark *::-webkit-scrollbar-thumb {
   border-radius: 999px;
 }
 html.dark *::-webkit-scrollbar-track { background: transparent; }
+
+/* ------------------------------------------------------------------
+   纯白极简主题：后台「主题强调色」选择 white 时启用。
+   去掉彩色倾向，改用中性灰阶 + 近黑强调色，长时间阅读更省眼。
+------------------------------------------------------------------ */
+html[data-brand="white"] {
+  color-scheme: light;
+
+  --background: 0 0% 100%;
+  --background-light: 0 0% 100%;
+  --background-hover: 0 0% 97%;
+  --background-container: 0, 0%, 100%, 0.92;
+  --foreground: 0 0% 9%;
+  --dot-color: 0 0% 91%;
+
+  --card: 0 0% 100%;
+  --card-hover: 0 0% 97%;
+  --card-active: 0 0% 94%;
+  --card-foreground: 0 0% 9%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 9%;
+
+  --primary: 0 0% 12%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 0 0% 22%;
+
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 33%;
+
+  --accent: 0 0% 18%;
+  --accent-secondary: 0 0% 45%;
+  --accent-foreground: 0 0% 100%;
+
+  --border: 0 0% 88%;
+  --border-hover: 0 0% 80%;
+  --border-active: 0 0% 68%;
+  --input: 0 0% 88%;
+  --input-unread: 0 0% 12%;
+  --ring: 0 0% 12%;
+
+  --text: 0 0% 9%;
+  --text-secondary: 0 0% 33%;
+  --selection: 0 0% 12%;
+  --selection-foreground: 0 0% 100%;
+  --shadow: rgba(0, 0, 0, 0.06);
+}
+
+html.dark[data-brand="white"] {
+  color-scheme: dark;
+
+  --background: 0 0% 9% / 0.86;
+  --background-light: 0 0% 8%;
+  --background-hover: 0 0% 16%;
+  --background-container: 0, 0%, 10%, 0.9;
+  --foreground: 0 0% 95%;
+  --dot-color: 0 0% 22%;
+
+  --card: 0 0% 12% / 0.9;
+  --card-hover: 0 0% 16%;
+  --card-active: 0 0% 20%;
+  --card-foreground: 0 0% 95%;
+
+  --popover: 0 0% 11%;
+  --popover-foreground: 0 0% 95%;
+
+  --primary: 0 0% 90%;
+  --primary-foreground: 0 0% 8%;
+
+  --secondary: 0 0% 16%;
+  --secondary-foreground: 0 0% 86%;
+
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 76%;
+
+  --accent: 0 0% 92%;
+  --accent-secondary: 0 0% 62%;
+  --accent-foreground: 0 0% 8%;
+
+  --border: 0 0% 23%;
+  --border-hover: 0 0% 31%;
+  --border-active: 0 0% 40%;
+  --input: 0 0% 23%;
+  --input-unread: 0 0% 90%;
+  --ring: 0 0% 90%;
+
+  --text: 0 0% 95%;
+  --text-secondary: 0 0% 76%;
+  --selection: 0 0% 90%;
+  --selection-foreground: 0 0% 8%;
+  --shadow: rgba(0, 0, 0, 0.4);
+}
+
+/* 纯白主题下清掉残留的彩色底纹，避免灰阶界面里透出紫色。 */
+html[data-brand="white"] .bg-mine-background {
+  background: linear-gradient(180deg, #ffffff 0%, #f7f7f7 100%);
+}
+html[data-brand="white"] .bg-mine-background::before { background: none; }
+html[data-brand="white"] .bg-decorative {
+  color: rgba(15, 23, 42, 0.06);
+  text-shadow: none;
+  mix-blend-mode: multiply;
+}
+html[data-brand="white"] .console { background: hsl(var(--muted) / 0.55); }
+html[data-brand="white"] .console-nav button.active { box-shadow: 0 6px 14px rgba(0, 0, 0, 0.14); }
+
+html.dark[data-brand="white"] .bg-mine-background {
+  background: linear-gradient(135deg, #0d0d0d 0%, #141414 48%, #0a0a0a 100%);
+}
+html.dark[data-brand="white"] .bg-decorative {
+  color: rgba(255, 255, 255, 0.08);
+  text-shadow: none;
+  mix-blend-mode: normal;
+}
+html.dark[data-brand="white"] .console { background: hsl(var(--muted) / 0.45); }

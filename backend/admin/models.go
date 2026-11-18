@@ -72,6 +72,22 @@ type Settings struct {
 	SiteIcon     string `json:"site_icon"`
 	Announcement string `json:"announcement"`
 
+	// SiteICP 是页脚展示的 ICP 备案号，留空则不显示。
+	SiteICP string `json:"site_icp"`
+	// SitePoliceICP 是页脚展示的公安联网备案号，留空则不显示。
+	SitePoliceICP string `json:"site_police_icp"`
+	// SiteOwnerHome / SiteOwnerBlog / SiteOwnerGithub 是页脚站长链接，留空则不显示。
+	SiteOwnerHome   string `json:"site_owner_home"`
+	SiteOwnerBlog   string `json:"site_owner_blog"`
+	SiteOwnerGithub string `json:"site_owner_github"`
+	// SiteThemeColor 控制前台强调色：留空使用内置紫色，"white" 表示纯白极简，
+	// 也接受 #RRGGBB 形式的自定义色值。
+	SiteThemeColor string `json:"site_theme_color"`
+	// SiteCustomCSS 会追加到全站页面头部，供管理员微调样式。
+	SiteCustomCSS string `json:"site_custom_css"`
+	// SiteCustomJS 会注入到全站页面底部，供管理员接入统计或第三方脚本。
+	SiteCustomJS string `json:"site_custom_js"`
+
 	// 邮箱登录：允许用「用户名或邮箱 + 密码」登录。管理员账号始终允许密码登录，避免锁死。
 	EmailLoginEnabled bool `json:"email_login_enabled"`
 	// 邮箱注册：开启时必须同时配置并启用 SMTP，否则保存会被拒绝。
@@ -119,6 +135,12 @@ func DefaultSettings() Settings {
 		SiteDescription:           "网盘资源搜索",
 		SiteSlogan:                "清羽飞扬自建网盘搜索，众多资源，一键直达",
 		SiteIcon:                  "/favicon.ico",
+		SiteICP:                   "陕ICP备2024028531号",
+		SitePoliceICP:             "陕公网安备61011602000637号",
+		SiteOwnerHome:             "https://www.liushen.fun/",
+		SiteOwnerBlog:             "https://blog.liushen.fun/",
+		SiteOwnerGithub:           "https://github.com/willow-god",
+		SiteThemeColor:            "",
 		EmailLoginEnabled:         true,
 		EmailRegisterEnabled:      false,
 		OAuthLoginEnabled:         false,

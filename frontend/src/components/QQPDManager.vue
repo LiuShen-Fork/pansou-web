@@ -1043,7 +1043,7 @@ https://pd.qq.com/g/m250319e25"
 
 .api-detail code {
   color: hsl(var(--foreground));
-  font-size: 11px;
+  font-size: 0.75rem;
 }
 
 /* 频道链接 */
@@ -1162,7 +1162,7 @@ https://pd.qq.com/g/m250319e25"
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: 0.8rem;
   background: hsl(var(--background));
   border-radius: 4px;
   margin-top: 4px;
@@ -1177,7 +1177,7 @@ https://pd.qq.com/g/m250319e25"
   color: hsl(var(--primary));
   border-radius: 4px;
   font-weight: 600;
-  font-size: 11px;
+  font-size: 0.75rem;
   text-transform: uppercase;
   min-width: 50px;
   justify-content: center;

@@ -71,7 +71,7 @@ import { dismissToast, toasts } from '@/lib/toast';
 
 .toast-item.success .toast-icon { background: #ecfdf5; color: #047857; }
 .toast-item.error .toast-icon { background: #fef2f2; color: #b91c1c; }
-.toast-item.info .toast-icon { background: #eef2ff; color: #4338ca; }
+.toast-item.info .toast-icon { background: hsl(var(--primary) / 0.1); color: hsl(var(--primary)); }
 
 .toast-body { flex: 1; min-width: 0; }
 .toast-body strong { display: block; font-size: 0.84rem; font-weight: 650; color: hsl(var(--foreground)); }

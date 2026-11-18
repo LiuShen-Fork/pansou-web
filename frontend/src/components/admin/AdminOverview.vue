@@ -341,7 +341,7 @@ onMounted(load);
   border-radius: 0.6rem;
   background: hsl(var(--muted) / 0.3);
   color: hsl(var(--foreground));
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 550;
   cursor: pointer;
   text-align: left;
@@ -349,12 +349,12 @@ onMounted(load);
 .quick-actions button:hover { border-color: hsl(var(--primary) / 0.5); color: hsl(var(--primary)); background: hsl(var(--primary) / 0.06); }
 
 .ranking { padding: 0.35rem 0.8rem 0.8rem; display: flex; flex-direction: column; gap: 0.55rem; }
-.ranking-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.76rem; }
-.rank { width: 1.25rem; height: 1.25rem; display: grid; place-items: center; border-radius: 0.35rem; background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); font-size: 0.64rem; font-weight: 700; }
-.rank.top { background: #eef2ff; color: #4338ca; }
+.ranking-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.86rem; }
+.rank { width: 1.25rem; height: 1.25rem; display: grid; place-items: center; border-radius: 0.35rem; background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); font-size: 0.78rem; font-weight: 700; }
+.rank.top { background: hsl(var(--primary) / 0.12); color: hsl(var(--primary)); }
 .rank-name { width: 6.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 550; }
 .rank-bar { flex: 1; height: 0.42rem; border-radius: 999px; background: hsl(var(--muted)); overflow: hidden; }
-.rank-bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, hsl(var(--primary)), #818cf8); }
+.rank-bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent))); }
 .rank-count { width: 3.2rem; text-align: right; color: hsl(var(--muted-foreground)); font-variant-numeric: tabular-nums; }
 
 .mini-ranking { display: flex; flex-direction: column; gap: 0.45rem; }
@@ -366,9 +366,9 @@ onMounted(load);
   border: 1px solid hsl(var(--border));
   border-radius: 0.5rem;
   background: hsl(var(--muted) / 0.22);
-  font-size: 0.75rem;
+  font-size: 0.8rem;
 }
-.mini-rank { width: 1.1rem; color: hsl(var(--muted-foreground)); font-size: 0.66rem; font-weight: 700; }
+.mini-rank { width: 1.1rem; color: hsl(var(--muted-foreground)); font-size: 0.8rem; font-weight: 700; }
 .mini-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mini-count { color: hsl(var(--muted-foreground)); font-variant-numeric: tabular-nums; }
 

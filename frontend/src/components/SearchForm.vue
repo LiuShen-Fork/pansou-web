@@ -460,7 +460,7 @@ function onIconError(event: Event) {
 }
 
 .label-hint {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: hsl(var(--muted-foreground));
 }
 
@@ -592,8 +592,8 @@ function onIconError(event: Event) {
   justify-content: center;
   padding: 0.75rem 1.5rem;
   border-radius: 0.75rem;
-  background-color: #3b82f6;
-  color: #fff;
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
   font-weight: 500;
   font-size: 1rem;
   border: none;
@@ -602,7 +602,7 @@ function onIconError(event: Event) {
 }
 
 .search-button:hover:not(:disabled) {
-  background-color: #2563eb;
+  background-color: hsl(var(--primary) / 0.9);
 }
 
 .search-button:disabled {

@@ -321,10 +321,10 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  border: 1px solid hsl(var(--border) / 0.7);
   border-radius: 1.25rem;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+    linear-gradient(180deg, hsl(var(--popover)), hsl(var(--background)));
   box-shadow: 0 28px 90px rgba(15, 23, 42, 0.22);
 }
 
@@ -334,7 +334,7 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem 1rem 0.8rem;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid hsl(var(--border));
 }
 
 .export-modal-heading {
@@ -346,14 +346,14 @@ onUnmounted(() => {
   font-size: 1.1rem;
   line-height: 1.3;
   font-weight: 700;
-  color: #0f172a;
+  color: hsl(var(--foreground));
 }
 
 .export-modal-close {
   appearance: none;
-  border: 1px solid #dbe3ef;
-  background: rgba(255, 255, 255, 0.92);
-  color: #64748b;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--background) / 0.92);
+  color: hsl(var(--muted-foreground));
   width: 2.25rem;
   height: 2.25rem;
   border-radius: 9999px;
@@ -366,9 +366,9 @@ onUnmounted(() => {
 }
 
 .export-modal-close:hover {
-  color: #0f172a;
-  border-color: #cbd5e1;
-  background: #f8fafc;
+  color: hsl(var(--foreground));
+  border-color: hsl(var(--border-hover));
+  background: hsl(var(--muted) / 0.6);
 }
 
 .export-modal-close,
@@ -408,9 +408,9 @@ onUnmounted(() => {
 }
 
 .export-section {
-  border: 1px solid #e2e8f0;
+  border: 1px solid hsl(var(--border));
   border-radius: 0.9rem;
-  background: rgba(255, 255, 255, 0.82);
+  background: hsl(var(--background) / 0.82);
   padding: 0.85rem;
 }
 
@@ -427,7 +427,7 @@ onUnmounted(() => {
   margin: 0;
   font-size: 0.9rem;
   font-weight: 700;
-  color: #0f172a;
+  color: hsl(var(--foreground));
 }
 
 .section-inline-row {
@@ -450,7 +450,7 @@ onUnmounted(() => {
   cursor: pointer;
   font-size: 0.84rem;
   line-height: 1;
-  color: #334155;
+  color: hsl(var(--muted-foreground));
   user-select: none;
 }
 
@@ -463,7 +463,7 @@ onUnmounted(() => {
   margin: 0;
   width: 0.95rem;
   height: 0.95rem;
-  accent-color: #2563eb;
+  accent-color: hsl(var(--primary));
   flex-shrink: 0;
 }
 
@@ -485,30 +485,30 @@ onUnmounted(() => {
   justify-content: center;
   min-height: 1.85rem;
   padding: 0 0.6rem;
-  border: 1px solid #dbe3ef;
+  border: 1px solid hsl(var(--border));
   border-radius: 0.65rem;
-  background: #fff;
-  font-size: 0.76rem;
+  background: hsl(var(--popover));
+  font-size: 0.82rem;
   font-weight: 500;
-  color: #334155;
+  color: hsl(var(--muted-foreground));
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
 }
 
 .disktype-chip:hover {
-  border-color: #93c5fd;
-  background: #f8fbff;
+  border-color: hsl(var(--primary) / 0.5);
+  background: hsl(var(--muted) / 0.6);
 }
 
 .disktype-chip .selected {
-  color: #1d4ed8;
+  color: hsl(var(--primary));
   font-weight: 600;
 }
 
 .disktype-chip.selected {
-  border-color: #60a5fa;
-  background: #eff6ff;
+  border-color: hsl(var(--primary) / 0.55);
+  background: hsl(var(--primary) / 0.1);
 }
 
 .field-checkbox {
@@ -522,8 +522,8 @@ onUnmounted(() => {
   justify-content: flex-end;
   gap: 0.75rem;
   padding: 0.85rem 1rem 1rem;
-  border-top: 1px solid #e2e8f0;
-  background: rgba(248, 250, 252, 0.92);
+  border-top: 1px solid hsl(var(--border));
+  background: hsl(var(--background) / 0.92);
 }
 
 .footer-btn {
@@ -544,24 +544,24 @@ onUnmounted(() => {
 }
 
 .footer-btn-secondary {
-  border-color: #dbe3ef;
-  background: #fff;
-  color: #334155;
+  border-color: hsl(var(--border));
+  background: hsl(var(--popover));
+  color: hsl(var(--muted-foreground));
 }
 
 .footer-btn-secondary:hover {
-  background: #f8fafc;
+  background: hsl(var(--muted) / 0.6);
 }
 
 .footer-btn-primary {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  color: #fff;
-  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.18);
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.82));
+  color: hsl(var(--primary-foreground));
+  box-shadow: 0 12px 30px hsl(var(--primary) / 0.22);
 }
 
 .footer-btn-primary:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 16px 34px rgba(37, 99, 235, 0.22);
+  box-shadow: 0 16px 34px hsl(var(--primary) / 0.25);
 }
 
 .export-modal-fade-enter-active,
@@ -657,7 +657,7 @@ onUnmounted(() => {
   .disktype-chip {
     min-height: 1.8rem;
     padding: 0 0.58rem;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
   }
 }
 </style>

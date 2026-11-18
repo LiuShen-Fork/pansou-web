@@ -51,6 +51,26 @@
                 <input v-model="site.description" class="input" placeholder="网盘资源搜索" maxlength="120" />
               </div>
               <div class="field">
+                <label>ICP 备案号</label>
+                <input v-model="site.icp" class="input" placeholder="陕ICP备2024028531号" maxlength="60" />
+              </div>
+              <div class="field">
+                <label>公安联网备案号</label>
+                <input v-model="site.police_icp" class="input" placeholder="陕公网安备61011602000637号" maxlength="60" />
+              </div>
+              <div class="field">
+                <label>站长主页（留空不显示）</label>
+                <input v-model="site.owner_home" class="input" placeholder="https://www.example.com/" maxlength="500" />
+              </div>
+              <div class="field">
+                <label>站长博客（留空不显示）</label>
+                <input v-model="site.owner_blog" class="input" placeholder="https://blog.example.com/" maxlength="500" />
+              </div>
+              <div class="field">
+                <label>站长 GitHub（留空不显示）</label>
+                <input v-model="site.owner_github" class="input" placeholder="https://github.com/your-name" maxlength="500" />
+              </div>
+              <div class="field">
                 <label>站点图标</label>
                 <div class="icon-input-row">
                   <input v-model="site.icon" class="input" placeholder="/favicon.ico 或 https://…" />
@@ -61,6 +81,19 @@
                 </div>
                 <span class="hint">支持外链、站内路径或上传图片（≤ 512KB），会同步更新浏览器标签页图标。</span>
               </div>
+            </div>
+            <div class="field theme-field">
+              <label>主题强调色</label>
+              <div class="theme-color-row">
+                <input v-model="site.theme_color" class="input" placeholder="留空使用默认紫色，或填写 #RRGGBB" maxlength="7" />
+                <label class="theme-color-picker" title="选择颜色">
+                  <input type="color" :value="pickerColor" @input="onPickColor" />
+                  <span :style="{ background: pickerColor }" />
+                </label>
+                <button type="button" class="btn btn-sm" @click="site.theme_color = ''">默认紫</button>
+                <button type="button" class="btn btn-sm" @click="site.theme_color = 'white'">纯白</button>
+              </div>
+              <span class="hint">主打按钮、链接与高亮会用这个颜色；「纯白」为无彩色极简主题。深色模式下会自动提亮以保证可读性。</span>
             </div>
             <div class="field" style="margin-top: 0.8rem">
               <label>站点公告</label>
@@ -97,6 +130,28 @@
           </div>
         </section>
       </div>
+
+      <section class="section-card">
+        <div class="section-head">
+          <div>
+            <div class="section-title"><AdminIcon name="tune" :size="16" /> 自定义代码</div>
+            <div class="section-desc">追加到全站页面的 CSS 与 JS，留空即关闭，保存后立即生效</div>
+          </div>
+          <span class="badge">高级</span>
+        </div>
+        <div class="section-body">
+          <div class="field">
+            <label>全局 CSS</label>
+            <textarea v-model="site.custom_css" class="textarea code-input" spellcheck="false" placeholder="/* 例：:root { --radius: 0.9rem; } */" />
+            <span class="hint">注入到页面 &lt;head&gt; 末尾，可用于微调字体、间距等细节，上限 256KB。</span>
+          </div>
+          <div class="field" style="margin-top: 0.9rem">
+            <label>全局 JS</label>
+            <textarea v-model="site.custom_js" class="textarea code-input" spellcheck="false" placeholder="// 例：接入站点统计" />
+            <span class="hint">注入到页面底部，内容未变化时不会重复执行，上限 256KB。请只粘贴可信来源的脚本。</span>
+          </div>
+        </div>
+      </section>
 
       <section class="section-card">
         <div class="section-head">
@@ -273,7 +328,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref, watch } from 'vue';
 import {
   adminGetSettings,
   adminSaveSettings,
@@ -286,12 +341,51 @@ import { loadPublicConfig } from '@/stores/auth';
 import AdminIcon from './AdminIcon.vue';
 import { toast } from '@/lib/toast';
 
-const site = reactive({ name: '', description: '', slogan: '', icon: '/favicon.ico', announcement: '' });
+const site = reactive({
+  name: '',
+  description: '',
+  slogan: '',
+  icon: '/favicon.ico',
+  announcement: '',
+  icp: '',
+  police_icp: '',
+  owner_home: '',
+  owner_blog: '',
+  owner_github: '',
+  theme_color: '',
+  custom_css: '',
+  custom_js: '',
+});
+// 原生取色器只认 #RRGGBB：白色主题显示纯白，留空时显示默认紫色。
+const pickerColor = ref('#6366f1');
+watch(
+  () => site.theme_color,
+  (value) => {
+    const raw = (value || '').trim();
+    if (/^#[0-9a-f]{6}$/i.test(raw)) {
+      pickerColor.value = raw;
+      return;
+    }
+    pickerColor.value = raw.toLowerCase() === 'white' ? '#ffffff' : '#6366f1';
+  },
+  { immediate: true }
+);
+const onPickColor = (event: Event) => {
+  site.theme_color = (event.target as HTMLInputElement).value;
+};
 const iconBroken = ref(false);
 const auth = reactive<AuthSettings>({
   site_name: '',
   site_description: '',
   announcement: '',
+  site_icp: '',
+  site_police_icp: '',
+  site_owner_home: '',
+  site_owner_blog: '',
+  site_owner_github: '',
+  site_theme_color: '',
+  site_custom_css: '',
+  site_custom_js: '',
   email_login_enabled: true,
   email_register_enabled: false,
   oauth_login_enabled: false,
@@ -340,6 +434,14 @@ const load = async () => {
     site.slogan = data.site.slogan || '';
     site.icon = data.site.icon || '/favicon.ico';
     site.announcement = data.site.announcement;
+    site.icp = data.site.icp || '';
+    site.police_icp = data.site.police_icp || '';
+    site.owner_home = data.site.owner_home || '';
+    site.owner_blog = data.site.owner_blog || '';
+    site.owner_github = data.site.owner_github || '';
+    site.theme_color = data.site.theme_color || '';
+    site.custom_css = data.site.custom_css || '';
+    site.custom_js = data.site.custom_js || '';
     iconBroken.value = false;
     Object.assign(auth, data.auth);
     Object.assign(email, data.email);
@@ -386,6 +488,14 @@ const save = async () => {
         site_description: site.description,
         site_slogan: site.slogan,
         site_icon: site.icon,
+        site_icp: site.icp,
+        site_police_icp: site.police_icp,
+        site_owner_home: site.owner_home,
+        site_owner_blog: site.owner_blog,
+        site_owner_github: site.owner_github,
+        site_theme_color: site.theme_color,
+        site_custom_css: site.custom_css,
+        site_custom_js: site.custom_js,
         announcement: site.announcement,
       },
       email: { ...email },
@@ -434,8 +544,8 @@ onMounted(load);
   top: calc(var(--console-topbar-h, 6.2rem) + 0.65rem);
   z-index: 20;
 }
-.settings-bar-copy strong { display: block; font-size: 0.82rem; }
-.settings-bar-copy span { display: block; margin-top: 0.15rem; font-size: 0.7rem; color: hsl(var(--muted-foreground)); }
+.settings-bar-copy strong { display: block; font-size: 0.92rem; }
+.settings-bar-copy span { display: block; margin-top: 0.15rem; font-size: 0.8rem; color: hsl(var(--muted-foreground)); }
 .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .quota-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-top: 1rem; }
 .quota-group {
@@ -445,15 +555,15 @@ onMounted(load);
   background: hsl(var(--muted) / 0.22);
 }
 .quota-group-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.75rem; }
-.quota-group-head strong { display: block; font-size: 0.82rem; }
-.quota-group-head span:not(.badge) { display: block; margin-top: 0.15rem; font-size: 0.7rem; color: hsl(var(--muted-foreground)); }
+.quota-group-head strong { display: block; font-size: 0.92rem; }
+.quota-group-head span:not(.badge) { display: block; margin-top: 0.15rem; font-size: 0.8rem; color: hsl(var(--muted-foreground)); }
 .quota-group .form-grid { grid-template-columns: 1fr 1fr; }
 .geo-status {
   margin-top: 0.7rem;
   padding: 0.55rem 0.7rem;
   border-radius: 0.55rem;
   background: hsl(var(--muted) / 0.35);
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   color: hsl(var(--muted-foreground));
 }
 .smtp-test { display: flex; align-items: flex-end; gap: 0.6rem; margin-top: 0.9rem; }
@@ -491,12 +601,41 @@ onMounted(load);
   font-weight: 700;
 }
 .brand-preview-copy { min-width: 0; }
-.brand-preview-copy strong { display: block; font-size: 0.85rem; }
-.brand-preview-copy span { display: block; margin-top: 0.15rem; font-size: 0.7rem; color: hsl(var(--muted-foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brand-preview-copy strong { display: block; font-size: 0.95rem; }
+.brand-preview-copy span { display: block; margin-top: 0.15rem; font-size: 0.8rem; color: hsl(var(--muted-foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .icon-input-row { display: flex; gap: 0.4rem; }
 .icon-input-row .input { flex: 1; min-width: 0; }
 .icon-upload { position: relative; flex: 0 0 auto; cursor: pointer; }
-.announcement-input { min-height: 8rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.75rem; line-height: 1.6; }
+.theme-field { margin-top: 0.9rem; }
+.theme-color-row { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; }
+.theme-color-row .input { flex: 1 1 14rem; min-width: 0; }
+.theme-color-picker {
+  position: relative;
+  width: 2.4rem;
+  height: 2.4rem;
+  flex: 0 0 2.4rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.55rem;
+  overflow: hidden;
+  cursor: pointer;
+}
+.theme-color-picker input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.theme-color-picker span { display: block; width: 100%; height: 100%; }
+.code-input {
+  min-height: 7.5rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+  line-height: 1.65;
+  tab-size: 2;
+}
+.announcement-input { min-height: 8rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.82rem; line-height: 1.65; }
 @media (max-width: 900px) {
   .settings-grid,
   .quota-grid,

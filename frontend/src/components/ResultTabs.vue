@@ -894,7 +894,7 @@ onUnmounted(() => {
 .empty-icon {
   width: 4rem;
   height: 4rem;
-  background-color: #f3f4f6;
+  background-color: hsl(var(--muted));
   border-radius: 9999px;
   display: flex;
   align-items: center;
@@ -905,13 +905,13 @@ onUnmounted(() => {
 .empty-icon .icon {
   width: 2rem;
   height: 2rem;
-  color: #9ca3af;
+  color: hsl(var(--muted-foreground) / 0.7);
 }
 
 .searching-icon {
   width: 4rem;
   height: 4rem;
-  background-color: #f0f9ff;
+  background-color: hsl(var(--primary) / 0.08);
   border-radius: 9999px;
   display: flex;
   align-items: center;
@@ -922,8 +922,8 @@ onUnmounted(() => {
 .searching-spinner {
   width: 2rem;
   height: 2rem;
-  border: 3px solid #e5e7eb;
-  border-top-color: #3b82f6;
+  border: 3px solid hsl(var(--border));
+  border-top-color: hsl(var(--primary));
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -931,13 +931,13 @@ onUnmounted(() => {
 .empty-title, .searching-title {
   font-size: 1.125rem;
   font-weight: 500;
-  color: #4b5563;
+  color: hsl(var(--foreground) / 0.82);
   margin-bottom: 0.5rem;
 }
 
 .empty-subtitle, .searching-subtitle {
-  font-size: 0.875rem;
-  color: #6b7280;
+  font-size: 0.9rem;
+  color: hsl(var(--muted-foreground));
 }
 
 .results-container {
@@ -965,7 +965,7 @@ onUnmounted(() => {
   border: 1px solid transparent;
   border-radius: 0.55rem;
   white-space: nowrap;
-  font-size: 0.82rem;
+  font-size: 0.86rem;
   color: hsl(var(--muted-foreground));
   background: transparent;
   cursor: pointer;
@@ -996,7 +996,7 @@ onUnmounted(() => {
 .empty-tab {
   padding: 3rem 1rem;
   text-align: center;
-  color: #6b7280;
+  color: hsl(var(--muted-foreground));
 }
 
 .result-list {
@@ -1043,7 +1043,7 @@ onUnmounted(() => {
 }
 
 .result-title-button:focus-visible {
-  outline: 2px solid #93c5fd;
+  outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
   border-radius: 0.25rem;
 }
@@ -1144,13 +1144,13 @@ onUnmounted(() => {
   
   /* 移动端数据来源标签优化 */
   .result-source {
-    font-size: 0.6875rem;
-    padding: 0.0625rem 0.25rem;
+    font-size: 0.75rem;
+    padding: 0.0625rem 0.3rem;
   }
 }
 
 .result-source {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   color: hsl(var(--primary));
   font-weight: 550;
   background-color: hsl(var(--primary) / 0.09);
@@ -1160,19 +1160,22 @@ onUnmounted(() => {
 }
 
 .meta-separator {
-  font-size: 0.75rem;
-  color: #9ca3af;
+  font-size: 0.78rem;
+  color: hsl(var(--muted-foreground) / 0.6);
   margin: 0 0.375rem;
 }
 
 .result-date {
-  font-size: 0.75rem;
-  color: #6b7280;
+  font-size: 0.78rem;
+  color: hsl(var(--muted-foreground));
 }
 
 .result-link {
   font-size: 0.875rem;
-  color: #3b82f6;
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-decoration-color: hsl(var(--primary) / 0.32);
+  text-underline-offset: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1181,7 +1184,7 @@ onUnmounted(() => {
 }
 
 .result-link:hover {
-  text-decoration: underline;
+  text-decoration-color: currentColor;
 }
 
 .result-password {
@@ -1189,8 +1192,8 @@ onUnmounted(() => {
   border: none;
   background: transparent;
   padding: 0;
-  font-size: 0.75rem;
-  color: #6b7280;
+  font-size: 0.8rem;
+  color: hsl(var(--muted-foreground));
   margin-left: 0.75rem;
   white-space: nowrap;
   cursor: pointer;
@@ -1198,32 +1201,32 @@ onUnmounted(() => {
 }
 
 .result-password:hover {
-  color: #4b5563;
+  color: hsl(var(--foreground));
 }
 
 .result-password:focus-visible {
-  outline: 2px solid #93c5fd;
+  outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
   border-radius: 0.25rem;
 }
 
 .result-password.copied {
-  color: #059669;
+  color: hsl(var(--success));
   display: inline-flex;
   align-items: center;
   padding: 0.3rem 0.7rem;
   border-radius: 9999px;
-  background: #ecfdf5;
-  border: 1px solid #d1fae5;
+  background: hsl(var(--success) / 0.1);
+  border: 1px solid hsl(var(--success) / 0.24);
   line-height: 1;
 }
 
 .result-password.copy-failed {
-  color: #dc2626;
+  color: hsl(var(--destructive));
 }
 
 .password-value {
-  color: #10b981;
+  color: hsl(var(--success));
   font-weight: 500;
 }
 
@@ -1243,10 +1246,10 @@ onUnmounted(() => {
   width: min(100%, 640px);
   max-height: min(80vh, 680px);
   overflow-y: auto;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
   border-radius: 1rem;
-  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.2);
+  box-shadow: 0 24px 64px hsl(var(--foreground) / 0.18);
 }
 
 .detail-header {
@@ -1263,10 +1266,10 @@ onUnmounted(() => {
 
 .detail-label {
   margin: 0 0 0.5rem;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: #6b7280;
+  color: hsl(var(--muted-foreground));
 }
 
 .detail-title {
@@ -1274,15 +1277,15 @@ onUnmounted(() => {
   font-size: 1rem;
   line-height: 1.7;
   font-weight: 600;
-  color: #111827;
+  color: hsl(var(--foreground));
   word-break: break-word;
 }
 
 .detail-close {
   appearance: none;
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  color: #6b7280;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  color: hsl(var(--muted-foreground));
   width: 2rem;
   height: 2rem;
   border-radius: 9999px;
@@ -1295,16 +1298,16 @@ onUnmounted(() => {
 }
 
 .detail-close:hover {
-  color: #111827;
-  border-color: #cbd5e1;
-  background: #f8fafc;
+  color: hsl(var(--foreground));
+  border-color: hsl(var(--border-hover));
+  background: hsl(var(--muted) / 0.6);
 }
 
 .detail-close:focus-visible,
 .detail-copy-btn:focus-visible,
 .detail-password-action:focus-visible,
 .detail-link-preview:focus-visible {
-  outline: 2px solid #93c5fd;
+  outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
 }
 
@@ -1335,7 +1338,7 @@ onUnmounted(() => {
   border: none;
   background: transparent;
   padding: 0;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1343,33 +1346,33 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.375rem;
   min-width: 0;
-  color: #6b7280;
+  color: hsl(var(--muted-foreground));
 }
 
 .detail-password-action:hover {
-  color: #047857;
+  color: hsl(var(--success));
 }
 
 .detail-password-action.success {
-  color: #059669;
+  color: hsl(var(--success));
   padding: 0.3rem 0.7rem;
   border-radius: 9999px;
-  background: #ecfdf5;
-  border: 1px solid #d1fae5;
+  background: hsl(var(--success) / 0.1);
+  border: 1px solid hsl(var(--success) / 0.24);
   line-height: 1;
 }
 
 .detail-password-action.error {
-  color: #dc2626;
+  color: hsl(var(--destructive));
 }
 
 .detail-copy-btn {
   appearance: none;
   border: none;
   background: transparent;
-  color: #2563eb;
+  color: hsl(var(--primary));
   padding: 0;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1377,20 +1380,20 @@ onUnmounted(() => {
 }
 
 .detail-copy-btn:hover {
-  color: #1d4ed8;
+  color: hsl(var(--primary) / 0.72);
 }
 
 .detail-copy-btn.success {
-  color: #059669;
+  color: hsl(var(--success));
   padding: 0.3rem 0.7rem;
   border-radius: 9999px;
-  background: #ecfdf5;
-  border: 1px solid #d1fae5;
+  background: hsl(var(--success) / 0.1);
+  border: 1px solid hsl(var(--success) / 0.24);
   line-height: 1;
 }
 
 .detail-copy-btn.error {
-  color: #dc2626;
+  color: hsl(var(--destructive));
 }
 
 .detail-password-label {
@@ -1399,7 +1402,7 @@ onUnmounted(() => {
 }
 
 .detail-password-content {
-  color: #10b981;
+  color: hsl(var(--success));
   max-width: 9rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1416,7 +1419,7 @@ onUnmounted(() => {
   border: none;
   background: transparent;
   cursor: pointer;
-  color: #3b82f6;
+  color: hsl(var(--primary));
   font-size: 0.875rem;
   line-height: 1.25rem;
   overflow: hidden;
@@ -1445,15 +1448,15 @@ onUnmounted(() => {
   justify-content: center;
   gap: 0.5rem;
   padding: 1rem;
-  color: #6b7280;
-  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.9rem;
 }
 
 .loading-spinner, .hint-spinner {
   width: 1rem;
   height: 1rem;
-  border: 2px solid #e5e7eb;
-  border-top-color: #3b82f6;
+  border: 2px solid hsl(var(--border));
+  border-top-color: hsl(var(--primary));
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -1466,7 +1469,7 @@ onUnmounted(() => {
   padding: 0.7rem;
   background: hsl(var(--primary) / 0.07);
   color: hsl(var(--primary));
-  font-size: 0.82rem;
+  font-size: 0.86rem;
   border-top: 1px solid hsl(var(--border) / 0.6);
   backdrop-filter: blur(12px);
 }
@@ -1533,7 +1536,7 @@ onUnmounted(() => {
   
   .tab-button {
     padding: 0.5rem 0.75rem;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
   }
 
   .detail-dialog {

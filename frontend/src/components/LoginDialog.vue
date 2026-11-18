@@ -481,9 +481,9 @@ const handleRegister = async () => {
 .login-brand img { width: 2.1rem; height: 2.1rem; object-fit: contain; }
 .login-eyebrow {
   display: block;
-  font-size: 0.58rem;
+  font-size: 0.72rem;
   font-weight: 750;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.14em;
   color: hsl(var(--primary));
 }
 .login-header h2 {
@@ -494,7 +494,7 @@ const handleRegister = async () => {
 }
 .login-header p {
   margin-top: 0.25rem;
-  font-size: 0.76rem;
+  font-size: 0.82rem;
   line-height: 1.55;
   color: hsl(var(--muted-foreground));
 }
@@ -510,13 +510,13 @@ const handleRegister = async () => {
   border-radius: 0.6rem;
   text-align: center;
 }
-.auth-empty p { margin: 0; font-size: 0.75rem; line-height: 1.6; color: hsl(var(--muted-foreground)); }
+.auth-empty p { margin: 0; font-size: 0.8rem; line-height: 1.6; color: hsl(var(--muted-foreground)); }
 .text-button {
   border: 0;
   padding: 0;
   background: transparent;
   color: hsl(var(--primary));
-  font-size: 0.74rem;
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
 }
@@ -524,7 +524,7 @@ const handleRegister = async () => {
 .auth-switch {
   margin-top: 1rem;
   text-align: center;
-  font-size: 0.74rem;
+  font-size: 0.8rem;
   color: hsl(var(--muted-foreground));
 }
 .auth-switch button {
@@ -548,7 +548,7 @@ const handleRegister = async () => {
   border-radius: 0.65rem;
   background: hsl(var(--background-light, 0 0% 100%));
   color: hsl(var(--foreground));
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   font-weight: 550;
   cursor: pointer;
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
@@ -563,7 +563,7 @@ const handleRegister = async () => {
   border-radius: 999px;
   background: hsl(var(--primary) / 0.12);
   color: hsl(var(--primary));
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 750;
 }
 .divider {
@@ -571,7 +571,7 @@ const handleRegister = async () => {
   align-items: center;
   gap: 0.7rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.7rem;
+  font-size: 0.76rem;
 }
 .divider::before, .divider::after {
   content: '';
@@ -582,7 +582,7 @@ const handleRegister = async () => {
 
 .login-form { display: flex; flex-direction: column; gap: 0.8rem; }
 .form-group { display: flex; flex-direction: column; gap: 0.35rem; }
-.form-group label { font-size: 0.76rem; font-weight: 600; color: hsl(var(--foreground)); }
+.form-group label { font-size: 0.82rem; font-weight: 600; color: hsl(var(--foreground)); }
 .form-group input {
   width: 100%;
   padding: 0.65rem 0.75rem;
@@ -590,7 +590,7 @@ const handleRegister = async () => {
   border-radius: 0.55rem;
   background: hsl(var(--background));
   color: hsl(var(--foreground));
-  font-size: 0.85rem;
+  font-size: 0.92rem;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 .form-group input::placeholder { color: hsl(var(--muted-foreground) / 0.75); }
@@ -630,7 +630,7 @@ const handleRegister = async () => {
   border-radius: 0.55rem;
   background: hsl(var(--muted));
   color: hsl(var(--foreground));
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 550;
   cursor: pointer;
   white-space: nowrap;
@@ -641,7 +641,7 @@ const handleRegister = async () => {
 .form-message {
   padding: 0.55rem 0.7rem;
   border-radius: 0.5rem;
-  font-size: 0.76rem;
+  font-size: 0.82rem;
   line-height: 1.5;
 }
 .error-message {
@@ -667,7 +667,7 @@ const handleRegister = async () => {
   border-radius: 0.6rem;
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
-  font-size: 0.86rem;
+  font-size: 0.92rem;
   font-weight: 650;
   cursor: pointer;
   box-shadow: 0 8px 18px hsl(var(--primary) / 0.22);
@@ -694,7 +694,7 @@ const handleRegister = async () => {
   margin-top: 1.15rem;
   padding-top: 0.75rem;
   border-top: 1px dashed hsl(var(--border) / 0.8);
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   color: hsl(var(--muted-foreground));
 }
 

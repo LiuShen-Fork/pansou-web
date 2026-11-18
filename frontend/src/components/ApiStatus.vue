@@ -413,7 +413,7 @@ onMounted(() => {
 .count-badge {
   background: #3b82f6;
   color: white;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   padding: 0.25rem 0.5rem;
   border-radius: 9999px;
   font-weight: 600;
@@ -447,7 +447,7 @@ onMounted(() => {
 }
 
 .toggle-icon {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   transition: transform 0.2s ease;
 }
 

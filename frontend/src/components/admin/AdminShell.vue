@@ -148,8 +148,8 @@ onBeforeUnmount(() => {
   display: flex;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 100% 0%, rgba(99, 102, 241, 0.08), transparent 32rem),
-    radial-gradient(circle at 0% 100%, rgba(129, 140, 248, 0.07), transparent 28rem),
+    radial-gradient(circle at 100% 0%, hsl(var(--primary) / 0.09), transparent 32rem),
+    radial-gradient(circle at 0% 100%, hsl(var(--primary) / 0.07), transparent 28rem),
     hsl(var(--muted) / 0.35);
 }
 
@@ -201,8 +201,8 @@ onBeforeUnmount(() => {
 }
 
 .brand-copy { min-width: 0; flex: 1; }
-.brand-copy strong { display: block; font-size: 0.9rem; font-weight: 700; letter-spacing: -0.01em; }
-.brand-copy span { display: block; font-size: 0.68rem; color: hsl(var(--muted-foreground)); margin-top: 0.1rem; }
+.brand-copy strong { display: block; font-size: 0.98rem; font-weight: 700; letter-spacing: -0.01em; }
+.brand-copy span { display: block; font-size: 0.78rem; color: hsl(var(--muted-foreground)); margin-top: 0.1rem; }
 
 .console-switch {
   display: grid;
@@ -224,7 +224,7 @@ onBeforeUnmount(() => {
   padding: 0.45rem 0.3rem;
   background: transparent;
   color: hsl(var(--muted-foreground));
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
 }
@@ -243,11 +243,11 @@ onBeforeUnmount(() => {
 
 .nav-label {
   margin: 0.9rem 0.55rem 0.45rem;
-  font-size: 0.64rem;
+  font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: hsl(var(--muted-foreground) / 0.8);
+  color: hsl(var(--muted-foreground));
 }
 
 .console-nav button {
@@ -260,7 +260,7 @@ onBeforeUnmount(() => {
   padding: 0.6rem 0.65rem;
   background: transparent;
   color: hsl(var(--muted-foreground));
-  font-size: 0.82rem;
+  font-size: 0.92rem;
   font-weight: 550;
   text-align: left;
   cursor: pointer;
@@ -275,7 +275,7 @@ onBeforeUnmount(() => {
 .console-nav button.active {
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
-  box-shadow: 0 6px 14px rgba(79, 70, 229, 0.22);
+  box-shadow: 0 6px 14px hsl(var(--primary) / 0.28);
 }
 
 .nav-text { flex: 1; }
@@ -285,7 +285,7 @@ onBeforeUnmount(() => {
   border-radius: 999px;
   background: hsl(var(--muted));
   color: hsl(var(--muted-foreground));
-  font-size: 0.64rem;
+  font-size: 0.78rem;
   text-align: center;
 }
 .console-nav button.active .nav-badge { background: rgba(255,255,255,0.22); color: #fff; }
@@ -309,8 +309,8 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 .user-copy { min-width: 0; }
-.user-copy strong { display: block; font-size: 0.78rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.user-copy span { display: block; font-size: 0.64rem; color: hsl(var(--muted-foreground)); text-transform: uppercase; letter-spacing: 0.08em; }
+.user-copy strong { display: block; font-size: 0.88rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-copy span { display: block; font-size: 0.78rem; color: hsl(var(--muted-foreground)); text-transform: uppercase; letter-spacing: 0.08em; }
 
 .footer-actions { display: flex; flex-direction: column; gap: 0.25rem; }
 .footer-actions button {
@@ -322,7 +322,7 @@ onBeforeUnmount(() => {
   padding: 0.45rem 0.5rem;
   background: transparent;
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   cursor: pointer;
   text-align: left;
 }
@@ -345,10 +345,10 @@ onBeforeUnmount(() => {
 }
 
 .title-block { min-width: 0; flex: 1; }
-.breadcrumb { font-size: 0.65rem; color: hsl(var(--muted-foreground)); letter-spacing: 0.04em; }
-.breadcrumb span { margin: 0 0.25rem; opacity: 0.6; }
-.title-block h1 { margin: 0.1rem 0 0; font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; }
-.title-block p { margin: 0.15rem 0 0; font-size: 0.75rem; color: hsl(var(--muted-foreground)); }
+.breadcrumb { font-size: 0.8rem; color: hsl(var(--muted-foreground)); letter-spacing: 0.04em; }
+.breadcrumb span { margin: 0 0.25rem; opacity: 0.7; }
+.title-block h1 { margin: 0.1rem 0 0; font-size: 1.3rem; font-weight: 700; letter-spacing: -0.02em; }
+.title-block p { margin: 0.15rem 0 0; font-size: 0.85rem; color: hsl(var(--muted-foreground)); }
 
 .topbar-actions { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; justify-content: flex-end; }
 
@@ -381,7 +381,7 @@ onBeforeUnmount(() => {
   .mobile-only { display: grid; }
   .console-topbar { padding: 0.85rem 1rem; }
   .console-body { padding: 1rem; }
-  .title-block h1 { font-size: 1rem; }
+  .title-block h1 { font-size: 1.15rem; }
   .title-block p { display: none; }
 }
 

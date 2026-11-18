@@ -117,7 +117,7 @@ onBeforeUnmount(() => {
 }
 .announce-badge svg { width: 1.35rem; height: 1.35rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .announce-heading { flex: 1; min-width: 0; }
-.announce-eyebrow { display: block; font-size: 0.58rem; font-weight: 750; letter-spacing: 0.18em; color: hsl(var(--primary)); }
+.announce-eyebrow { display: block; font-size: 0.72rem; font-weight: 750; letter-spacing: 0.14em; color: hsl(var(--primary)); }
 .announce-heading h2 { margin: 0.1rem 0 0; font-size: 1.15rem; font-weight: 750; letter-spacing: -0.02em; }
 .announce-close {
   display: grid;
@@ -149,14 +149,14 @@ onBeforeUnmount(() => {
   border-top: 1px solid hsl(var(--border) / 0.75);
   background: hsl(var(--muted) / 0.3);
 }
-.announce-foot span { font-size: 0.66rem; color: hsl(var(--muted-foreground)); }
+.announce-foot span { font-size: 0.78rem; color: hsl(var(--muted-foreground)); }
 .announce-ok {
   padding: 0.45rem 0.95rem;
   border: 0;
   border-radius: 0.5rem;
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
-  font-size: 0.76rem;
+  font-size: 0.82rem;
   font-weight: 650;
   cursor: pointer;
   box-shadow: 0 6px 16px hsl(var(--primary) / 0.24);
@@ -164,7 +164,7 @@ onBeforeUnmount(() => {
 .announce-ok:hover { filter: brightness(1.06); }
 
 /* Markdown 排版 */
-.markdown-body { font-size: 0.83rem; line-height: 1.75; color: hsl(var(--foreground)); }
+.markdown-body { font-size: 0.88rem; line-height: 1.75; color: hsl(var(--foreground)); }
 .markdown-body :deep(> :first-child) { margin-top: 0; }
 .markdown-body :deep(> :last-child) { margin-bottom: 0; }
 .markdown-body :deep(h1),
@@ -204,7 +204,7 @@ onBeforeUnmount(() => {
   border: 1px solid hsl(var(--border));
   border-radius: 0.55rem;
   background: hsl(var(--muted));
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   line-height: 1.6;
 }
 .markdown-body :deep(pre.md-code code) { padding: 0; background: transparent; font-size: inherit; }

@@ -314,8 +314,8 @@ onMounted(load);
   border-radius: 0.7rem;
   background: hsl(var(--muted) / 0.3);
 }
-.callback-url { margin-top: 0.2rem; word-break: break-all; font-size: 0.76rem; }
-.hint { margin-top: 0.15rem; font-size: 0.68rem; color: hsl(var(--muted-foreground)); }
+.callback-url { margin-top: 0.2rem; word-break: break-all; font-size: 0.8rem; }
+.hint { margin-top: 0.15rem; font-size: 0.78rem; color: hsl(var(--muted-foreground)); }
 
 .oauth-grid {
   display: grid;
@@ -351,8 +351,8 @@ onMounted(load);
 .provider-logo.google { background: #fef2f2; color: #dc2626; }
 .provider-logo.linuxdo { background: #eff6ff; color: #2563eb; }
 .oauth-preview strong { font-size: 0.92rem; }
-.preview-meta { width: 100%; font-size: 0.66rem; color: hsl(var(--muted-foreground)); word-break: break-all; }
-.oauth-preview p { margin-top: auto; padding-top: 0.5rem; font-size: 0.68rem; line-height: 1.6; color: hsl(var(--muted-foreground)); }
+.preview-meta { width: 100%; font-size: 0.8rem; color: hsl(var(--muted-foreground)); word-break: break-all; }
+.oauth-preview p { margin-top: auto; padding-top: 0.5rem; font-size: 0.78rem; line-height: 1.6; color: hsl(var(--muted-foreground)); }
 
 .oauth-form { min-width: 0; }
 .preset-row { display: flex; gap: 0.4rem; flex-wrap: wrap; }
@@ -365,7 +365,7 @@ onMounted(load);
   border-radius: 999px;
   background: transparent;
   color: hsl(var(--muted-foreground));
-  font-size: 0.7rem;
+  font-size: 0.78rem;
   font-weight: 550;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -379,7 +379,7 @@ onMounted(load);
   height: 1.1rem;
   border-radius: 999px;
   background: hsl(var(--muted));
-  font-size: 0.58rem;
+  font-size: 0.8rem;
   font-weight: 750;
 }
 .preset-mark.github { background: #111827; color: #fff; }
@@ -392,9 +392,9 @@ onMounted(load);
 .tips-card .section-head { border-bottom: 0; }
 .tips-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; }
 .tip-item { display: flex; gap: 0.6rem; padding: 0.75rem; border: 1px solid hsl(var(--border) / 0.8); border-radius: 0.7rem; background: hsl(var(--muted) / 0.18); }
-.tip-index { font-size: 0.68rem; font-weight: 800; color: hsl(var(--primary)); letter-spacing: 0.04em; }
-.tip-item strong { display: block; font-size: 0.76rem; }
-.tip-item small { display: block; margin-top: 0.2rem; font-size: 0.68rem; line-height: 1.55; color: hsl(var(--muted-foreground)); }
+.tip-index { font-size: 0.78rem; font-weight: 800; color: hsl(var(--primary)); letter-spacing: 0.04em; }
+.tip-item strong { display: block; font-size: 0.8rem; }
+.tip-item small { display: block; margin-top: 0.2rem; font-size: 0.78rem; line-height: 1.6; color: hsl(var(--muted-foreground)); }
 
 @media (max-width: 900px) {
   .oauth-grid { grid-template-columns: 1fr; }

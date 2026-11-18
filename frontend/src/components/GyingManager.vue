@@ -1073,7 +1073,7 @@ const copyHashToClipboard = async () => {
 
 .api-detail code {
   color: hsl(var(--foreground));
-  font-size: 11px;
+  font-size: 0.75rem;
 }
 
 /* 搜索卡片 */
@@ -1139,7 +1139,7 @@ const copyHashToClipboard = async () => {
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: 0.8rem;
   background: hsl(var(--background));
   border-radius: 4px;
   margin-top: 4px;
@@ -1154,7 +1154,7 @@ const copyHashToClipboard = async () => {
   color: hsl(var(--primary));
   border-radius: 4px;
   font-weight: 600;
-  font-size: 11px;
+  font-size: 0.75rem;
   text-transform: uppercase;
   min-width: 50px;
   justify-content: center;

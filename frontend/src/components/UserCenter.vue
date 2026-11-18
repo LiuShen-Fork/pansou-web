@@ -652,7 +652,7 @@ const removeBinding = async (providerId: number) => {
   border: 1px solid hsl(var(--border));
   border-radius: var(--console-radius);
   background:
-    radial-gradient(circle at 90% -20%, rgba(99, 102, 241, 0.12), transparent 16rem),
+    radial-gradient(circle at 90% -20%, hsl(var(--primary) / 0.12), transparent 16rem),
     hsl(var(--background-light, 0 0% 100%) / 0.94);
   box-shadow: var(--console-shadow);
 }
@@ -663,17 +663,17 @@ const removeBinding = async (providerId: number) => {
   width: 3.2rem;
   height: 3.2rem;
   border-radius: 1rem;
-  background: linear-gradient(135deg, hsl(var(--primary)), #818cf8);
-  color: #fff;
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+  color: hsl(var(--primary-foreground));
   font-size: 1.15rem;
   font-weight: 750;
-  box-shadow: 0 10px 22px rgba(79, 70, 229, 0.25);
+  box-shadow: 0 10px 22px hsl(var(--primary) / 0.25);
 }
 .hero-copy { min-width: 0; }
 .hero-title { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .hero-title h2 { font-size: 1.2rem; font-weight: 750; letter-spacing: -0.02em; }
-.hero-copy p { margin-top: 0.15rem; font-size: 0.75rem; color: hsl(var(--muted-foreground)); }
-.hero-meta { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 0.4rem; font-size: 0.7rem; color: hsl(var(--muted-foreground)); }
+.hero-copy p { margin-top: 0.15rem; font-size: 0.85rem; color: hsl(var(--muted-foreground)); }
+.hero-meta { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 0.4rem; font-size: 0.8rem; color: hsl(var(--muted-foreground)); }
 .hero-meta span { display: inline-flex; align-items: center; gap: 0.3rem; }
 .hero-actions { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
 .user-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
@@ -682,10 +682,10 @@ const removeBinding = async (providerId: number) => {
   display: flex; align-items: center; gap: 0.45rem; padding: 0.65rem;
   border: 1px solid hsl(var(--border)); border-radius: 0.6rem;
   background: hsl(var(--muted) / 0.3); color: hsl(var(--foreground));
-  font-size: 0.75rem; font-weight: 550; cursor: pointer; text-align: left;
+  font-size: 0.85rem; font-weight: 550; cursor: pointer; text-align: left;
 }
 .quick-grid button:hover { border-color: hsl(var(--primary) / 0.5); color: hsl(var(--primary)); background: hsl(var(--primary) / 0.06); }
-.api-hint { font-size: 0.72rem; line-height: 1.6; color: hsl(var(--muted-foreground)); margin-bottom: 0.75rem; }
+.api-hint { font-size: 0.82rem; line-height: 1.65; color: hsl(var(--muted-foreground)); margin-bottom: 0.75rem; }
 .api-hint code { background: hsl(var(--muted)); padding: 0.1rem 0.3rem; border-radius: 0.3rem; }
 .token-head { align-items: center; }
 .token-head-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
@@ -700,11 +700,11 @@ const removeBinding = async (providerId: number) => {
 }
 .api-guide-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.7rem; }
 .api-guide-head strong { display: block; font-size: 0.82rem; }
-.api-guide-head span { display: block; margin-top: 0.18rem; font-size: 0.7rem; color: hsl(var(--muted-foreground)); line-height: 1.5; }
+.api-guide-head span { display: block; margin-top: 0.18rem; font-size: 0.8rem; color: hsl(var(--muted-foreground)); line-height: 1.6; }
 .api-row { display: flex; align-items: center; gap: 0.55rem; padding: 0.4rem 0; border-top: 1px dashed hsl(var(--border) / 0.8); }
 .api-row:first-of-type { border-top: 0; }
-.api-label { flex: 0 0 3.4rem; font-size: 0.68rem; color: hsl(var(--muted-foreground)); }
-.api-row code { flex: 1; min-width: 0; padding: 0.32rem 0.5rem; border-radius: 0.4rem; background: hsl(var(--background-light, 0 0% 100%) / 0.8); border: 1px solid hsl(var(--border) / 0.75); font-size: 0.7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.api-label { flex: 0 0 3.4rem; font-size: 0.8rem; color: hsl(var(--muted-foreground)); }
+.api-row code { flex: 1; min-width: 0; padding: 0.32rem 0.5rem; border-radius: 0.4rem; background: hsl(var(--background-light, 0 0% 100%) / 0.8); border: 1px solid hsl(var(--border) / 0.75); font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .api-copy { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; flex: 0 0 1.75rem; border: 1px solid hsl(var(--border)); border-radius: 0.45rem; background: transparent; color: hsl(var(--muted-foreground)); cursor: pointer; }
 .api-copy:hover { color: hsl(var(--primary)); border-color: hsl(var(--primary) / 0.4); }
 .token-quota {
@@ -718,12 +718,12 @@ const removeBinding = async (providerId: number) => {
   background: hsl(var(--muted) / 0.22);
 }
 .token-quota > div { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
-.token-quota span { font-size: 0.68rem; color: hsl(var(--muted-foreground)); }
+.token-quota span { font-size: 0.8rem; color: hsl(var(--muted-foreground)); }
 .token-quota strong { font-size: 0.78rem; font-variant-numeric: tabular-nums; }
-.token-quota p { grid-column: 1 / -1; font-size: 0.64rem; color: hsl(var(--muted-foreground)); }
+.token-quota p { grid-column: 1 / -1; font-size: 0.8rem; color: hsl(var(--muted-foreground)); }
 .token-list-head { display: flex; align-items: center; justify-content: space-between; margin: 1rem 0 0.5rem; }
-.token-list-head span { font-size: 0.76rem; font-weight: 650; }
-.token-list-head small { font-size: 0.66rem; color: hsl(var(--muted-foreground)); }
+.token-list-head span { font-size: 0.86rem; font-weight: 650; }
+.token-list-head small { font-size: 0.8rem; color: hsl(var(--muted-foreground)); }
 .token-list { display: flex; flex-direction: column; gap: 0.45rem; }
 .token-row {
   display: flex; align-items: center; gap: 0.7rem;
@@ -739,8 +739,8 @@ const removeBinding = async (providerId: number) => {
 .token-copy { flex: 1; min-width: 0; }
 .token-title { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; }
 .token-title strong { font-size: 0.8rem; font-weight: 650; }
-.token-mask { font-size: 0.68rem; color: hsl(var(--muted-foreground)); letter-spacing: 0.02em; }
-.token-times { display: flex; align-items: center; flex-wrap: wrap; gap: 0.3rem 0.8rem; margin-top: 0.22rem; font-size: 0.66rem; color: hsl(var(--muted-foreground)); }
+.token-mask { font-size: 0.8rem; color: hsl(var(--muted-foreground)); letter-spacing: 0.02em; }
+.token-times { display: flex; align-items: center; flex-wrap: wrap; gap: 0.3rem 0.8rem; margin-top: 0.22rem; font-size: 0.8rem; color: hsl(var(--muted-foreground)); }
 .token-times span { display: inline-flex; align-items: center; gap: 0.22rem; }
 .token-unused { color: hsl(var(--muted-foreground) / 0.7); }
 .token-delete { display: grid; place-items: center; width: 1.9rem; height: 1.9rem; flex: 0 0 1.9rem; border: 1px solid transparent; border-radius: 0.5rem; background: transparent; color: hsl(var(--muted-foreground)); cursor: pointer; }
@@ -748,26 +748,26 @@ const removeBinding = async (providerId: number) => {
 .token-empty { padding: 2rem 1rem; }
 .token-empty-icon { display: grid; place-items: center; width: 3rem; height: 3rem; margin-bottom: 0.6rem; border-radius: 999px; background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
 .token-empty strong { font-size: 0.85rem; }
-.token-empty span { margin-top: 0.2rem; font-size: 0.7rem; color: hsl(var(--muted-foreground)); }
+.token-empty span { margin-top: 0.2rem; font-size: 0.8rem; color: hsl(var(--muted-foreground)); }
 .token-modal { max-width: 30rem; width: 100%; }
 .token-reveal { padding: 0.85rem; border: 1px solid hsl(var(--success, 142 76% 36%) / 0.3); border-radius: 0.7rem; background: hsl(var(--success, 142 76% 36%) / 0.06); }
-.token-reveal-label { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; font-size: 0.72rem; font-weight: 650; }
-.token-reveal-warn { font-size: 0.64rem; font-weight: 500; color: hsl(var(--destructive)); }
+.token-reveal-label { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; font-size: 0.82rem; font-weight: 650; }
+.token-reveal-warn { font-size: 0.8rem; font-weight: 500; color: hsl(var(--destructive)); }
 .token-reveal-box { display: flex; align-items: center; gap: 0.45rem; margin-top: 0.55rem; padding: 0.55rem 0.6rem; border: 1px solid hsl(var(--border)); border-radius: 0.55rem; background: hsl(var(--background-light, 0 0% 100%)); }
-.token-reveal-box code { flex: 1; min-width: 0; font-size: 0.72rem; word-break: break-all; }
+.token-reveal-box code { flex: 1; min-width: 0; font-size: 0.8rem; word-break: break-all; }
 .token-reveal-hint { margin-top: 0.7rem; line-height: 1.6; }
 .binding-list { display: flex; flex-direction: column; gap: 0.5rem; }
 .binding-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0; border-bottom: 1px dashed hsl(var(--border)); }
 .binding-row:last-child { border-bottom: 0; }
 .binding-icon {
   display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 0.6rem;
-  background: #eef2ff; color: #4338ca; font-size: 0.75rem; font-weight: 750;
+  background: hsl(var(--primary) / 0.12); color: hsl(var(--primary)); font-size: 0.85rem; font-weight: 750;
 }
 .binding-copy { flex: 1; min-width: 0; }
-.binding-copy strong { display: block; font-size: 0.8rem; }
-.binding-copy span { display: block; font-size: 0.68rem; color: hsl(var(--muted-foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.binding-copy strong { display: block; font-size: 0.9rem; }
+.binding-copy span { display: block; font-size: 0.78rem; color: hsl(var(--muted-foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bind-actions { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.6rem; }
-.hint { font-size: 0.7rem; color: hsl(var(--muted-foreground)); }
+.hint { font-size: 0.8rem; color: hsl(var(--muted-foreground)); }
 
 @media (max-width: 860px) {
   .user-grid { grid-template-columns: 1fr; }
@@ -779,7 +779,7 @@ const removeBinding = async (providerId: number) => {
   .token-head { align-items: flex-start; flex-direction: column; }
   .token-head-actions { width: 100%; justify-content: space-between; }
   .api-row { flex-wrap: nowrap; }
-  .api-row code { flex: 1 1 auto; font-size: 0.64rem; }
+  .api-row code { flex: 1 1 auto; font-size: 0.8rem; }
   .api-copy { flex: 0 0 1.65rem; width: 1.65rem; height: 1.65rem; }
   .token-times { gap: 0.2rem 0.55rem; }
   .token-quota { grid-template-columns: 1fr; }

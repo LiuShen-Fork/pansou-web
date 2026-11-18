@@ -167,8 +167,8 @@ onBeforeUnmount(() => {
 .option-icon :deep(svg) { width: 1.05rem; height: 1.05rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .theme-menu button.active .option-icon { color: hsl(var(--primary)); }
 .option-copy { flex: 1; min-width: 0; }
-.option-copy strong { display: block; font-size: 0.76rem; font-weight: 600; }
-.option-copy small { display: block; margin-top: 0.08rem; font-size: 0.63rem; color: hsl(var(--muted-foreground)); }
+.option-copy strong { display: block; font-size: 0.82rem; font-weight: 600; }
+.option-copy small { display: block; margin-top: 0.08rem; font-size: 0.75rem; color: hsl(var(--muted-foreground)); }
 .check { width: 0.9rem; height: 0.9rem; fill: none; stroke: hsl(var(--primary)); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .theme-pop-enter-active, .theme-pop-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }
 .theme-pop-enter-from, .theme-pop-leave-to { opacity: 0; transform: translateY(-4px) scale(0.98); }

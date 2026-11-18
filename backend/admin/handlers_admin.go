@@ -3,6 +3,7 @@ package admin
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -15,7 +16,21 @@ type adminSiteSettings struct {
 	Slogan       string `json:"slogan"`
 	Icon         string `json:"icon"`
 	Announcement string `json:"announcement"`
+	ICP          string `json:"icp"`
+	PoliceICP    string `json:"police_icp"`
+	OwnerHome    string `json:"owner_home"`
+	OwnerBlog    string `json:"owner_blog"`
+	OwnerGithub  string `json:"owner_github"`
+	ThemeColor   string `json:"theme_color"`
+	CustomCSS    string `json:"custom_css"`
+	CustomJS     string `json:"custom_js"`
 }
+
+// siteThemeColorPattern 只接受 #RRGGBB；空值与 white 由调用方单独放行。
+var siteThemeColorPattern = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
+
+// 自定义 CSS/JS 会原样注入页面，限制体积避免设置表被撑爆。
+const maxSiteCustomCodeBytes = 256 * 1024
 
 type adminSettingsPayload struct {
 	Site  adminSiteSettings `json:"site"`
@@ -32,6 +47,22 @@ func isSafeIconURL(value string) bool {
 		strings.HasPrefix(lower, "data:image/")
 }
 
+// normalizeSiteLink 只接受 http(s) 链接；留空表示页脚不展示该入口。
+func normalizeSiteLink(value string) (string, bool) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", true
+	}
+	lower := strings.ToLower(value)
+	if !strings.HasPrefix(lower, "http://") && !strings.HasPrefix(lower, "https://") {
+		return "", false
+	}
+	if len([]rune(value)) > 500 {
+		return "", false
+	}
+	return value, true
+}
+
 func AdminGetSettings(c *gin.Context) {
 	s := LoadSettings()
 	e := LoadEmailSettings()
@@ -41,10 +72,18 @@ func AdminGetSettings(c *gin.Context) {
 		providers[i].ClientSecret = ""
 	}
 	// site 已单独返回名称、Slogan 与图标，auth 中不再重复携带，
-	// 避免上传图标后设置页响应体翻倍。
+	// 避免上传图标后设置页响应体翻倍；自定义代码与备案号同理。
 	auth := s
 	auth.SiteSlogan = ""
 	auth.SiteIcon = ""
+	auth.SiteICP = ""
+	auth.SitePoliceICP = ""
+	auth.SiteOwnerHome = ""
+	auth.SiteOwnerBlog = ""
+	auth.SiteOwnerGithub = ""
+	auth.SiteThemeColor = ""
+	auth.SiteCustomCSS = ""
+	auth.SiteCustomJS = ""
 	c.JSON(http.StatusOK, gin.H{
 		"site": adminSiteSettings{
 			Name:         s.SiteName,
@@ -52,6 +91,14 @@ func AdminGetSettings(c *gin.Context) {
 			Slogan:       s.SiteSlogan,
 			Icon:         s.SiteIcon,
 			Announcement: s.Announcement,
+			ICP:          s.SiteICP,
+			PoliceICP:    s.SitePoliceICP,
+			OwnerHome:    s.SiteOwnerHome,
+			OwnerBlog:    s.SiteOwnerBlog,
+			OwnerGithub:  s.SiteOwnerGithub,
+			ThemeColor:   s.SiteThemeColor,
+			CustomCSS:    s.SiteCustomCSS,
+			CustomJS:     s.SiteCustomJS,
 		},
 		"auth":               auth,
 		"email":              e,
@@ -95,6 +142,49 @@ func AdminPutSettings(c *gin.Context) {
 		s.SiteSlogan = string([]rune(s.SiteSlogan)[:120])
 	}
 	s.Announcement = payload.Site.Announcement
+
+	s.SiteICP = strings.TrimSpace(payload.Site.ICP)
+	s.SitePoliceICP = strings.TrimSpace(payload.Site.PoliceICP)
+	if n := len([]rune(s.SiteICP)); n > 60 {
+		s.SiteICP = string([]rune(s.SiteICP)[:60])
+	}
+	if n := len([]rune(s.SitePoliceICP)); n > 60 {
+		s.SitePoliceICP = string([]rune(s.SitePoliceICP)[:60])
+	}
+
+	for _, link := range []struct {
+		label string
+		value string
+		dst   *string
+	}{
+		{"站长主页", payload.Site.OwnerHome, &s.SiteOwnerHome},
+		{"站长博客", payload.Site.OwnerBlog, &s.SiteOwnerBlog},
+		{"站长 GitHub", payload.Site.OwnerGithub, &s.SiteOwnerGithub},
+	} {
+		normalized, ok := normalizeSiteLink(link.value)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": link.label + "必须是 http(s) 链接或留空", "code": "BAD_SITE_LINK"})
+			return
+		}
+		*link.dst = normalized
+	}
+
+	s.SiteThemeColor = strings.ToLower(strings.TrimSpace(payload.Site.ThemeColor))
+	if s.SiteThemeColor != "" && s.SiteThemeColor != "white" && !siteThemeColorPattern.MatchString(s.SiteThemeColor) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "主题色仅支持留空、white 或 #RRGGBB", "code": "BAD_THEME_COLOR"})
+		return
+	}
+
+	s.SiteCustomCSS = payload.Site.CustomCSS
+	s.SiteCustomJS = payload.Site.CustomJS
+	if len(s.SiteCustomCSS) > maxSiteCustomCodeBytes {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "自定义 CSS 不能超过 256KB", "code": "BAD_CUSTOM_CSS"})
+		return
+	}
+	if len(s.SiteCustomJS) > maxSiteCustomCodeBytes {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "自定义 JS 不能超过 256KB", "code": "BAD_CUSTOM_JS"})
+		return
+	}
 	quotaFields := []struct {
 		name  string
 		value int

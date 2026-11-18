@@ -760,7 +760,7 @@ onMounted(() => {
 }
 
 .stat-label {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: hsl(var(--muted-foreground));
   font-weight: 500;
 }
@@ -873,7 +873,7 @@ onMounted(() => {
   background: hsl(var(--primary) / 0.15);
   color: hsl(var(--primary));
   border-radius: 9999px;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 
@@ -890,7 +890,7 @@ onMounted(() => {
   height: 1.5rem;
   padding: 0 0.55rem;
   border-radius: 9999px;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
@@ -1213,7 +1213,7 @@ onMounted(() => {
 }
 
 .custom-badge {
-  font-size: 0.7rem;
+  font-size: 0.76rem;
   padding: 0.15rem 0.5rem;
   background: hsl(var(--accent));
   color: hsl(var(--accent-foreground));
@@ -1602,7 +1602,7 @@ onMounted(() => {
   }
 
   .tab-count {
-    font-size: 0.7rem;
+    font-size: 0.76rem;
     min-width: 1.25rem;
     height: 1.25rem;
   }
@@ -1627,7 +1627,7 @@ onMounted(() => {
   .action-btn {
     flex: 1;
     padding: 0.5rem;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
   }
 
   .items-grid {
@@ -1697,7 +1697,7 @@ onMounted(() => {
   }
 
   .export-code {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
   }
 }
 </style>

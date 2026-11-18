@@ -299,7 +299,7 @@ onMounted(() => load(1));
   border-radius: 0.45rem;
   background: transparent;
   color: hsl(var(--muted-foreground));
-  font-size: 0.74rem;
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
 }

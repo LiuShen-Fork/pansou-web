@@ -85,7 +85,7 @@ operated for the long term.
 | Admin console | Overview, users, logs/audit, auth/site, OAuth, upstream sync, runtime settings, system status |
 | Observability | Per-search keyword, source, IP, UA, geolocation, result count, duration, status, error |
 | GeoIP | ip2region xdb; IPv4 required / IPv6 optional; private IPs skipped; hot reload on save |
-| Site customization | Site name, slogan, description, icon, Markdown announcement, light/dark theme |
+| Site customization | Site name, slogan, description, icon, ICP/police filing numbers, footer links (owner home/blog/GitHub), Markdown announcement, accent color (including a pure-white skin), global custom CSS/JS, light/dark theme |
 | Distribution | Docker amd64/arm64, Linux/macOS/Windows binaries, GitHub Release, GHCR |
 | Upstream upkeep | Build-time and runtime sync of upstream channels/plugins; hot reload and fallback |
 
@@ -206,7 +206,7 @@ Sign in and click **Console** in the top-right corner. Navigation follows daily 
 | Overview | Users, today's searches, anonymous searches, quota triggers, web/API split, top countries, noisy anonymous IPs, recent audit |
 | Users | Create/disable/delete users, reset passwords, set role and four quota fields (web/API daily and per-minute) |
 | Logs & Audit | Two tabs for search tasks and audit events; filter by keyword/user/IP/source/status/event; CSV export |
-| Auth & Site | Login/registration switches, SMTP, API permissions, anonymous/user quotas, GeoIP, site name/icon/announcement |
+| Auth & Site | Login/registration switches, SMTP, API permissions, anonymous/user quotas, GeoIP, site name/icon/slogan/filing numbers/footer owner links/accent color/announcement/custom CSS-JS |
 | OAuth2 Login | Configure the single enabled third-party login provider and auto-registration |
 | Upstream Sync | Sync upstream Telegram channels and plugins; inspect last success/failure, revision, restart hint |
 | Runtime | Proxy, cache, concurrency, outbound concurrency, web-token signing secret |

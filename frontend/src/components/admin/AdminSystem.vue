@@ -205,7 +205,7 @@ onUnmounted(() => {
   padding: 0.55rem 0.65rem;
   background: hsl(var(--muted) / 0.3);
 }
-.live-chip span { display: block; font-size: 0.68rem; color: hsl(var(--muted-foreground)); }
+.live-chip span { display: block; font-size: 0.78rem; color: hsl(var(--muted-foreground)); }
 .live-chip strong { display: block; font-size: 1.15rem; margin-top: 0.1rem; }
 .live-chip.danger strong { color: #b91c1c; }
 .live-chip.warning strong { color: #b45309; }
@@ -220,11 +220,11 @@ onUnmounted(() => {
   border-radius: 0.65rem;
   padding: 0.7rem;
 }
-.live-block h4 { font-size: 0.76rem; font-weight: 650; margin-bottom: 0.5rem; }
+.live-block h4 { font-size: 0.8rem; font-weight: 650; margin-bottom: 0.5rem; }
 .live-list { display: flex; flex-direction: column; gap: 0.35rem; max-height: 11rem; overflow: auto; }
-.live-item { display: flex; align-items: center; gap: 0.45rem; font-size: 0.72rem; }
+.live-item { display: flex; align-items: center; gap: 0.45rem; font-size: 0.78rem; }
 .live-error { color: hsl(var(--muted-foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.empty-line { font-size: 0.74rem; color: hsl(var(--muted-foreground)); }
+.empty-line { font-size: 0.8rem; color: hsl(var(--muted-foreground)); }
 
 .raw-card summary {
   padding: 0.85rem 1.1rem;
@@ -237,8 +237,8 @@ onUnmounted(() => {
   padding: 0 1.1rem 1rem;
   max-height: 24rem;
   overflow: auto;
-  font-size: 0.68rem;
-  line-height: 1.55;
+  font-size: 0.78rem;
+  line-height: 1.6;
   color: hsl(var(--muted-foreground));
 }
 </style>

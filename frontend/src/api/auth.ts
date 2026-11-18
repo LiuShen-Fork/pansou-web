@@ -74,6 +74,14 @@ export interface PublicConfig {
     slogan: string;
     icon: string;
     announcement: string;
+    icp: string;
+    police_icp: string;
+    owner_home: string;
+    owner_blog: string;
+    owner_github: string;
+    theme_color: string;
+    custom_css: string;
+    custom_js: string;
   };
   auth: PublicAuthConfig;
   oauth_providers: PublicProvider[];
@@ -84,6 +92,14 @@ export interface AuthSettings extends PublicAuthConfig {
   site_description: string;
   site_slogan: string;
   site_icon: string;
+  site_icp: string;
+  site_police_icp: string;
+  site_owner_home: string;
+  site_owner_blog: string;
+  site_owner_github: string;
+  site_theme_color: string;
+  site_custom_css: string;
+  site_custom_js: string;
   announcement: string;
   anonymous_rate_limit: number;
   anonymous_daily_limit: number;
@@ -298,8 +314,24 @@ export interface AuditLog {
   created_at: string;
 }
 
+export interface AdminSiteSettings {
+  name: string;
+  description: string;
+  slogan: string;
+  icon: string;
+  announcement: string;
+  icp: string;
+  police_icp: string;
+  owner_home: string;
+  owner_blog: string;
+  owner_github: string;
+  theme_color: string;
+  custom_css: string;
+  custom_js: string;
+}
+
 export interface AdminSettingsPayload {
-  site: { name: string; description: string; slogan: string; icon: string; announcement: string };
+  site: AdminSiteSettings;
   auth: AuthSettings;
   email: EmailSettings;
 }

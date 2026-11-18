@@ -356,7 +356,7 @@ onMounted(() => load(1));
   border-radius: 999px;
   background: hsl(var(--muted));
   color: hsl(var(--muted-foreground));
-  font-size: 0.7rem;
+  font-size: 0.76rem;
   font-weight: 700;
   flex: 0 0 auto;
 }
@@ -366,9 +366,9 @@ onMounted(() => load(1));
   padding: 0.08rem 0.35rem;
   border-radius: 0.35rem;
   background: hsl(var(--muted));
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
 }
-.quota-sep { margin: 0 0.15rem; color: hsl(var(--muted-foreground)); font-size: 0.66rem; }
+.quota-sep { margin: 0 0.15rem; color: hsl(var(--muted-foreground)); font-size: 0.8rem; }
 .role-readonly { display: flex; align-items: center; gap: 0.5rem; min-height: 2.5rem; flex-wrap: wrap; }
 </style>

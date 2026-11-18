@@ -103,6 +103,17 @@ const siteSlogan = computed(
   () => authState.config?.site.slogan || authState.config?.site.description || '清羽飞扬自建网盘搜索，众多资源，一键直达',
 );
 const siteIcon = computed(() => authState.config?.site.icon || '/favicon.ico');
+// 备案号由后台配置，留空时页脚不展示对应条目。
+const siteICP = computed(() => authState.config?.site.icp || '');
+const sitePoliceICP = computed(() => authState.config?.site.police_icp || '');
+// 站长链接同样由后台配置，留空则不展示。
+const siteOwnerHome = computed(() => authState.config?.site.owner_home || '');
+const siteOwnerBlog = computed(() => authState.config?.site.owner_blog || '');
+const siteOwnerGithub = computed(() => authState.config?.site.owner_github || '');
+const policeICPURL = computed(() => {
+  const digits = sitePoliceICP.value.match(/\d+/g)?.join('') || '';
+  return digits ? `https://beian.mps.gov.cn/#/query/webSearch?code=${digits}` : 'https://beian.mps.gov.cn/';
+});
 const globalNotice = ref('');
 const globalError = ref('');
 
@@ -160,6 +171,101 @@ function syncSiteMeta() {
 }
 
 watch([siteName, siteIcon, () => authState.config?.site.description], syncSiteMeta, { immediate: true });
+
+// ---------------- 后台可配置的主题色 ----------------
+type BrandHSL = { h: number; s: number; l: number };
+
+function hexToHsl(hex: string): BrandHSL | null {
+  const matched = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!matched) return null;
+  const value = parseInt(matched[1], 16);
+  const r = ((value >> 16) & 255) / 255;
+  const g = ((value >> 8) & 255) / 255;
+  const b = (value & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0;
+  let s = 0;
+  if (max !== min) {
+    const delta = max - min;
+    s = l > 0.5 ? delta / (2 - max - min) : delta / (max + min);
+    if (max === r) h = (g - b) / delta + (g < b ? 6 : 0);
+    else if (max === g) h = (b - r) / delta + 2;
+    else h = (r - g) / delta + 4;
+    h /= 6;
+  }
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+const BRAND_VARS = [
+  '--brand-primary',
+  '--brand-primary-dark',
+  '--brand-accent',
+  '--brand-accent-dark',
+  '--brand-accent-secondary',
+  '--brand-accent-secondary-dark',
+];
+
+// 颜色写在 html 上，再由 pansou.css / theme.css 的 var() 回退到内置紫色。
+function applySiteTheme(color: string) {
+  const root = document.documentElement;
+  BRAND_VARS.forEach((name) => root.style.removeProperty(name));
+  const value = (color || '').trim().toLowerCase();
+  if (value === 'white') {
+    root.dataset.brand = 'white';
+    return;
+  }
+  root.removeAttribute('data-brand');
+  const hsl = hexToHsl(value);
+  if (!hsl) return;
+  // 浅色主题压暗、深色主题提亮，保证按钮与链接上的文字始终可读。
+  const lightL = Math.min(52, Math.max(30, hsl.l));
+  const darkL = Math.min(84, Math.max(hsl.l, 68));
+  const darkS = Math.min(hsl.s, 88);
+  root.style.setProperty('--brand-primary', `${hsl.h} ${hsl.s}% ${lightL}%`);
+  root.style.setProperty('--brand-primary-dark', `${hsl.h} ${darkS}% ${darkL}%`);
+  root.style.setProperty('--brand-accent', `${hsl.h} ${Math.min(100, hsl.s + 4)}% ${Math.max(26, lightL - 6)}%`);
+  root.style.setProperty('--brand-accent-dark', `${hsl.h} ${Math.min(100, darkS + 4)}% ${Math.min(86, darkL + 4)}%`);
+  root.style.setProperty('--brand-accent-secondary', `${hsl.h} ${Math.min(100, hsl.s + 20)}% ${Math.min(80, lightL + 20)}%`);
+  root.style.setProperty('--brand-accent-secondary-dark', `${hsl.h} ${Math.min(100, darkS + 10)}% ${Math.max(42, darkL - 14)}%`);
+}
+
+// ---------------- 后台可配置的全局 CSS / JS ----------------
+const CUSTOM_CSS_ID = 'pansou-custom-css';
+const CUSTOM_JS_ID = 'pansou-custom-js';
+let appliedCustomJS = '';
+
+function applyCustomCSS(css: string) {
+  let el = document.getElementById(CUSTOM_CSS_ID) as HTMLStyleElement | null;
+  if (!css.trim()) {
+    el?.remove();
+    return;
+  }
+  if (!el) {
+    el = document.createElement('style');
+    el.id = CUSTOM_CSS_ID;
+    document.head.appendChild(el);
+  }
+  if (el.textContent !== css) el.textContent = css;
+}
+
+function applyCustomJS(code: string) {
+  // 内容没变就不重新执行，避免登录等场景刷新配置时脚本重复运行。
+  if (code === appliedCustomJS) return;
+  appliedCustomJS = code;
+  document.getElementById(CUSTOM_JS_ID)?.remove();
+  if (!code.trim()) return;
+  const script = document.createElement('script');
+  script.id = CUSTOM_JS_ID;
+  script.textContent = code;
+  document.body.appendChild(script);
+}
+
+watch(() => authState.config?.site.theme_color, (color) => applySiteTheme(color || ''), { immediate: true });
+watch(() => authState.config?.site.custom_css, (css) => applyCustomCSS(css || ''), { immediate: true });
+watch(() => authState.config?.site.custom_js, (code) => applyCustomJS(code || ''), { immediate: true });
+
 watch(
   () => authState.config?.site.announcement,
   () => nextTick(maybeShowAnnouncement),
@@ -1102,6 +1208,19 @@ const handleHashLanding = () => {
   }
 };
 
+// 鼠标前进/后退或手动改 hash 时不会重新挂载应用，必须监听 hashchange
+// 主动同步视图，否则地址栏变了页面却停在原处。
+const onHashChange = () => {
+  const raw = (window.location.hash || '').replace(/^#\/?/, '');
+  const path = raw.split('?')[0];
+  if (path === 'user' || path === 'admin' || path === 'login' || raw.includes('oauth')) {
+    handleHashLanding();
+    return;
+  }
+  // 回到首页：用 false 避免 handleHashLanding / switchView 再写 hash 造成循环。
+  if (currentView.value !== 'search') switchView('search', false);
+};
+
 const initAuthState = async () => {
   // OAuth 回跳以服务端下发的 Cookie 会话为准。清掉本地可能残留的旧 Bearer
   // token，避免它抢占身份（后端显式凭证优先），导致显示成上一个账号或未登录。
@@ -1401,6 +1520,7 @@ onMounted(async () => {
   window.addEventListener('storage', handleStorageChange);
   window.addEventListener('config:saved', handleConfigSaved);
   window.addEventListener('resize', syncMobileSearchLayout);
+  window.addEventListener('hashchange', onHashChange);
 
   syncNavBackground();
   window.addEventListener('scroll', onAnyScroll, { passive: true });
@@ -1414,6 +1534,7 @@ onUnmounted(() => {
   window.removeEventListener('storage', handleStorageChange);
   window.removeEventListener('config:saved', handleConfigSaved);
   window.removeEventListener('resize', syncMobileSearchLayout);
+  window.removeEventListener('hashchange', onHashChange);
   window.removeEventListener('scroll', onAnyScroll);
   document.removeEventListener('scroll', onAnyScroll, true);
   if (navScrollFrame) window.cancelAnimationFrame(navScrollFrame);
@@ -1611,15 +1732,16 @@ onUnmounted(() => {
             <span>{{ siteSlogan }}</span>
           </div>
         </div>
-        <div class="footer-links">
-          <a href="https://www.liushen.fun/" target="_blank" rel="noopener noreferrer">站长主页</a>
-          <a href="https://blog.liushen.fun/" target="_blank" rel="noopener noreferrer">站长博客</a>
-          <a href="https://github.com/willow-god" target="_blank" rel="noopener noreferrer">站长 GitHub</a>
-        </div>
-        <div class="footer-legal">
-          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">陕ICP备2024028531号</a>
-          <a href="https://beian.mps.gov.cn/#/query/webSearch?code=61011602000637" target="_blank" rel="noopener noreferrer">陕公网安备61011602000637号</a>
-          <span>© {{ new Date().getFullYear() }} {{ siteName }}</span>
+        <div class="footer-side">
+          <nav v-if="siteOwnerHome || siteOwnerBlog || siteOwnerGithub" class="footer-links" aria-label="站长链接">
+            <a v-if="siteOwnerHome" :href="siteOwnerHome" target="_blank" rel="noopener noreferrer">站长主页</a>
+            <a v-if="siteOwnerBlog" :href="siteOwnerBlog" target="_blank" rel="noopener noreferrer">站长博客</a>
+            <a v-if="siteOwnerGithub" :href="siteOwnerGithub" target="_blank" rel="noopener noreferrer">站长 GitHub</a>
+          </nav>
+          <div v-if="siteICP || sitePoliceICP" class="footer-legal">
+            <a v-if="siteICP" href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">{{ siteICP }}</a>
+            <a v-if="sitePoliceICP" :href="policeICPURL" target="_blank" rel="noopener noreferrer">{{ sitePoliceICP }}</a>
+          </div>
         </div>
       </div>
     </footer>
@@ -1638,8 +1760,8 @@ onUnmounted(() => {
   pointer-events: none;
   user-select: none;
   transform: translateY(-12%) rotate(-2deg);
-  color: rgba(67, 56, 202, 0.16);
-  font-family: "Zhuque Fangsong (technical preview)", "Noto Sans SC", sans-serif;
+  color: hsl(var(--primary) / 0.16);
+  font-family: serif;
   font-size: clamp(3.7rem, 8.8vw, 9.6rem);
   font-weight: 400;
   line-height: 0.95;
@@ -1752,12 +1874,12 @@ onUnmounted(() => {
   height: 2.35rem;
   border-radius: 0.55rem;
   object-fit: contain;
-  box-shadow: 0 8px 24px rgba(49, 46, 129, 0.1);
+  box-shadow: 0 8px 24px hsl(var(--primary) / 0.12);
 }
 
 .brand-title {
   margin: 0;
-  color: rgba(30, 27, 75, 0.96);
+  color: hsl(var(--foreground) / 0.96);
   font-size: 1.08rem;
   font-weight: 700;
   line-height: 1.1;
@@ -1765,9 +1887,9 @@ onUnmounted(() => {
 
 .brand-subtitle {
   margin: 0.18rem 0 0;
-  color: rgba(67, 56, 202, 0.66);
-  font-size: 0.76rem;
-  line-height: 1;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.8rem;
+  line-height: 1.2;
 }
 
 .nav-actions {
@@ -1787,7 +1909,7 @@ onUnmounted(() => {
   border: 1px solid transparent;
   border-radius: 0.45rem;
   background: transparent;
-  color: rgba(49, 46, 129, 0.76);
+  color: hsl(var(--foreground) / 0.78);
   font-size: 0.84rem;
   font-weight: 500;
   text-decoration: none;
@@ -1795,9 +1917,9 @@ onUnmounted(() => {
 }
 
 .nav-link:hover {
-  background: rgba(238, 242, 255, 0.72);
-  border-color: rgba(199, 210, 254, 0.72);
-  color: rgba(49, 46, 129, 0.98);
+  background: hsl(var(--primary) / 0.08);
+  border-color: hsl(var(--primary) / 0.18);
+  color: hsl(var(--primary));
 }
 
 /* 导航按钮样式 */
@@ -1808,7 +1930,7 @@ onUnmounted(() => {
   min-height: 2.25rem;
   padding: 0.42rem 0.72rem;
   background: transparent;
-  color: rgba(71, 85, 105, 0.95);
+  color: hsl(var(--muted-foreground));
   border: 1px solid transparent;
   border-radius: 0.5rem;
   font-size: 0.875rem;
@@ -1819,16 +1941,16 @@ onUnmounted(() => {
 }
 
 .nav-button:hover {
-  background: rgba(238, 242, 255, 0.72);
-  color: rgba(49, 46, 129, 0.98);
-  border-color: rgba(199, 210, 254, 0.72);
+  background: hsl(var(--primary) / 0.08);
+  color: hsl(var(--primary));
+  border-color: hsl(var(--primary) / 0.18);
   box-shadow: none;
 }
 
 .nav-button.active {
-  background: rgba(15, 23, 42, 0.92);
-  color: #fff;
-  border-color: rgba(15, 23, 42, 0.92);
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
   box-shadow: none;
 }
 
@@ -1837,15 +1959,15 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: rgba(49, 46, 129, 0.72);
+  color: hsl(var(--muted-foreground));
   font-size: 0.8rem;
   font-weight: 550;
   padding: 0 0.25rem;
 }
 
 .login-entry {
-  color: rgba(49, 46, 129, 0.92);
-  border-color: rgba(199, 210, 254, 0.8);
+  color: hsl(var(--primary));
+  border-color: hsl(var(--primary) / 0.25);
 }
 
 .global-banner {
@@ -1872,9 +1994,9 @@ onUnmounted(() => {
 }
 
 .global-banner.notice {
-  background: rgba(238, 242, 255, 0.86);
-  border: 1px solid rgba(199, 210, 254, 0.8);
-  color: rgba(49, 46, 129, 0.92);
+  background: hsl(var(--primary) / 0.08);
+  border: 1px solid hsl(var(--primary) / 0.2);
+  color: hsl(var(--foreground));
 }
 
 .banner-link {
@@ -1915,7 +2037,7 @@ onUnmounted(() => {
 }
 
 .footer-shell {
-  border-top: 1px solid rgba(199, 210, 254, 0.46);
+  border-top: 1px solid hsl(var(--border) / 0.7);
   background: transparent;
 }
 
@@ -1940,12 +2062,12 @@ onUnmounted(() => {
   flex: 0 0 2.1rem;
   padding: 0.15rem;
   border-radius: 0.55rem;
-  background: #fff;
+  background: hsl(var(--background));
   object-fit: contain;
-  box-shadow: 0 4px 14px rgba(49, 46, 129, 0.1);
+  box-shadow: 0 4px 14px hsl(var(--primary) / 0.12);
 }
 .footer-brand div { min-width: 0; }
-.footer-brand strong { display: block; font-size: 0.82rem; color: rgba(30, 27, 75, 0.94); }
+.footer-brand strong { display: block; font-size: 0.88rem; color: hsl(var(--foreground)); }
 .footer-brand span {
   display: block;
   margin-top: 0.12rem;
@@ -1953,8 +2075,18 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.68rem;
-  color: rgba(67, 56, 202, 0.62);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: hsl(var(--muted-foreground));
+}
+
+.footer-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
+  /* 给右下角固定 GitHub 按钮留出空间，避免遮挡备案号 */
+  padding-right: 4.5rem;
 }
 
 .footer-links {
@@ -1963,8 +2095,8 @@ onUnmounted(() => {
   justify-content: flex-end;
   gap: 0.9rem;
   flex-wrap: wrap;
-  color: rgba(79, 70, 229, 0.7);
-  font-size: 0.78rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.82rem;
 }
 
 .footer-links a {
@@ -1987,24 +2119,20 @@ onUnmounted(() => {
 }
 
 .footer-links a:hover {
-  color: rgba(49, 46, 129, 0.94);
+  color: hsl(var(--primary));
 }
 
 .footer-legal {
-  grid-column: 1 / -1;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem 1rem;
+  justify-content: flex-end;
+  gap: 0.35rem 1rem;
   flex-wrap: wrap;
-  /* 给右下角固定 GitHub 按钮留出空间，避免遮挡版权信息 */
-  padding: 0.8rem 4.5rem 0 0;
-  border-top: 1px dashed rgba(199, 210, 254, 0.55);
-  color: rgba(79, 70, 229, 0.52);
-  font-size: 0.7rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.78rem;
 }
 .footer-legal a { color: inherit; text-decoration: none; }
-.footer-legal a:hover { color: rgba(49, 46, 129, 0.9); }
+.footer-legal a:hover { color: hsl(var(--primary)); }
 
 /* 右下角 GitHub 悬浮按钮：浅色白底黑图标，深色黑底白图标 */
 .github-float {
@@ -2063,7 +2191,7 @@ onUnmounted(() => {
     left: 18vw;
     width: 130vw;
     font-size: clamp(3.3rem, 18vw, 6.5rem);
-    color: rgba(67, 56, 202, 0.13);
+    color: hsl(var(--primary) / 0.13);
   }
 
   .nav-inner {
@@ -2099,7 +2227,7 @@ onUnmounted(() => {
   .nav-link {
     min-height: 2rem;
     padding: 0.3rem 0.45rem;
-    font-size: 0.78rem;
+    font-size: 0.8rem;
   }
 
   .main-content {
@@ -2131,8 +2259,9 @@ onUnmounted(() => {
     padding-bottom: 0.7rem;
   }
   .footer-brand span { max-width: 100%; white-space: normal; line-height: 1.4; }
+  .footer-side { align-items: flex-start; padding-right: 0; gap: 0.3rem; }
   .footer-links { justify-content: flex-start; gap: 0.8rem; }
-  .footer-legal { flex-direction: column; align-items: flex-start; gap: 0.3rem; padding: 0.65rem 4.2rem 0 0; font-size: 0.66rem; }
+  .footer-legal { justify-content: flex-start; font-size: 0.78rem; }
   .github-float {
     right: 0.8rem;
     bottom: calc(0.8rem + env(safe-area-inset-bottom));
@@ -2172,7 +2301,7 @@ onUnmounted(() => {
   .nav-button {
     padding: 0.4rem 0.55rem;
     min-height: 2.15rem;
-    font-size: 0.76rem;
+    font-size: 0.8rem;
     justify-content: center;
   }
   .nav-actions {

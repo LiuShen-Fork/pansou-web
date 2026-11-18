@@ -233,7 +233,7 @@ onMounted(load);
   z-index: 20;
 }
 .settings-bar-copy strong { display: block; font-size: 0.82rem; }
-.settings-bar-copy span { display: block; margin-top: 0.15rem; font-size: 0.7rem; color: hsl(var(--muted-foreground)); }
+.settings-bar-copy span { display: block; margin-top: 0.15rem; font-size: 0.76rem; color: hsl(var(--muted-foreground)); }
 .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .effective-line {
   margin-top: 0.9rem;
@@ -241,7 +241,7 @@ onMounted(load);
   border: 1px dashed hsl(var(--border));
   border-radius: 0.6rem;
   background: hsl(var(--muted) / 0.3);
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   color: hsl(var(--muted-foreground));
   overflow-wrap: anywhere;
 }
@@ -251,7 +251,7 @@ onMounted(load);
   align-items: center;
   gap: 0.5rem;
   margin-top: 0.7rem;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   color: hsl(var(--muted-foreground));
   cursor: pointer;
 }
